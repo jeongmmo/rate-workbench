@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>전망 입력기 · Forecast Builder</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --ink:#16213a; --ink2:#3a4a6b; --muted:#6b7488;
+    --line:#d9dde6; --line2:#eceef3;
+    --accent:#1f3a6e; --accent-soft:#eaf0f9;
+    --paper:#ffffff; --good:#2f6f6b; --bad:#a23b3b; --warn:#b07d2b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);
+    font-family:'Times New Roman',Times,Georgia,serif;font-size:16px;line-height:1.5;}
+  .wrap{max-width:1100px;margin:0 auto;padding:0 28px 90px;}
+  header.mast{border-bottom:2px solid var(--ink);padding:34px 0 18px;}
+  .eyebrow{font-variant:small-caps;letter-spacing:.14em;font-size:.82rem;color:var(--accent);margin:0 0 6px;}
+  h1.title{font-size:2rem;font-weight:700;margin:0 0 6px;}
+  .subtitle{font-size:1rem;color:var(--ink2);font-style:italic;margin:0;}
+  a.back{font-size:.86rem;color:var(--accent);}
+  #status{margin:18px 0;font-size:.92rem;}
+  #status.err{color:var(--bad)} #status.busy{color:var(--warn);font-style:italic} #status.ok{color:var(--good)}
+
+  h2.sec{font-size:1.16rem;margin:34px 0 4px;font-weight:700;}
+  h2.sec .num{font-variant:small-caps;font-size:.78rem;color:var(--accent);margin-right:9px;letter-spacing:.1em;}
+  p.secdesc{margin:0 0 14px;color:var(--ink2);font-size:.92rem;}
+
+  table.grid{border-collapse:collapse;font-size:.9rem;width:100%;margin:4px 0 6px;}
+  table.grid th{font-variant:small-caps;font-size:.76rem;letter-spacing:.05em;color:var(--muted);
+    border-top:1.5px solid var(--ink);border-bottom:1px solid var(--line);padding:7px 8px;text-align:center;font-weight:700;}
+  table.grid th.lab{text-align:left;}
+  table.grid td{border-bottom:1px solid var(--line2);padding:4px 8px;text-align:center;font-variant-numeric:tabular-nums;}
+  table.grid td.lab{text-align:left;white-space:nowrap;}
+  table.grid td.ref{font-size:.8rem;color:var(--muted);white-space:nowrap;text-align:left;font-style:italic;}
+  tr.level td{font-weight:700;background:var(--accent-soft);}
+  tr.level td.lab{font-weight:700;}
+  tr.spread td.lab{color:var(--ink2);padding-left:22px;}
+  input.cell{width:64px;font-family:inherit;font-size:.9rem;text-align:right;padding:3px 5px;
+    border:1px solid var(--line);background:#fff;color:var(--ink);}
+  input.cell:focus{outline:2px solid var(--accent-soft);border-color:var(--accent);}
+  input.cell.unusual{background:#fdf6ec;border-color:var(--warn);}
+  .tnote{font-size:.82rem;color:var(--muted);font-style:italic;margin:2px 0 14px;}
+
+  .exportbar{border:1px solid var(--line);padding:16px 20px;margin-top:30px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;}
+  .exportbar label{font-variant:small-caps;font-size:.8rem;color:var(--muted);letter-spacing:.06em;margin-right:6px;}
+  input#fdate{font-family:inherit;font-size:.95rem;padding:5px 8px;border:1px solid var(--line);}
+  button.primary{font-family:inherit;font-size:.95rem;padding:9px 22px;cursor:pointer;
+    background:var(--accent);color:#fff;border:1px solid var(--accent);}
+  button.primary:hover{background:#16305c;}
+  button.ghost{font-family:inherit;font-size:.88rem;padding:6px 14px;cursor:pointer;background:none;
+    border:1px solid var(--line);color:var(--ink2);}
+  button.ghost:hover{border-color:var(--accent);color:var(--accent);}
+  ol.steps{font-size:.88rem;color:var(--ink2);margin:8px 0 0;padding-left:20px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">Forecast Builder · Base Rate + Adjacent Spreads</p>
+    <h1 class="title">전망 입력기</h1>
+    <p class="subtitle">기준금리를 전망하고 인접 만기 스프레드를 입력하면 레벨이 자동 산출됩니다 — 참고치는 과거 10년 평균·표준편차.</p>
+    <p style="margin:10px 0 0"><a class="back" href="index.html">&#8592; 포털로 돌아가기</a></p>
+  </header>
+  <div id="status" class="busy">참고 통계(results/spread_stats.json) 불러오는 중 …</div>
+
+  <div id="content" style="display:none">
+    <div id="chains"></div>
+
+    <div class="exportbar">
+      <span><label>전망 기준일</label><input type="date" id="fdate"></span>
+      <button class="ghost" id="btnFillMean">스프레드를 10년 평균으로 채우기</button>
+      <button class="ghost" id="btnFillCur">스프레드를 현재값으로 채우기</button>
+      <button class="primary" id="btnExport">전망 내보내기 — forecasts.xlsx 갱신본 다운로드</button>
+    </div>
+    <ol class="steps">
+      <li>다운로드된 forecasts.xlsx를 <b>research-data 저장소의 data/ 폴더</b>에 덮어쓰기 업로드(Add file → Upload files)</li>
+      <li>커밋되면 Actions가 자동 실행 → 1~2분 뒤 <a href="forecast_tracker.html">전망 적중도 추적</a>에 새 빈티지가 반영됩니다</li>
+    </ol>
+    <p class="tnote">기존 전망은 모두 보존되고, 같은 (기준일·변수·타깃) 조합만 새 값으로 교체됩니다.
+      입력칸이 노란색이면 과거 10년 평균에서 ±1.5σ를 벗어난 값이라는 표시일 뿐, 입력은 자유입니다.</p>
+  </div>
+</div>
+
+<script src="./common.js"></script>
+<script>
+(async function(){
+  "use strict";
+  var $=function(id){return document.getElementById(id);};
+  var status=$("status");
+  var STATS=null, QUARTERS=[];
+
+  /* 오늘이 속한 분기부터 6개 분기 라벨 생성 → "2026Q3" */
+  function buildQuarters(n){
+    var d=new Date(), y=d.getFullYear(), q=Math.floor(d.getMonth()/3)+1, out=[];
+    for(var i=0;i<n;i++){ out.push(y+"Q"+q); q++; if(q>4){q=1;y++;} }
+    return out;
+  }
+  function qEndDate(tq){  // "2026Q3" → 그 분기의 말일
+    var y=+tq.slice(0,4), q=+tq.slice(5);
+    return new Date(y, q*3, 0);
+  }
+  function fmt(v,d){return v===null||v===undefined?"—":Number(v).toFixed(d===undefined?2:d);}
+
+  function buildChainTable(cname, chain){
+    var sec=document.createElement("section");
+    sec.innerHTML='<h2 class="sec"><span class="num">'+cname+'</span>'+cname+' 금리 전망</h2>'+
+      '<p class="secdesc">레벨(음영) = 윗 행 레벨 + 스프레드. 참고치: 현재 / 10년 평균 ± 표준편차.</p>';
+    var t=document.createElement("table"); t.className="grid";
+    var head='<tr><th class="lab">항목</th><th style="text-align:left">참고치 ('+STATS.window_years+'년)</th>';
+    QUARTERS.forEach(function(q){head+='<th>'+q.slice(2)+'</th>';});
+    t.innerHTML='<thead>'+head+'</tr></thead>';
+    var tb=document.createElement("tbody");
+
+    // 1행: 기준금리 — 레벨 직접 입력
+    var base=chain.nodes[0];
+    var tr=document.createElement("tr"); tr.className="level";
+    var refBase='현재 '+fmt(base.current);
+    tr.innerHTML='<td class="lab">'+base.var+'</td><td class="ref">'+refBase+'</td>';
+    QUARTERS.forEach(function(q,qi){
+      var td=document.createElement("td");
+      var inp=document.createElement("input");
+      inp.className="cell"; inp.type="number"; inp.step="0.05";
+      inp.dataset.chain=cname; inp.dataset.kind="base"; inp.dataset.q=qi;
+      inp.value=base.current!==null?Number(base.current).toFixed(2):"";
+      td.appendChild(inp); tr.appendChild(td);
+    });
+    tb.appendChild(tr);
+
+    // 링크별: 스프레드 입력 행 + 레벨 산출 행
+    chain.links.forEach(function(l,li){
+      var trS=document.createElement("tr"); trS.className="spread";
+      var ref='현재 '+fmt(l.current)+' · 평균 '+fmt(l.mean)+' ± '+fmt(l.sd);
+      trS.innerHTML='<td class="lab">+ 스프레드 ('+l.to.replace(cname+"_","")+'−'+l.from.replace(cname+"_","")+')</td>'+
+                    '<td class="ref">'+ref+'</td>';
+      QUARTERS.forEach(function(q,qi){
+        var td=document.createElement("td");
+        var inp=document.createElement("input");
+        inp.className="cell"; inp.type="number"; inp.step="0.01";
+        inp.dataset.chain=cname; inp.dataset.kind="spread"; inp.dataset.link=li; inp.dataset.q=qi;
+        inp.dataset.mean=l.mean; inp.dataset.sd=l.sd;
+        inp.value=l.current!==null?Number(l.current).toFixed(2):"";
+        td.appendChild(inp); trS.appendChild(td);
+      });
+      tb.appendChild(trS);
+
+      var trL=document.createElement("tr"); trL.className="level";
+      trL.innerHTML='<td class="lab">'+l.to+'</td><td class="ref">현재 '+
+        fmt((chain.nodes[li+1]||{}).current)+'</td>';
+      QUARTERS.forEach(function(q,qi){
+        var td=document.createElement("td");
+        td.dataset.chain=cname; td.dataset.kind="lvl"; td.dataset.node=li+1; td.dataset.q=qi;
+        td.textContent="—"; trL.appendChild(td);
+      });
+      tb.appendChild(trL);
+    });
+    t.appendChild(tb); sec.appendChild(t);
+    return sec;
+  }
+
+  function recompute(cname){
+    var chain=STATS.chains[cname];
+    QUARTERS.forEach(function(q,qi){
+      var baseInp=document.querySelector('input[data-chain="'+cname+'"][data-kind="base"][data-q="'+qi+'"]');
+      var lvl=parseFloat(baseInp.value);
+      chain.links.forEach(function(l,li){
+        var sInp=document.querySelector('input[data-chain="'+cname+'"][data-kind="spread"][data-link="'+li+'"][data-q="'+qi+'"]');
+        var sp=parseFloat(sInp.value);
+        // 비정상 표시: |z| > 1.5
+        var m=parseFloat(sInp.dataset.mean), sd=parseFloat(sInp.dataset.sd);
+        sInp.classList.toggle("unusual", isFinite(sp)&&isFinite(m)&&isFinite(sd)&&sd>0&&Math.abs((sp-m)/sd)>1.5);
+        var cell=document.querySelector('td[data-chain="'+cname+'"][data-kind="lvl"][data-node="'+(li+1)+'"][data-q="'+qi+'"]');
+        if(isFinite(lvl)&&isFinite(sp)){ lvl=lvl+sp; cell.textContent=lvl.toFixed(2); }
+        else { lvl=NaN; cell.textContent="—"; }
+      });
+    });
+  }
+
+  function fillSpreads(field){
+    document.querySelectorAll('input[data-kind="spread"]').forEach(function(inp){
+      var cname=inp.dataset.chain, li=+inp.dataset.link;
+      var v=STATS.chains[cname].links[li][field];
+      if(v!==null&&v!==undefined)inp.value=Number(v).toFixed(2);
+    });
+    Object.keys(STATS.chains).forEach(recompute);
+  }
+
+  /* 전망값 수집: 레벨만(기준금리 + 산출 만기) long 포맷으로 */
+  function collectRows(){
+    var fdate=$("fdate").value;
+    if(!fdate){alert("전망 기준일을 선택하세요.");return null;}
+    var rows=[];
+    Object.keys(STATS.chains).forEach(function(cname){
+      var chain=STATS.chains[cname];
+      QUARTERS.forEach(function(q,qi){
+        if(qEndDate(q) < new Date(fdate)) return;   // 이미 지난 분기는 제외
+        var baseInp=document.querySelector('input[data-chain="'+cname+'"][data-kind="base"][data-q="'+qi+'"]');
+        var lvl=parseFloat(baseInp.value);
+        if(isFinite(lvl)) rows.push({forecast_date:fdate,variable:chain.nodes[0].var,target:q,value:+lvl.toFixed(2)});
+        chain.links.forEach(function(l,li){
+          var sInp=document.querySelector('input[data-chain="'+cname+'"][data-kind="spread"][data-link="'+li+'"][data-q="'+qi+'"]');
+          var sp=parseFloat(sInp.value);
+          if(isFinite(lvl)&&isFinite(sp)){ lvl=+(lvl+sp).toFixed(4);
+            rows.push({forecast_date:fdate,variable:l.to,target:q,value:+lvl.toFixed(2)});
+          } else lvl=NaN;
+        });
+      });
+    });
+    return rows;
+  }
+
+  async function exportXlsx(){
+    var rows=collectRows();
+    if(!rows)return;
+    if(!rows.length){alert("내보낼 전망값이 없습니다 — 입력을 확인하세요.");return;}
+    status.className="busy"; status.textContent="기존 forecasts.xlsx 불러와 병합 중 …";
+    var existing=[];
+    try{
+      var bytes=await GHCommon.fetchFile(GHCommon.currentConfig(),"data/forecasts.xlsx");
+      var wb=XLSX.read(bytes,{type:"array",cellDates:true});
+      existing=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:null});
+      existing=existing.map(function(r){
+        var d=r.forecast_date;
+        if(d instanceof Date)d=d.toISOString().slice(0,10);
+        return {forecast_date:String(d).slice(0,10),variable:String(r.variable),
+                target:String(r.target),value:Number(r.value)};
+      }).filter(function(r){return r.variable&&r.target&&isFinite(r.value);});
+    }catch(e){
+      if(!confirm("저장소의 data/forecasts.xlsx를 불러오지 못했습니다("+e.message+").\n기존 전망 없이 새 파일로 만들까요?"))
+        {status.className="err";status.textContent="내보내기 취소됨";return;}
+    }
+    var key=function(r){return r.forecast_date+"|"+r.variable+"|"+r.target;};
+    var newKeys={}; rows.forEach(function(r){newKeys[key(r)]=1;});
+    var merged=existing.filter(function(r){return !newKeys[key(r)];}).concat(rows);
+    merged.sort(function(a,b){
+      return a.variable<b.variable?-1:a.variable>b.variable?1:
+             a.forecast_date<b.forecast_date?-1:a.forecast_date>b.forecast_date?1:
+             a.target<b.target?-1:1;});
+    var ws=XLSX.utils.json_to_sheet(merged,{header:["forecast_date","variable","target","value"]});
+    var out=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(out,ws,"forecasts");
+    XLSX.writeFile(out,"forecasts.xlsx");
+    status.className="ok";
+    status.textContent="완료 — 기존 "+existing.length+"건 유지(중복 "+
+      (existing.length+rows.length-merged.length)+"건 교체) + 신규 포함 총 "+merged.length+
+      "건. 내려받은 forecasts.xlsx를 research-data의 data/에 업로드하세요.";
+  }
+
+  try{
+    STATS=await GHCommon.loadResults(GHCommon.currentConfig(),"spread_stats");
+    QUARTERS=buildQuarters(6);
+    $("fdate").value=new Date().toISOString().slice(0,10);
+    var box=$("chains");
+    Object.keys(STATS.chains).forEach(function(cn){box.appendChild(buildChainTable(cn,STATS.chains[cn]));});
+    document.querySelectorAll("input.cell").forEach(function(inp){
+      inp.addEventListener("input",function(){recompute(inp.dataset.chain);});
+    });
+    Object.keys(STATS.chains).forEach(recompute);
+    $("btnFillMean").addEventListener("click",function(){fillSpreads("mean");});
+    $("btnFillCur").addEventListener("click",function(){fillSpreads("current");});
+    $("btnExport").addEventListener("click",exportXlsx);
+    status.textContent="참고 기준일 "+STATS.as_of+" · 통계 윈도우 "+STATS.window[0]+" ~ "+STATS.window[1]+
+      " · 전망 대상: 오늘부터 6개 분기 ("+QUARTERS[0]+" ~ "+QUARTERS[QUARTERS.length-1]+")";
+    status.className="";
+    $("content").style.display="";
+  }catch(e){
+    status.className="err";
+    status.innerHTML="참고 통계를 불러오지 못했습니다 — "+e.message+
+      "<br>① research-data에 최신 analysis(specs·러너)가 푸시되어 Actions가 spread_stats를 만들었는지, ② <a href='index.html'>포털</a>에서 토큰 연결을 했는지 확인하세요.";
+  }
+})();
+</script>
+</body>
+</html>
