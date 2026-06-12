@@ -1,0 +1,3824 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>채권형 ETF 포트폴리오 분석 모듈</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<style>
+  :root{
+    --ink:#1a1a1a; --rule:#9a9a9a; --rule-light:#d8d8d8;
+    --accent:#1f3a6e; --accent-soft:#eef2f9;
+    --pos:#1f3a6e; --neg:#a03030;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:"Times New Roman", "Nanum Myeongjo", Batang, serif;
+    background:#ffffff; color:var(--ink);
+    max-width:1180px; margin:0 auto; padding:28px 32px 80px 232px;
+    font-size:15px; line-height:1.5;
+  }
+  /* left content navigation */
+  #sideNav{
+    position:fixed; left:0; top:0; bottom:0; width:200px;
+    background:#fbfcfe; border-right:1px solid var(--rule-light);
+    padding:24px 0 24px 0; overflow-y:auto; z-index:50;
+    font-size:13.5px;
+  }
+  #sideNav .nav-title{font-weight:bold; font-size:13px; letter-spacing:.5px; padding:0 16px 10px; border-bottom:1px solid var(--rule-light); margin-bottom:8px;}
+  #sideNav a{
+    display:block; padding:6px 16px; color:var(--ink); text-decoration:none;
+    border-left:3px solid transparent; cursor:pointer;
+  }
+  #sideNav a:hover{background:var(--accent-soft); border-left-color:var(--accent);}
+  #sideNav a.sub{padding-left:30px; font-size:12.5px; color:#555;}
+  #sideNav a.dim{color:#aaa; cursor:default;}
+  #sideNav a.dim:hover{background:none; border-left-color:transparent;}
+  @media (max-width:1100px){ #sideNav{display:none;} body{padding-left:32px;} }
+  h1{font-size:26px; font-weight:bold; letter-spacing:.3px;}
+  .subtitle{font-size:14px; color:#555; margin-top:4px; font-style:italic;}
+  header{border-bottom:3px double var(--ink); padding-bottom:14px; margin-bottom:26px;}
+  section{margin-bottom:34px;}
+  h2{
+    font-size:17px; font-weight:bold; margin-bottom:12px;
+    border-bottom:1px solid var(--ink); padding-bottom:5px;
+  }
+  h2 .stepno{font-variant:small-caps; color:var(--accent); margin-right:8px;}
+  h3{font-size:15px; margin:14px 0 8px;}
+  .note{font-size:13px; color:#555;}
+  code{font-family:"Courier New", monospace; font-size:12.5px; background:#f0f2f5; padding:1px 4px; border-radius:2px;}
+  /* upload */
+  .dropzone{
+    border:1.5px dashed var(--rule); padding:26px; text-align:center;
+    background:#fcfcfc; cursor:pointer; transition:background .15s;
+  }
+  .dropzone.dragover{background:var(--accent-soft); border-color:var(--accent);}
+  .dropzone strong{color:var(--accent);}
+  input[type=file]{display:none;}
+  .file-meta{margin-top:10px; font-size:13.5px;}
+  /* controls */
+  .controls{display:flex; flex-wrap:wrap; gap:18px; align-items:flex-end;}
+  .ctrl label{display:block; font-size:13px; color:#444; margin-bottom:3px;}
+  .ctrl input, .ctrl select{
+    font-family:inherit; font-size:14px; padding:5px 8px;
+    border:1px solid var(--rule); background:#fff; min-width:130px;
+  }
+  button{
+    font-family:inherit; font-size:14px; padding:7px 16px;
+    background:#fff; border:1px solid var(--ink); cursor:pointer;
+  }
+  button:hover{background:var(--accent-soft);}
+  button.primary{background:var(--accent); color:#fff; border-color:var(--accent);}
+  button.primary:hover{background:#16294e;}
+  button.small{font-size:12.5px; padding:3px 9px;}
+  button:disabled{opacity:.45; cursor:not-allowed;}
+  /* tables */
+  table{border-collapse:collapse; width:100%; font-size:13.5px;}
+  th, td{padding:5px 8px; text-align:right; border-bottom:1px solid var(--rule-light);}
+  th{border-top:1.5px solid var(--ink); border-bottom:1px solid var(--ink); font-weight:bold; white-space:nowrap;}
+  tbody tr:last-child td{border-bottom:1.5px solid var(--ink);}
+  td:first-child, th:first-child{text-align:left;}
+  .num-pos{color:var(--pos);} .num-neg{color:var(--neg);}
+  .tbl-wrap{overflow-x:auto;}
+  caption{caption-side:top; text-align:left; font-weight:bold; font-size:14px; padding-bottom:6px;}
+  /* weights */
+  .wt-input{width:74px; text-align:right; font-family:inherit; font-size:13.5px; padding:3px 5px; border:1px solid var(--rule);}
+  .wt-sum{font-weight:bold;}
+  .wt-sum.bad{color:var(--neg);}
+  .wt-toolbar{display:flex; gap:10px; margin:12px 0; flex-wrap:wrap; align-items:center;}
+  .wt-toolbar input[type=text]{font-family:inherit; font-size:14px; padding:6px 9px; border:1px solid var(--rule); width:240px;}
+  /* saved portfolios */
+  .saved-empty{font-size:13.5px; color:#777; font-style:italic; padding:8px 0;}
+  /* optimization universe */
+  .univ-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(200px,1fr)); gap:4px 16px; font-size:13.5px;}
+  .univ-grid label{cursor:pointer; white-space:nowrap;}
+  .late{color:#a06a00;}
+  sup.sig{font-size:10px; letter-spacing:1px;}
+  /* outperform summary */
+  .op-card{border-left:3px solid var(--accent); background:#fafbfd; padding:8px 14px; margin:6px 0; font-size:13.5px;}
+  .op-card b.win{color:var(--pos);} .op-card b.lose{color:var(--neg);}
+  /* split panels */
+  .panel{border:1px solid var(--rule-light); padding:16px 18px; margin-top:14px; background:#fff;}
+  .panel-input{background:#fbfcfe; border-left:3px solid var(--accent);}
+  .panel-title{font-weight:bold; font-size:14.5px; margin-bottom:12px; letter-spacing:.2px;}
+  tr.run-selected td{background:var(--accent-soft);}
+  /* charts */
+  .chart-box{border:1px solid var(--rule-light); padding:14px; margin-top:16px; background:#fff;}
+  .chart-box canvas{max-height:430px;}
+  .chart-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;}
+  .chart-head .title{font-weight:bold; font-size:14.5px;}
+  /* misc */
+  .hidden{display:none;}
+  .badge{display:inline-block; font-size:12px; border:1px solid var(--rule); padding:1px 7px; margin-left:6px; color:#555;}
+  .msg{margin-top:10px; font-size:13.5px;}
+  .msg.err{color:var(--neg);}
+  .msg.ok{color:var(--accent);}
+  .dl-bar{display:flex; gap:10px; flex-wrap:wrap; margin-top:18px;}
+  footer{margin-top:50px; border-top:1px solid var(--rule-light); padding-top:10px; font-size:12.5px; color:#777;}
+</style>
+</head>
+<body>
+
+<nav id="sideNav">
+  <div class="nav-title">목차</div>
+  <a data-go="sec-upload">I. 데이터 업로드</a>
+  <a data-go="sec-settings">II. 분석 설정</a>
+  <a data-go="sec-stats">III. 기초 통계</a>
+  <a data-go="sec-optim">IV. 포트폴리오 최적화</a>
+  <a data-go="sec-weights">V. 비중 입력·기록</a>
+  <a data-go="sec-backtest">VI. 백테스트</a>
+  <a data-go="anchor-perf" class="sub">— 성과 요약표</a>
+  <a data-go="anchor-op" class="sub">— 아웃퍼폼 요약</a>
+  <a data-go="anchor-attr" class="sub">— 귀속분석 (Brinson)</a>
+  <a data-go="anchor-ddc" class="sub">— MDD 기여도</a>
+  <a data-go="anchor-value" class="sub">— 투자금액 평가</a>
+  <a data-go="anchor-sig" class="sub">— 유의성·팩터 회귀</a>
+  <a data-go="anchor-charts" class="sub">— 그래프</a>
+  <a data-go="anchor-dl" class="sub">— 다운로드</a>
+</nav>
+
+<header>
+  <h1>채권형 ETF 포트폴리오 분석 모듈</h1>
+  <div class="subtitle">Fixed-Income ETF Portfolio Construction &amp; Backtesting — Benchmark: 50% LBUSTRUU + 50% KBPMABIN</div>
+</header>
+
+<!-- ============ STEP 1 : UPLOAD ============ -->
+<section id="sec-upload">
+  <h2><span class="stepno">Step I.</span>데이터 업로드</h2>
+
+  <div class="panel panel-input" style="margin-bottom:14px">
+    <div class="panel-title">GitHub 저장소에서 불러오기</div>
+    <p class="note">개인 액세스 토큰(PAT)으로 저장소의 엑셀 파일 목록을 받아와 선택·로드합니다.
+    <b>토큰은 이 세션의 메모리에서만 사용되며 파일·브라우저 저장소에 저장되지 않습니다.</b> 페이지를 새로고침하면 토큰은 사라집니다.
+    토큰은 <code>repo</code>(또는 fine-grained PAT의 Contents: Read) 권한이 필요합니다.</p>
+    <div class="controls" style="margin-bottom:8px">
+      <div class="ctrl"><label>소유자 / 사용자명 (owner)</label>
+        <input type="text" id="ghOwner" value="jeongmmo" style="min-width:150px"></div>
+      <div class="ctrl"><label>저장소 (repo)</label>
+        <input type="text" id="ghRepo" value="research-data" style="min-width:150px"></div>
+      <div class="ctrl"><label>폴더 경로 (선택, 비우면 루트)</label>
+        <input type="text" id="ghDir" placeholder="예: data 또는 비움" style="min-width:160px"></div>
+      <div class="ctrl"><label>브랜치 (선택)</label>
+        <input type="text" id="ghRef" placeholder="main" style="width:100px"></div>
+    </div>
+    <div class="wt-toolbar">
+      <input type="password" id="ghToken" placeholder="github_pat_… (세션에서만 사용, 저장 안 함)" autocomplete="off"
+        style="font-family:inherit; font-size:13.5px; padding:6px 9px; border:1px solid var(--rule); width:330px">
+      <label style="font-size:13px"><input type="checkbox" id="ghShowToken"> 표시</label>
+      <button class="small" id="btnGhList">파일 목록 불러오기</button>
+    </div>
+    <div class="wt-toolbar" id="ghFileRow" style="display:none">
+      <div class="ctrl" style="flex:1"><label>파일 선택</label>
+        <select id="ghFileSelect" style="min-width:320px; max-width:100%"></select></div>
+      <button class="small" id="btnGhRefresh" title="목록 새로고침">↻</button>
+      <button class="primary" id="btnGhLoad">선택 파일 불러오기</button>
+    </div>
+    <div class="wt-toolbar" id="ghManualRow">
+      <span class="note">또는 파일 경로 직접 입력:</span>
+      <input type="text" id="ghPath" value="data/data_bb.xlsx" style="min-width:240px; font-family:inherit; font-size:13px; padding:4px 6px; border:1px solid var(--rule)">
+      <button class="small" id="btnGhLoadManual">경로로 불러오기</button>
+    </div>
+    <div class="msg" id="ghMsg"></div>
+  </div>
+
+  <div class="dropzone" id="dropzone">
+    또는 엑셀 파일을 이곳에 끌어다 놓거나 <strong>클릭하여 선택</strong>하세요.<br>
+    <span class="note">시트 「D」 전체에서 입력한 티커를 검색하여 일간 토털리턴 인덱스를 불러옵니다.</span>
+    <input type="file" id="fileInput" accept=".xlsx,.xlsm,.xls">
+  </div>
+  <div class="file-meta" id="fileMeta"></div>
+  <div class="msg err" id="uploadErr"></div>
+
+  <div id="tickerPanel" class="panel panel-input hidden" style="margin-top:16px">
+    <div class="panel-title">분석 대상 티커 선택</div>
+    <p class="note">투자가능 자산으로 사용할 티커를 입력하세요. 파일에 존재하는 티커(부분일치 가능)를 검색해 데이터를 불러옵니다.
+    벤치마크(미국종합·한국종합)와 NSS 팩터용 국채 커브는 자동으로 탐색됩니다.</p>
+    <div class="wt-toolbar">
+      <textarea id="tickerInput" rows="3" style="width:100%; font-family:inherit; font-size:13.5px; padding:8px; border:1px solid var(--rule)"
+        placeholder="티커를 쉼표·줄바꿈·공백으로 구분해 입력 (예: SHY US EQUITY, IEF US EQUITY, 114260 KS EQUITY, LQD)"></textarea>
+    </div>
+    <div class="wt-toolbar">
+      <button class="small" id="btnDetectAll">파일 내 TOT_RETURN 자산 전체 불러오기</button>
+      <button class="small" id="btnUseDefault">기본 18종 ETF 사용</button>
+      <span class="note">벤치마크 티커</span>
+      <input type="text" id="bmUsTicker" value="LBUSTRUU" style="width:120px; font-family:inherit; font-size:13px; padding:4px 6px; border:1px solid var(--rule)" title="미국종합 벤치마크">
+      <input type="text" id="bmKrTicker" value="KBPMABIN" style="width:120px; font-family:inherit; font-size:13px; padding:4px 6px; border:1px solid var(--rule)" title="한국종합 벤치마크">
+      <button class="primary" id="btnLoadTickers">선택 티커로 분석 시작</button>
+    </div>
+    <div class="msg" id="tickerMsg"></div>
+    <div class="tbl-wrap hidden" id="tickerPreview" style="margin-top:10px; max-height:260px; overflow-y:auto">
+      <table id="tickerPreviewTable">
+        <thead><tr><th>매칭</th><th>입력 티커</th><th>파일 내 티커</th><th>자산명</th><th>데이터 시작</th><th>관측치</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============ STEP 2 : SETTINGS ============ -->
+<section id="sec-settings" class="hidden">
+  <h2><span class="stepno">Step II.</span>분석 설정</h2>
+  <div class="controls">
+    <div class="ctrl"><label>분석 시작일</label><input type="date" id="startDate"></div>
+    <div class="ctrl"><label>분석 종료일</label><input type="date" id="endDate"></div>
+    <div class="ctrl"><label>리밸런싱 주기</label>
+      <select id="rebalFreq">
+        <option value="M" selected>월간 (월초)</option>
+        <option value="Q">분기 (분기초)</option>
+        <option value="Y">연간 (연초)</option>
+        <option value="N">리밸런싱 없음 (Buy &amp; Hold)</option>
+      </select>
+    </div>
+    <div class="ctrl"><label>무위험수익률 (연, %)</label><input type="number" id="rfRate" value="0" step="0.1" style="width:90px"></div>
+    <button id="applySettings">통계 재계산</button>
+  </div>
+  <p class="note" style="margin-top:10px">
+    ※ 수익률은 각 시계열의 현지통화 기준 토털리턴 인덱스의 일간 변화율로 계산되며, 한·미 휴장일 불일치는 직전 가격 이월(forward-fill)로 처리합니다.
+    분석 시작일은 비중이 부여된 자산의 데이터 가용 시점에 따라 자동으로 보정될 수 있습니다.
+  </p>
+</section>
+
+<!-- ============ STEP 3 : ASSET STATS ============ -->
+<section id="sec-stats" class="hidden">
+  <h2><span class="stepno">Step III.</span>자산별 기초 통계</h2>
+  <div class="tbl-wrap">
+    <table id="statsTable">
+      <caption>Table 1. 일간수익률 기초 통계 (선택 기간 기준)</caption>
+      <thead><tr>
+        <th>자산</th><th>티커</th><th>듀레이션</th><th>데이터 시작</th><th>관측치</th>
+        <th>일평균수익률(%)</th><th>일표준편차(%)</th><th>연환산수익률(%)</th><th>연환산변동성(%)</th><th>t(μ=0)</th><th>p-값</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="wt-toolbar" style="margin-top:12px">
+    <button class="small" id="toggleCorr">상관관계 행렬 숨기기/보기</button>
+  </div>
+  <div class="tbl-wrap" id="corrWrap">
+    <table id="corrTable"><caption>Table 2. 일간수익률 상관계수 행렬 (음영: 상관 강도, 청색 = 양(+) · 적색 = 음(−))</caption><thead></thead><tbody></tbody></table>
+    <p class="note" style="margin-top:8px">주: 상관계수의 유의성은 t = r·√(n−2)/√(1−r²)에 대한 양측 검정. 유의수준 표기: * p&lt;0.10, ** p&lt;0.05, *** p&lt;0.01. 각 쌍(pair)별 공통 관측치 기준이며, 셀에 마우스를 올리면 관측치 수(n)와 p-값이 표시됩니다.</p>
+  </div>
+</section>
+
+<!-- ============ STEP 4 : OPTIMIZATION ============ -->
+<section id="sec-optim" class="hidden">
+  <h2><span class="stepno">Step IV.</span>포트폴리오 최적화 (Mean–Variance Optimization)</h2>
+  <p class="note">기대수익률 벡터(μ)와 공분산행렬(Σ)에 기반한 공매도 제약(long-only) 최적화입니다. μ는 과거 평균과 키인값(투자자 전망)을 블렌딩할 수 있고,
+  Σ는 대각수축(shrinkage)으로 안정화할 수 있습니다. 수치는 252일 산술 연환산이며, 무위험수익률은 Step II의 설정값을 사용합니다.</p>
+
+  <!-- ① 입력 패널 -->
+  <div class="panel panel-input">
+    <div class="panel-title">① 입력 — Universe · 기대수익률 키인 · 제약 · 파라미터</div>
+    <div class="tbl-wrap">
+      <table id="univTable">
+        <thead><tr><th>포함</th><th>자산</th><th>티커</th><th>데이터 시작</th><th>과거 μ (연, %)</th><th>기대수익률 키인 (연, %)</th><th>최소비중(%)</th><th>최대비중(%)</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="note" style="margin-top:6px">「과거 μ」는 선택 기간 일평균수익률의 산술 연환산(자산별 가용 기간 기준, 참고용). 「기대수익률 키인」이 빈칸인 자산은 과거 평균이 그대로 사용됩니다.
+    데이터 시작이 분석 시작일보다 늦은 자산(<span class="late">주황색</span>)을 포함하면 추정 기간이 단축됩니다. 제약: Σ최소 ≤ 100% ≤ Σ최대, 자산별 최소 ≤ 최대.</p>
+    <div class="wt-toolbar">
+      <button class="small" id="btnFillHist">키인란에 과거치 채우기</button>
+      <button class="small" id="btnClearER">키인 비우기</button>
+    </div>
+    <div class="controls" style="margin-top:12px">
+      <div class="ctrl"><label>키인 블렌딩 비중 (%, 0=과거만 · 100=키인만)</label>
+        <input type="number" id="muBlend" value="100" step="5" min="0" max="100" style="width:90px"></div>
+      <div class="ctrl"><label>공분산 수축 λ (0=표본 · 1=대각)</label>
+        <input type="number" id="covShrink" value="0" step="0.05" min="0" max="1" style="width:90px"></div>
+      <div class="ctrl"><label>최대비중 일괄설정 (%)</label>
+        <input type="number" id="optCap" value="100" step="5" min="1" max="100" style="width:80px">
+        <button class="small" id="btnCapAll" style="margin-left:4px">전체 적용</button>
+      </div>
+    </div>
+    <div class="controls" style="margin-top:12px">
+      <div class="ctrl"><label>미국 자산 합계 비중 (%, 최소~최대)</label>
+        <input type="number" id="grpUsLo" value="0" step="5" min="0" max="100" style="width:70px"> ~
+        <input type="number" id="grpUsHi" value="100" step="5" min="0" max="100" style="width:70px"></div>
+      <div class="ctrl"><label>한국 자산 합계 비중 (%, 최소~최대)</label>
+        <input type="number" id="grpKrLo" value="0" step="5" min="0" max="100" style="width:70px"> ~
+        <input type="number" id="grpKrHi" value="100" step="5" min="0" max="100" style="width:70px"></div>
+      <div class="ctrl"><label>&nbsp;</label><span class="note">대분류(통화권) 합계 제약 — 티커의 US/KS 기준 자동 분류. 0~100이면 비활성.</span></div>
+    </div>
+    <div class="controls" style="margin-top:12px">
+      <div class="ctrl"><label>방법론</label>
+        <select id="optMethod">
+          <option value="gmv">최소분산 (Global Minimum Variance)</option>
+          <option value="msr" selected>최대 샤프 (Tangency / Max Sharpe)</option>
+          <option value="tgt">목표수익률 최소분산 (Markowitz)</option>
+          <option value="ra">위험회피계수 직접 지정 (max μ′w − ½γ·w′Σw)</option>
+          <option value="rp">위험균형 (Risk Parity)</option>
+          <option value="ew">균등비중 (1/N)</option>
+        </select>
+      </div>
+      <div class="ctrl"><label>목표수익률 (연, %)</label><input type="number" id="optTarget" value="4" step="0.25" style="width:90px"></div>
+      <div class="ctrl"><label>위험회피계수 γ</label><input type="number" id="optGamma" value="1" step="0.5" min="0.1" style="width:80px"></div>
+      <div class="ctrl"><label>MC 시뮬레이션 횟수 (B)</label>
+        <input type="number" id="mcB" value="200" step="50" min="50" max="1000" style="width:90px"></div>
+      <div class="ctrl"><label>로버스트 비중</label>
+        <label style="font-size:13px; font-weight:normal"><input type="checkbox" id="mcRobustW" checked> 리샘플링 평균 비중 사용</label></div>
+      <div class="ctrl"><label>결과 자동입력 대상</label>
+        <select id="optApplyTarget" style="min-width:150px">
+          <option value="0">Portfolio 1 칸에 입력</option>
+          <option value="1">Portfolio 2 칸에 입력</option>
+          <option value="2">Portfolio 3 칸에 입력</option>
+          <option value="-1">자동입력 안 함</option>
+        </select>
+      </div>
+      <button class="primary" id="btnOptimize">최적화 실행</button>
+    </div>
+  </div>
+  <div class="msg err" id="optErr"></div>
+
+  <!-- ② 결과 패널 -->
+  <div id="optResult" class="hidden">
+    <div class="panel">
+      <div class="panel-title">② 결과 비교</div>
+      <div class="tbl-wrap">
+        <table id="optCompare">
+          <caption>Table 3a. 최적화 실행 비교 (행을 클릭하거나 「상세」로 비중 확인 · 좌표는 각 실행 당시의 μ·Σ 기준)</caption>
+          <thead><tr><th>#</th><th>방법론</th><th>μ 소스 / 파라미터</th><th>추정 기간</th><th>기대수익률(연,%)</th><th>기대변동성(연,%)</th><th>Sharpe</th><th>주요 비중</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="wt-toolbar">
+        <button class="small" id="btnClearRuns">실행 기록 전체 삭제</button>
+      </div>
+      <div class="tbl-wrap" style="margin-top:14px">
+        <table id="optTable">
+          <caption id="optCaption">Table 3b. 선택 실행의 상세 비중</caption>
+          <thead><tr><th>자산</th><th>티커</th><th>최적 비중(%)</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="wt-toolbar">
+        <button id="btnApplyOpt">선택 실행을 비중 입력에 적용</button>
+        <button id="btnSaveOpt">선택 실행을 포트폴리오 기록으로 저장</button>
+        <span class="note" id="optSummary"></span>
+      </div>
+
+      <h3 style="margin-top:18px">비중 비교 — 직전(기준) 비중 vs 최적화 실행별 비중</h3>
+      <div class="controls" style="margin-bottom:8px">
+        <div class="ctrl"><label>기준(직전) 비중</label>
+          <select id="cmpRef" style="min-width:240px"></select></div>
+      </div>
+      <div class="tbl-wrap">
+        <table id="cmpTable">
+          <caption id="cmpCaption">Table 3c. 기준 비중 대비 최적화 실행별 비중 (%, 괄호는 기준 대비 Δ%p)</caption>
+          <thead></thead>
+          <tbody></tbody>
+          <tfoot></tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ STEP 5 : WEIGHTS ============ -->
+<section id="sec-weights" class="hidden">
+  <h2><span class="stepno">Step V.</span>포트폴리오 비중 입력 및 기록</h2>
+  <p class="note">최대 3개 포트폴리오의 비중을 나란히 입력해 비교할 수 있습니다. 「균등비중(EW)」 열은 항상 표시되며 자동 계산됩니다(각 자산 = 100/자산수).
+  각 포트폴리오 열의 적용일·이름을 지정해 개별 저장할 수 있습니다.</p>
+  <div class="tbl-wrap">
+    <table id="wtTable">
+      <caption>투자 비중 입력 (%)</caption>
+      <thead>
+        <tr id="wtHeadName"></tr>
+        <tr id="wtHeadCtl"></tr>
+        <tr id="wtHeadCol"></tr>
+      </thead>
+      <tbody></tbody>
+      <tfoot><tr id="wtFoot"></tr></tfoot>
+    </table>
+  </div>
+  <div class="wt-toolbar">
+    <button class="small" id="btnNormalizeAll">모든 열 100%로 정규화</button>
+    <button class="small" id="btnClearAll">전체 초기화</button>
+    <button class="small" id="btnCopyEW">균등비중을 P1에 복사</button>
+  </div>
+  <div class="msg" id="wtMsg"></div>
+
+  <h3>저장된 포트폴리오 기록</h3>
+  <p class="note">「적용일」은 동적 비중 이력 백테스트에서 해당 비중이 효력을 갖기 시작하는 날짜입니다.
+  기록을 엑셀로 내려받아 보관하고, 다시 업로드하면 비중 조절 이력이 그대로 복원됩니다.</p>
+  <div class="wt-toolbar">
+    <button class="small" id="btnDlHistory">비중 기록 다운로드 (.xlsx)</button>
+    <button class="small" id="btnUlHistory">비중 기록 업로드 (.xlsx)</button>
+    <input type="file" id="historyFile" accept=".xlsx,.xls" style="display:none">
+    <span class="msg" id="histMsg" style="margin-top:0"></span>
+  </div>
+  <div class="tbl-wrap">
+    <table id="savedTable" class="hidden">
+      <thead><tr><th>비교</th><th>이름</th><th>적용일</th><th>저장 시각</th><th>주요 비중</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="saved-empty" id="savedEmpty">저장된 포트폴리오가 없습니다. 비중을 입력하고 「저장」을 누르세요.</div>
+</section>
+
+<!-- ============ STEP 6 : BACKTEST ============ -->
+<section id="sec-backtest" class="hidden">
+  <h2><span class="stepno">Step VI.</span>백테스트 및 벤치마크 비교</h2>
+  <p class="note">벤치마크: 미국종합(LBUSTRUU Index) 50% + 한국종합(KBPMABIN Index) 50%, <b>매년 말(연초 첫 거래일) 50:50으로 리밸런싱</b>(포트폴리오 리밸런싱 설정과 무관).
+  입력 비중·균등비중(EW)·「비교」에 체크된 저장 포트폴리오가 함께 평가됩니다.</p>
+  <div class="controls" style="margin-top:10px">
+    <div class="ctrl"><label>초기투자금액 (원)</label>
+      <input type="number" id="initAmt" value="100000000" step="10000000" min="1" style="width:150px"></div>
+    <div class="ctrl"><label>백테스트 방식</label>
+      <select id="btMode" style="min-width:330px">
+        <option value="static" selected>정적 비중 비교 — 현재 입력 + 체크된 기록을 각각 개별 포트폴리오로</option>
+        <option value="dynamic">동적 비중 이력 — 체크된 기록을 적용일 순으로 연결한 단일 전략</option>
+      </select>
+    </div>
+    <button class="primary" id="btnRun">백테스트 실행</button>
+  </div>
+  <div class="wt-toolbar" style="margin-top:8px">
+    <label style="font-size:13.5px"><input type="checkbox" id="chkCredit"> 팩터 회귀에 신용스프레드 팩터 포함 (ΔIG OAS, ΔHY OAS)</label>
+  </div>
+  <p class="note">동적 이력 모드: 각 기록의 비중이 적용일(해당일 종가 기준)부터 다음 변경 시점까지 목표 비중으로 유지되며, 그 사이에는 선택한 리밸런싱 주기에 따라 목표 비중으로 재조정됩니다. 백테스트는 첫 기록의 적용일부터 시작합니다.</p>
+  <div class="msg err" id="btErr"></div>
+
+  <div id="btResults" class="hidden">
+    <div id="anchor-perf"></div>
+    <div class="tbl-wrap">
+      <table id="perfTable">
+        <caption>Table 4. 성과 요약 (선택 기간, 연환산 252일 기준)</caption>
+        <thead><tr>
+          <th>포트폴리오</th><th>기간</th><th>누적수익률(%)</th><th>CAGR(%)</th><th>연변동성(%)</th>
+          <th>Sharpe</th><th>MDD(%)</th><th>추적오차(%)</th><th>정보비율(IR)</th><th>일간승률(%)</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <h3 id="anchor-op">아웃퍼폼 / 언더퍼폼 요약</h3>
+    <div id="opSummary"></div>
+    <div class="tbl-wrap" style="margin-top:12px">
+      <table id="yearTable">
+        <caption>Table 6. 연도별 수익률 및 벤치마크 대비 초과수익률 (%)</caption>
+        <thead></thead><tbody></tbody>
+      </table>
+    </div>
+
+    <h3 id="anchor-attr">벤치마크 아웃퍼폼 기여도 분석 (Brinson 귀속분석)</h3>
+    <div class="controls" style="margin-bottom:8px">
+      <div class="ctrl"><label>분석 대상 포트폴리오</label>
+        <select id="attrSel" style="min-width:260px"></select></div>
+    </div>
+    <div class="tbl-wrap">
+      <table id="attrTable">
+        <caption id="attrCaption">Table 6b. 자산별 초과수익 기여도 분해 (연환산, %p)</caption>
+        <thead><tr>
+          <th>자산</th><th>포트폴리오 비중(%)</th><th>벤치마크 비중(%)</th><th>자산 수익률(연,%)</th>
+          <th>배분효과</th><th>선택효과</th><th>상호작용</th><th>총기여(%p)</th>
+        </tr></thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+      </table>
+    </div>
+    <p class="note" id="attrNote">주: Brinson–Hood–Beebower 분해. 벤치마크는 자산군 단위로 미국종합·한국종합 2개 노드를 사용하며, 각 ETF는 통화권(미국/한국)에 따라 해당 벤치마크 노드에 매핑됩니다.
+    배분효과 = (w_p − w_b)·(r_b,asset − r_b) · 선택효과 = w_b·(r_asset − r_b,group) · 상호작용 = (w_p − w_b)·(r_asset − r_b,group). 수익률은 기하 연환산. 총기여 합계는 포트폴리오–벤치마크 연환산 초과수익률에 근사합니다(리밸런싱·복리 효과로 잔차 존재).
+    <span id="attrChart-toggle"></span></p>
+    <div class="chart-box">
+      <div class="chart-head">
+        <span class="title">Figure 2b. 자산별 초과수익 기여도 (연환산, %p)</span>
+        <button class="small" data-dlx="attrChart">데이터 (.xlsx)</button>
+          <button class="small" data-dl="attrChart">PNG 다운로드</button>
+      </div>
+      <canvas id="attrChart" style="max-height:340px"></canvas>
+    </div>
+
+    <h3 id="anchor-attry">기간별(연도별) 귀속분석 추이</h3>
+    <div class="tbl-wrap">
+      <table id="attrYTable">
+        <caption id="attrYCaption">Table 6c. 연도별 Brinson 효과 분해 (기간 기여, %p)</caption>
+        <thead><tr><th>연도</th><th>배분효과</th><th>선택효과</th><th>상호작용</th><th>총기여(%p)</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="chart-box">
+      <div class="chart-head">
+        <span class="title">Figure 2c. 연도별 Brinson 효과 추이 (누적막대 = 효과 분해, %p)</span>
+        <button class="small" data-dlx="attrYChart">데이터 (.xlsx)</button>
+        <button class="small" data-dl="attrYChart">PNG 다운로드</button>
+      </div>
+      <canvas id="attrYChart" style="max-height:320px"></canvas>
+    </div>
+    <p class="note">주: 각 연도의 일평균 효과 × 해당 연도 거래일수 (기간 기여, 비연환산). 분석 대상은 위 드롭다운에서 선택한 포트폴리오와 동일하며, 비중은 정태적(분석 대상 비중 고정) 가정입니다.</p>
+
+    <div id="anchor-sig"></div>
+    <div class="tbl-wrap" style="margin-top:20px">
+      <table id="sigTable">
+        <caption>Table 5. 벤치마크 대비 성과의 통계적 유의성 (일간수익률 기준)</caption>
+        <thead><tr>
+          <th>포트폴리오</th><th>연초과수익률(%)</th><th>t-통계량</th><th>p-값</th>
+          <th>α (연, %)</th><th>t(α)</th><th>p(α)</th><th>β</th><th>R²</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="note">주: 초과수익률 검정은 일간 (r<sub>p</sub> − r<sub>bm</sub>)의 평균이 0이라는 귀무가설에 대한 양측 t-검정.
+    α·β는 OLS 회귀 r<sub>p,t</sub> = α + β·r<sub>bm,t</sub> + ε<sub>t</sub>의 추정치이며 α는 252일 산술 연환산.
+    표준오차는 동분산 가정(OLS)에 기반하므로 자기상관·이분산이 있는 경우 보수적으로 해석할 것. 유의수준: * p&lt;0.10, ** p&lt;0.05, *** p&lt;0.01.</p>
+
+    <div class="tbl-wrap" style="margin-top:20px">
+      <table id="fregTable">
+        <caption id="fregCaption">Table 7. 채권시장 팩터 회귀 — NSS 팩터 통제 후 알파 점검</caption>
+        <thead></thead><tbody></tbody>
+      </table>
+    </div>
+    <p class="note" id="fregNote">주: 팩터는 미국·한국 국채 커브(3M–30Y, 7개 만기)에 Nelson–Siegel–Svensson 모형(τ₁=1.37, τ₂=8.0 고정, 일별 OLS)을 적합하여 얻은
+    Level(β₀), Slope(−β₁, 장단기금리차 방향), Curvature(β₂)의 일간 변화분(%p). 팩터 베타는 해당 팩터 1%p 변화에 대한 일간수익률 반응(%).
+    표준오차는 Newey–West(시차 5) HAC 기준. 종속변수 「초과수익률」 회귀의 α가 유의하면 커브 팩터 노출을 통제한 후에도 벤치마크 대비 알파가 존재함을 의미.
+    유의수준: * p&lt;0.10, ** p&lt;0.05, *** p&lt;0.01 (셀에 마우스를 올리면 t-통계량 표시).</p>
+
+    <div id="anchor-charts"></div>
+    <div class="chart-box">
+      <div class="chart-head">
+        <span class="title">Figure 2. 포트폴리오 구성 비교 (비중, %)</span>
+        <button class="small" data-dlx="compChart">데이터 (.xlsx)</button>
+          <button class="small" data-dl="compChart">PNG 다운로드</button>
+      </div>
+      <canvas id="compChart" style="max-height:320px"></canvas>
+    </div>
+
+    <div class="chart-box">
+      <div class="chart-head">
+        <span class="title">Figure 3. 누적수익률 추이 (기준 = 100)</span>
+        <button class="small" data-dlx="cumChart">데이터 (.xlsx)</button>
+          <button class="small" data-dl="cumChart">PNG 다운로드</button>
+      </div>
+      <canvas id="cumChart"></canvas>
+    </div>
+
+    <div class="chart-box">
+      <div class="chart-head">
+        <span class="title">Figure 4. 벤치마크 대비 상대성과 (포트폴리오 NAV ÷ 벤치마크 NAV × 100, &gt;100 = 아웃퍼폼)</span>
+        <button class="small" data-dlx="relChart">데이터 (.xlsx)</button>
+          <button class="small" data-dl="relChart">PNG 다운로드</button>
+      </div>
+      <canvas id="relChart"></canvas>
+    </div>
+
+    <div class="chart-box">
+      <div class="chart-head">
+        <span class="title">Figure 5. 낙폭(Drawdown) 추이</span>
+        <button class="small" data-dlx="ddChart">데이터 (.xlsx)</button>
+          <button class="small" data-dl="ddChart">PNG 다운로드</button>
+      </div>
+      <canvas id="ddChart"></canvas>
+    </div>
+
+    <h3 id="anchor-ddc">최대 낙폭(MDD) 자산별 기여도 분석</h3>
+    <div class="controls" style="margin-bottom:8px">
+      <div class="ctrl"><label>분석 대상 포트폴리오</label>
+        <select id="ddSel" style="min-width:260px"></select></div>
+    </div>
+    <div id="ddEpisode" class="op-card"></div>
+    <div class="tbl-wrap">
+      <table id="ddTable">
+        <caption id="ddCaption">Table 5b. MDD 구간 자산별 손실 기여도</caption>
+        <thead><tr><th>자산</th><th>구간 평균 비중(%)</th><th>자산 자체 수익률(%)</th><th>기여도(%p)</th><th>기여율(%)</th></tr></thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+      </table>
+    </div>
+    <p class="note">주: 기여도 = Σₜ w<sub>i,t−1</sub>·r<sub>i,t</sub> (MDD 고점 익일~저점, 일별 비중은 드리프트·리밸런싱 반영). 산술 합산이므로 합계는 복리 기준 MDD와 근소한 차이가 있을 수 있습니다.
+    기여율 = 기여도 / 산술 합계.</p>
+    <div class="chart-box">
+      <div class="chart-head">
+        <span class="title">Figure 5b. MDD 구간 자산별 손실 기여도 (%p)</span>
+        <button class="small" data-dlx="ddcChart">데이터 (.xlsx)</button>
+        <button class="small" data-dl="ddcChart">PNG 다운로드</button>
+      </div>
+      <canvas id="ddcChart" style="max-height:340px"></canvas>
+    </div>
+
+    <h3 id="anchor-value">초기투자금액 기준 자산가치·비중 변화</h3>
+    <div class="controls" style="margin-bottom:8px">
+      <div class="ctrl"><label>분석 대상 포트폴리오</label>
+        <select id="valSel" style="min-width:260px"></select></div>
+    </div>
+    <div id="valSummary" class="op-card"></div>
+    <div class="tbl-wrap">
+      <table id="valTable">
+        <caption id="valCaption">Table 5c. 자산별 평가금액 및 비중 변화</caption>
+        <thead><tr><th>자산</th><th>초기 비중(%)</th><th>초기 금액(원)</th><th>기말 비중(%)</th><th>기말 평가금액(원)</th><th>금액 변화(원)</th></tr></thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+      </table>
+    </div>
+    <p class="note">주: 기말 비중은 가격 변동에 따른 드리프트와 설정된 리밸런싱을 모두 반영한 시뮬레이션 최종 시점의 실제 보유 비중입니다.
+    자산별 금액 변화에는 리밸런싱에 따른 자금 이동이 포함되므로 해당 자산의 단순 수익률과 다를 수 있습니다.</p>
+
+    <div class="chart-box">
+      <div class="chart-head">
+        <span class="title">Figure 6. 위험–수익 산점도 (연환산)</span>
+        <button class="small" data-dlx="rrChart">데이터 (.xlsx)</button>
+          <button class="small" data-dl="rrChart">PNG 다운로드</button>
+      </div>
+      <canvas id="rrChart" style="max-height:380px"></canvas>
+    </div>
+
+    <div class="chart-box">
+      <div class="chart-head">
+        <span class="title">Figure 7. NSS 커브 팩터 추이 — Level · Slope · Curvature (미국 실선, 한국 점선)</span>
+        <span class="note">기준 시작일</span>
+        <input type="date" id="factStart" style="font-family:inherit; font-size:12.5px; padding:3px 5px; border:1px solid var(--rule)">
+        <button class="small" data-dlx="factChart">데이터 (.xlsx)</button>
+        <button class="small" data-dl="factChart">PNG 다운로드</button>
+      </div>
+      <canvas id="factChart"></canvas>
+      <p class="note" id="factNote" style="margin-top:6px"></p>
+    </div>
+
+    <h3 id="anchor-nssdev">NSS 적합 기준 만기별 괴리 — 최근 영업일</h3>
+    <div class="tbl-wrap">
+      <table id="nssDevTable">
+        <caption id="nssDevCaption">Table 8. 만기별 실제 금리 vs NSS 적합치 괴리</caption>
+        <thead><tr><th rowspan="2">만기</th><th colspan="3">미국 (USGG)</th><th colspan="3">한국 (GVSK)</th></tr>
+        <tr><th>실제(%)</th><th>NSS 적합(%)</th><th>괴리(bp)</th><th>실제(%)</th><th>NSS 적합(%)</th><th>괴리(bp)</th></tr></thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+      </table>
+    </div>
+    <p class="note">주: 괴리 = (실제 − 적합) × 100bp. 양(+)이면 해당 만기가 NSS 커브 대비 고평가된 금리(저평가된 가격), 음(−)이면 그 반대.
+    적합은 고정 감쇠모수(τ₁=1.37, τ₂=8.0) NSS의 당일 횡단면 OLS.</p>
+
+    <div class="dl-bar" id="anchor-dl">
+      <button class="primary" id="btnDlExcel">분석 결과 데이터 Excel 다운로드 (.xlsx)</button>
+      <button class="primary" id="btnDlCharts">그래프 Excel 다운로드 (.xlsx, 이미지 포함)</button>
+    </div>
+  </div>
+</section>
+
+<footer>
+  채권형 ETF 포트폴리오 분석 모듈 · 데이터: 업로드 파일 시트 D, FW–GP 칼럼 (TOT_RETURN_INDEX_GROSS_DVDS) · 본 도구의 산출물은 참고용이며 투자 권유가 아닙니다.
+</footer>
+
+<script>
+"use strict";
+/* ============================================================
+   GLOBAL STATE
+============================================================ */
+// investable assets are now user-selected by ticker; these are populated at load time
+let N_COL = 0;                    // number of investable assets + 2 benchmarks
+let BM_US_IDX = 0, BM_KR_IDX = 0; // benchmark positions within the assembled block (last two)
+const ANN = 252;
+// yield curves for NSS factor model: resolved by Bloomberg ticker (column header row 8)
+const YC_US_TICKERS = ["USGG3M","USGG12M","USGG2YR","USGG3YR","USGG5YR","USGG10YR","USGG30YR"];
+const YC_KR_TICKERS = ["GVSK3M","GVSK1Y","GVSK2Y","GVSK3Y","GVSK5Y","GVSK10Y","GVSK30Y"];
+const IG_OAS_TICKER = "LUACOAS", HY_OAS_TICKER = "LF98OAS";
+const TENORS = [0.25,1,2,3,5,10,30];
+const NSS_T1 = 1.37, NSS_T2 = 8.0;      // fixed decay parameters (Diebold–Li style)
+let NSSF = null;                        // {us:{L,S,C,B3}, kr:{...}, ig:[], hy:[], usFirst, krFirst}
+// default investable universe (used by "기본 18종 ETF 사용")
+const DEFAULT_TICKERS = [
+  "SHY US EQUITY","IEI US EQUITY","IEF US EQUITY","TLH US EQUITY","LQD US EQUITY","USHY US EQUITY","BIL US EQUITY",
+  "423160 KS EQUITY","114260 KS EQUITY","302190 KS EQUITY","471230 KS EQUITY","455890 KS EQUITY",
+  "385550 KS EQUITY","0052T0 KS EQUITY","0016X0 KS EQUITY","0119H0 KS EQUITY","438330 KS EQUITY","272910 KS EQUITY"
+];
+let SHEET = null;                 // {rows, nameRow, tickerCol map} retained between upload and ticker-resolve
+
+let DATA = null;     // {dates:[Date], px:[ [..20 cols filled fwd or null..] per row ], names:[], tickers:[], durations:[], firstValid:[Date]}
+let savedPortfolios = [];   // {id, name, savedAt, weights:{assetIdx:pct}}
+let lastBacktest = null;    // for Excel export
+let charts = {};
+
+const $ = id => document.getElementById(id);
+const fmt = (x,d=2) => (x===null||x===undefined||isNaN(x)) ? "–" : x.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmtDate = d => d ? d.toISOString().slice(0,10) : "–";
+const signClass = x => x>0 ? "num-pos" : (x<0 ? "num-neg" : "");
+
+/* ============================================================
+   PERSISTENT STORAGE (Claude artifact storage, fallback in-memory)
+============================================================ */
+const STORE_KEY = "bond-etf-portfolios";
+async function loadSaved(){
+  try{
+    if(window.storage){
+      const r = await window.storage.get(STORE_KEY);
+      if(r && r.value) savedPortfolios = JSON.parse(r.value);
+    }
+  }catch(e){ /* key not found or storage unavailable */ }
+  renderSaved();
+}
+async function persistSaved(){
+  try{
+    if(window.storage) await window.storage.set(STORE_KEY, JSON.stringify(savedPortfolios));
+  }catch(e){ console.warn("storage unavailable; portfolios kept in memory only", e); }
+}
+
+/* ============================================================
+   FILE PARSING
+============================================================ */
+const dropzone = $("dropzone"), fileInput = $("fileInput");
+dropzone.addEventListener("click", ()=>fileInput.click());
+dropzone.addEventListener("dragover", e=>{e.preventDefault(); dropzone.classList.add("dragover");});
+dropzone.addEventListener("dragleave", ()=>dropzone.classList.remove("dragover"));
+dropzone.addEventListener("drop", e=>{
+  e.preventDefault(); dropzone.classList.remove("dragover");
+  if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener("change", e=>{ if(e.target.files.length) handleFile(e.target.files[0]); });
+
+/* ---------- GitHub loader (token used in-session only, never stored) ---------- */
+$("ghShowToken").addEventListener("change", e=>{
+  $("ghToken").type = e.target.checked ? "text" : "password";
+});
+function b64ToUint8(b64){
+  const clean = b64.replace(/\s/g, "");
+  const bin = atob(clean);
+  const arr = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
+  return arr;
+}
+function ghHeaders(token, accept){
+  const h = { "Accept": accept, "X-GitHub-Api-Version": "2022-11-28" };
+  if(token) h["Authorization"] = "Bearer " + token;   // omit header for public repos w/o token
+  return h;
+}
+function ghContentsUrl(owner, repo, path, ref){
+  return "https://api.github.com/repos/" + encodeURIComponent(owner) + "/" + encodeURIComponent(repo)
+       + "/contents/" + String(path||"").split("/").filter(Boolean).map(encodeURIComponent).join("/")
+       + (ref ? ("?ref=" + encodeURIComponent(ref)) : "");
+}
+async function ghError(resp){
+  let detail = "";
+  try{ const j = await resp.json(); detail = j.message || ""; }catch(e){}
+  if(resp.status===401) return "인증 실패(401): 토큰이 유효하지 않거나 만료되었습니다.";
+  if(resp.status===403) return "권한 거부(403): 토큰 권한 또는 API 한도(미인증 시 시간당 60회)를 확인하세요. "+detail;
+  if(resp.status===404) return "찾을 수 없음(404): owner/repo/경로/branch를 확인하세요. (비공개 저장소면 토큰 권한도 확인) "+detail;
+  return "HTTP "+resp.status+" "+detail;
+}
+
+/* common: list .xlsx files in a repo directory → [{name, path, size}] */
+async function listGithubFiles(owner, repo, dir, ref, token){
+  const resp = await fetch(ghContentsUrl(owner, repo, dir, ref), { headers: ghHeaders(token, "application/vnd.github+json") });
+  if(!resp.ok) throw new Error(await ghError(resp));
+  const j = await resp.json();
+  if(!Array.isArray(j)) throw new Error("지정한 경로가 폴더가 아닙니다. 폴더 경로를 입력하거나 비워두세요.");
+  return j.filter(x => x.type === "file" && /\.(xlsx|xlsm|xls)$/i.test(x.name))
+          .map(x => ({ name:x.name, path:x.path, size:x.size }))
+          .sort((a,b)=> a.name<b.name ? 1 : -1);   // newest-named first
+}
+
+/* common: fetch a single file by path → Uint8Array bytes */
+async function fetchGithubFile(owner, repo, path, ref, token){
+  const url = ghContentsUrl(owner, repo, path, ref);
+  let resp = await fetch(url, { headers: ghHeaders(token, "application/vnd.github.raw") });
+  if(resp.ok && (resp.headers.get("content-type")||"").indexOf("application/json") === -1){
+    return new Uint8Array(await resp.arrayBuffer());
+  }
+  resp = await fetch(url, { headers: ghHeaders(token, "application/vnd.github+json") });
+  if(!resp.ok) throw new Error(await ghError(resp));
+  const j = await resp.json();
+  if(Array.isArray(j)) throw new Error("지정한 경로가 파일이 아니라 디렉터리입니다. 파일 경로를 입력하세요.");
+  if(j.content && j.encoding === "base64") return b64ToUint8(j.content);
+  if(j.download_url){
+    const r2 = await fetch(j.download_url, { headers: token ? { "Authorization":"Bearer "+token } : {} });
+    if(!r2.ok) throw new Error("download_url 요청 실패 ("+r2.status+")");
+    return new Uint8Array(await r2.arrayBuffer());
+  }
+  throw new Error("파일 콘텐츠를 가져오지 못했습니다 (응답 형식 불일치).");
+}
+
+function ghCtx(){
+  return {
+    owner: $("ghOwner").value.trim(),
+    repo:  $("ghRepo").value.trim(),
+    dir:   $("ghDir").value.trim().replace(/^\/+|\/+$/g, ""),
+    ref:   $("ghRef").value.trim(),
+    token: $("ghToken").value.trim()
+  };
+}
+
+/* load the repo file list into the dropdown */
+async function refreshGhFileList(){
+  const { owner, repo, dir, ref, token } = ghCtx();
+  const msg = $("ghMsg");
+  if(!owner || !repo){ msg.className="msg err"; msg.textContent="owner / repo를 입력하세요."; return; }
+  msg.className="msg"; msg.textContent="파일 목록을 불러오는 중…";
+  try{
+    const files = await listGithubFiles(owner, repo, dir, ref, token);
+    const sel = $("ghFileSelect");
+    sel.innerHTML = "";
+    if(files.length===0){
+      $("ghFileRow").style.display = "none";
+      msg.className="msg err"; msg.textContent = "해당 위치에서 엑셀(.xlsx/.xlsm/.xls) 파일을 찾지 못했습니다.";
+      return;
+    }
+    files.forEach(f=>{
+      const o = document.createElement("option");
+      o.value = f.path;
+      o.textContent = f.name + "  (" + (f.size/1024).toFixed(0) + " KB)";
+      sel.appendChild(o);
+    });
+    $("ghFileRow").style.display = "flex";
+    msg.className="msg ok"; msg.textContent = files.length + "개 파일 발견. 선택 후 「선택 파일 불러오기」를 누르세요.";
+  }catch(err){
+    $("ghFileRow").style.display = "none";
+    msg.className="msg err"; msg.textContent = "목록 조회 실패: " + err.message;
+  }
+}
+$("btnGhList").addEventListener("click", refreshGhFileList);
+$("btnGhRefresh").addEventListener("click", refreshGhFileList);
+
+/* shared loader used by both dropdown and manual-path buttons */
+async function loadGhPath(path){
+  const ctx = ghCtx();
+  const msg = $("ghMsg");
+  let token = ctx.token;
+  if(!ctx.owner || !ctx.repo || !path){ msg.className="msg err"; msg.textContent="owner / repo / 파일 경로가 필요합니다."; return; }
+  msg.className="msg"; msg.textContent = "GitHub에서 「"+path+"」 불러오는 중…";
+  try{
+    const bytes = await fetchGithubFile(ctx.owner, ctx.repo, path, ctx.ref, token);
+    token = null; $("ghToken").value = "";   // wipe token from input & memory after use
+    parseWorkbookBytes(bytes, path.split("/").pop());
+    msg.className="msg ok"; msg.textContent = "✔ "+ctx.owner+"/"+ctx.repo+" · "+path+(ctx.ref?(" @"+ctx.ref):"")+" 불러오기 완료. 토큰은 입력란에서 지워졌습니다.";
+  }catch(err){
+    token = null;
+    msg.className="msg err"; msg.textContent = "불러오기 실패: " + err.message;
+  }
+}
+$("btnGhLoad").addEventListener("click", ()=>{
+  const path = $("ghFileSelect").value;
+  if(!path){ $("ghMsg").className="msg err"; $("ghMsg").textContent="먼저 「파일 목록 불러오기」로 파일을 선택하세요."; return; }
+  loadGhPath(path);
+});
+$("btnGhLoadManual").addEventListener("click", ()=>{
+  loadGhPath($("ghPath").value.trim().replace(/^\/+/, ""));
+});
+function parseWorkbookBytes(bytes, fname){
+  try{
+    const wb = XLSX.read(bytes, {type:"array", cellDates:false});
+    let sheetName = wb.SheetNames.includes("D") ? "D" : wb.SheetNames[0];
+    const ws = wb.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:null});
+    indexSheet(rows, fname, sheetName);
+  }catch(err){
+    $("uploadErr").textContent = "엑셀 해석 실패: " + err.message;
+  }
+}
+
+$("tickerInput").addEventListener("input", ()=>previewTickers());
+$("btnDetectAll").addEventListener("click", ()=>{
+  if(!SHEET) return;
+  // all TOT_RETURN columns except the benchmark tickers
+  const bmU = ($("bmUsTicker").value||"").toUpperCase(), bmK = ($("bmKrTicker").value||"").toUpperCase();
+  const list = SHEET.cols.filter(c=>c.isRet)
+    .filter(c=>!c.ticker.toUpperCase().includes(bmU) && !c.ticker.toUpperCase().includes(bmK))
+    .map(c=>c.ticker);
+  $("tickerInput").value = list.join("\n");
+  previewTickers();
+});
+$("btnUseDefault").addEventListener("click", ()=>{
+  if(!SHEET) return;
+  $("tickerInput").value = DEFAULT_TICKERS.filter(t=>resolveTickerCol(t)!==null).join("\n");
+  previewTickers();
+});
+$("btnLoadTickers").addEventListener("click", buildDataFromTickers);
+
+function excelSerialToDate(n){ return new Date(Math.round((n - 25569) * 86400 * 1000)); }
+function toDateUTC(v){
+  if(v instanceof Date) return new Date(Date.UTC(v.getFullYear(), v.getMonth(), v.getDate()));
+  if(typeof v === "number" && v > 20000 && v < 80000){
+    const d = excelSerialToDate(v);
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  }
+  return null;
+}
+
+function handleFile(file){
+  $("uploadErr").textContent = "";
+  const reader = new FileReader();
+  reader.onload = e => parseWorkbookBytes(new Uint8Array(e.target.result), file.name);
+  reader.readAsArrayBuffer(file);
+}
+
+function indexSheet(rows, fname, sheetName){
+  // header rows: row7(idx6)=Notation/name, row8(idx7)=ticker, row9(idx8)=field; data from row10
+  let nameRow = -1;
+  for(let r=0; r<Math.min(rows.length, 30); r++){
+    if(rows[r] && String(rows[r][0]).trim() === "Notation"){ nameRow = r; break; }
+  }
+  if(nameRow < 0) nameRow = 6;
+  const tickerRow = rows[nameRow+1] || [];
+  const fieldRow = rows[nameRow+2] || [];
+  const durRow = rows[nameRow-2] || [];
+  // build column index: ticker(upper) -> col, and a list of TOT_RETURN columns
+  const colByTicker = {};      // exact upper ticker -> col
+  const cols = [];             // {c, ticker, name, field, isRet}
+  const ncol = Math.max(...rows.slice(0, nameRow+3).map(r=>r?r.length:0));
+  for(let c=1;c<ncol;c++){
+    const t = tickerRow[c]; if(t==null) continue;
+    const tk = String(t).trim();
+    if(!tk) continue;
+    const nm = (rows[nameRow] && rows[nameRow][c]!=null) ? String(rows[nameRow][c]) : "";
+    const fld = fieldRow[c]!=null ? String(fieldRow[c]) : "";
+    const dur = typeof durRow[c]==="number" ? durRow[c] : null;
+    colByTicker[tk.toUpperCase()] = c;
+    cols.push({c, ticker:tk, name:nm, field:fld, dur, isRet: /TOT_RETURN/i.test(fld)});
+  }
+  SHEET = {rows, nameRow, cols, colByTicker, fname, sheetName};
+  // reveal ticker panel; prefill with defaults that exist in the file
+  $("tickerPanel").classList.remove("hidden");
+  const present = DEFAULT_TICKERS.filter(t=>resolveTickerCol(t)!==null);
+  $("tickerInput").value = present.join("\n");
+  $("fileMeta").innerHTML = "✔ <b>"+fname+"</b> · 시트 「"+sheetName+"」 · 인식된 시계열 "+cols.length+"개 (TOT_RETURN "+cols.filter(c=>c.isRet).length+"개) · 아래에서 분석 티커를 선택하세요.";
+  $("tickerMsg").textContent = "";
+  $("tickerPreview").classList.add("hidden");
+  previewTickers();
+  window.scrollTo({top:$("tickerPanel").offsetTop-10, behavior:"smooth"});
+}
+
+function resolveTickerCol(query){
+  if(!SHEET) return null;
+  const q = String(query).trim().toUpperCase();
+  if(!q) return null;
+  if(SHEET.colByTicker[q]!==undefined) return SHEET.colByTicker[q];
+  // partial / token match: prefer TOT_RETURN columns, then any
+  const cands = SHEET.cols.filter(c=>c.ticker.toUpperCase().includes(q) || q.includes(c.ticker.toUpperCase().split(" ")[0]));
+  if(cands.length===0){
+    // match by first token (e.g. "SHY" matches "SHY US EQUITY")
+    const tok = q.split(/\s+/)[0];
+    const c2 = SHEET.cols.filter(c=>c.ticker.toUpperCase().split(" ")[0]===tok);
+    if(c2.length){ const ret=c2.find(c=>c.isRet); return (ret||c2[0]).c; }
+    return null;
+  }
+  const ret = cands.find(c=>c.isRet);
+  return (ret||cands[0]).c;
+}
+function colMeta(c){ return SHEET.cols.find(x=>x.c===c); }
+
+function parseTickerList(){
+  return $("tickerInput").value.split(/[\n,;]+/).map(s=>s.trim()).filter(Boolean);
+}
+function previewTickers(){
+  const list = parseTickerList();
+  const tb = $("tickerPreviewTable").querySelector("tbody");
+  tb.innerHTML = "";
+  if(list.length===0){ $("tickerPreview").classList.add("hidden"); return; }
+  $("tickerPreview").classList.remove("hidden");
+  list.forEach(q=>{
+    const c = resolveTickerCol(q);
+    const tr = document.createElement("tr");
+    if(c===null){
+      tr.innerHTML = "<td style='color:var(--neg)'>✗</td><td style='text-align:left'>"+q+"</td><td colspan='4' style='text-align:left; color:var(--neg)'>파일에서 찾지 못함</td>";
+    } else {
+      const m = colMeta(c);
+      const {first, n} = columnStats(c);
+      tr.innerHTML = "<td style='color:var(--accent)'>✓</td><td style='text-align:left'>"+q+"</td>"+
+        "<td style='text-align:left'>"+m.ticker+"</td><td style='text-align:left'>"+(m.name||"–")+"</td>"+
+        "<td>"+(first?fmtDate(first):"–")+"</td><td>"+n.toLocaleString()+"</td>";
+    }
+    tb.appendChild(tr);
+  });
+}
+function columnStats(c){
+  const rows = SHEET.rows, nameRow = SHEET.nameRow;
+  let first=null, n=0;
+  for(let r=nameRow+1;r<rows.length;r++){
+    const d = toDateUTC(rows[r]?rows[r][0]:null);
+    const v = rows[r]?rows[r][c]:null;
+    if(d && typeof v==="number" && isFinite(v)){ if(!first||d<first) first=d; n++; }
+  }
+  return {first, n};
+}
+
+function buildDataFromTickers(){
+  $("tickerMsg").textContent = "";
+  if(!SHEET){ return; }
+  const list = parseTickerList();
+  if(list.length<2){ $("tickerMsg").className="msg err"; $("tickerMsg").textContent="최소 2개 이상의 자산 티커가 필요합니다."; return; }
+  // resolve investable assets (dedupe by column)
+  const assetCols = [], assetNames = [], assetTickers = [], assetDur = [];
+  const seenCol = new Set();
+  const missing = [];
+  list.forEach(q=>{
+    const c = resolveTickerCol(q);
+    if(c===null){ missing.push(q); return; }
+    if(seenCol.has(c)) return;
+    seenCol.add(c);
+    const m = colMeta(c);
+    assetCols.push(c); assetTickers.push(m.ticker);
+    assetNames.push(m.name && m.name.trim() ? m.name : m.ticker.split(" ")[0]);
+    assetDur.push(m.dur);
+  });
+  if(assetCols.length<2){ $("tickerMsg").className="msg err"; $("tickerMsg").textContent="유효한 자산이 2개 미만입니다. 티커를 확인하세요."; return; }
+  // resolve benchmarks
+  const bmUsC = resolveTickerCol($("bmUsTicker").value);
+  const bmKrC = resolveTickerCol($("bmKrTicker").value);
+  if(bmUsC===null || bmKrC===null){
+    $("tickerMsg").className="msg err";
+    $("tickerMsg").textContent="벤치마크 티커를 찾지 못했습니다 ("+(bmUsC===null?$("bmUsTicker").value:"")+" "+(bmKrC===null?$("bmKrTicker").value:"")+"). 정확한 티커를 입력하세요.";
+    return;
+  }
+  // assemble block: [assets..., BM_US, BM_KR]
+  const blockCols = [...assetCols, bmUsC, bmKrC];
+  N_COL = blockCols.length;
+  BM_US_IDX = assetCols.length;
+  BM_KR_IDX = assetCols.length+1;
+  const names = [...assetNames, (colMeta(bmUsC).name||"미국종합"), (colMeta(bmKrC).name||"한국종합")];
+  const tickers = [...assetTickers, colMeta(bmUsC).ticker, colMeta(bmKrC).ticker];
+  const durations = [...assetDur, colMeta(bmUsC).dur, colMeta(bmKrC).dur];
+  // disambiguate duplicate display names
+  const seen = {};
+  for(let j=0;j<N_COL;j++){
+    if(seen[names[j]]!==undefined){ names[j] = names[j]+"("+tickers[j].split(" ")[0]+")"; }
+    else seen[names[j]] = j;
+  }
+  // resolve yield-curve & spread columns by ticker
+  const ycResolve = arr => arr.map(t=>{ const c=resolveTickerCol(t); return c; });
+  const YC_US_C = ycResolve(YC_US_TICKERS), YC_KR_C = ycResolve(YC_KR_TICKERS);
+  const IG_C = resolveTickerCol(IG_OAS_TICKER), HY_C = resolveTickerCol(HY_OAS_TICKER);
+  const YC_COLS = [...YC_US_C, ...YC_KR_C, IG_C, HY_C];   // may contain nulls
+  const factorsAvail = YC_US_C.every(c=>c!==null) || YC_KR_C.every(c=>c!==null);
+
+  // collect data rows
+  const rows = SHEET.rows, nameRow = SHEET.nameRow;
+  const dates = [], raw = [], ycRaw = [];
+  for(let r=nameRow+1; r<rows.length; r++){
+    const d = toDateUTC(rows[r] ? rows[r][0] : null);
+    if(!d) continue;
+    const v = new Array(N_COL).fill(null);
+    let any = false;
+    for(let j=0;j<N_COL;j++){
+      const x = rows[r][blockCols[j]];
+      if(typeof x === "number" && isFinite(x)){ v[j] = x; any = true; }
+    }
+    if(any){
+      dates.push(d); raw.push(v);
+      ycRaw.push(YC_COLS.map(c=>{ if(c===null) return null; const x = rows[r][c]; return (typeof x === "number" && isFinite(x)) ? x : null; }));
+    }
+  }
+  if(dates.length < 50){ $("tickerMsg").className="msg err"; $("tickerMsg").textContent="선택한 티커들의 공통 일간 데이터가 부족합니다."; return; }
+  // sort + forward-fill
+  const order = dates.map((d,i)=>i).sort((a,b)=>dates[a]-dates[b]);
+  const sDates = order.map(i=>dates[i]), sRaw = order.map(i=>raw[i]), sYC = order.map(i=>ycRaw[i]);
+  const firstValid = new Array(N_COL).fill(null);
+  const px = sRaw.map(r=>r.slice());
+  for(let j=0;j<N_COL;j++){
+    let lastv = null;
+    for(let i=0;i<px.length;i++){
+      if(px[i][j] != null){ if(firstValid[j]===null) firstValid[j]=sDates[i]; lastv = px[i][j]; }
+      else if(lastv != null) px[i][j] = lastv;
+    }
+  }
+  const yc = sYC.map(r=>r.slice());
+  for(let j=0;j<YC_COLS.length;j++){
+    let lastv = null;
+    for(let i=0;i<yc.length;i++){
+      if(yc[i][j] != null) lastv = yc[i][j];
+      else if(lastv != null) yc[i][j] = lastv;
+    }
+  }
+  DATA = {dates:sDates, px, yc, names, tickers, durations, firstValid,
+          fname:SHEET.fname, sheetName:SHEET.sheetName, nAssets:assetCols.length, factorsAvail};
+  computeNSSFactors();
+  let meta = "✔ <b>"+SHEET.fname+"</b> · 자산 "+assetCols.length+"종 + 벤치마크 2 · 거래일 "+sDates.length.toLocaleString()+"개 · "
+    + fmtDate(sDates[0]) + " ~ " + fmtDate(sDates[sDates.length-1]);
+  if(!factorsAvail) meta += ' <span class="badge" style="color:var(--neg)">NSS 커브 미탐지 → 팩터회귀 비활성</span>';
+  if(missing.length) meta += ' <span class="badge" style="color:var(--neg)">미매칭 '+missing.length+"개</span>";
+  $("fileMeta").innerHTML = meta;
+  $("tickerMsg").className="msg ok";
+  $("tickerMsg").textContent = "분석 자산 "+assetCols.length+"종 로드 완료"+(missing.length?(" (미매칭: "+missing.join(", ")+")"):"")+".";
+
+  // default analysis window: max(2013-01-01, benchmark common start)
+  const bmCommon = new Date(Math.max(firstValid[BM_US_IDX], firstValid[BM_KR_IDX]));
+  const defStart = new Date(Math.max(bmCommon.getTime(), Date.UTC(2013,0,1)));
+  $("startDate").value = fmtDate(defStart);
+  $("endDate").value = fmtDate(sDates[sDates.length-1]);
+  ["sec-settings","sec-stats","sec-optim","sec-weights","sec-backtest"].forEach(id=>$(id).classList.remove("hidden"));
+  buildWeightTable();
+  buildUniverse();
+  computeStats();
+  loadSaved();
+  window.scrollTo({top:$("sec-settings").offsetTop-10, behavior:"smooth"});
+}
+
+/* ============================================================
+   RETURNS & STATS
+============================================================ */
+function windowIndices(){
+  const s = new Date($("startDate").value || fmtDate(DATA.dates[0]));
+  const e = new Date($("endDate").value || fmtDate(DATA.dates[DATA.dates.length-1]));
+  const idx = [];
+  for(let i=0;i<DATA.dates.length;i++) if(DATA.dates[i]>=s && DATA.dates[i]<=e) idx.push(i);
+  return idx;
+}
+// daily simple returns for column j over row indices (null until 2nd valid obs)
+function colReturns(j, idx){
+  const out = new Array(idx.length).fill(null);
+  for(let k=1;k<idx.length;k++){
+    const p0 = DATA.px[idx[k-1]][j], p1 = DATA.px[idx[k]][j];
+    if(p0 != null && p1 != null && p0 !== 0) out[k] = p1/p0 - 1;
+  }
+  return out;
+}
+function meanStd(arr){
+  const v = arr.filter(x=>x!==null);
+  const n = v.length;
+  if(n<2) return {n, mean:null, sd:null};
+  const m = v.reduce((a,b)=>a+b,0)/n;
+  const sd = Math.sqrt(v.reduce((a,b)=>a+(b-m)*(b-m),0)/(n-1));
+  return {n, mean:m, sd};
+}
+
+/* ---------- statistical inference helpers ---------- */
+function gammln(x){
+  const c=[76.18009172947146,-86.50532032941677,24.01409824083091,
+           -1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5];
+  let y=x, tmp=x+5.5; tmp-=(x+0.5)*Math.log(tmp);
+  let ser=1.000000000190015;
+  for(let j=0;j<6;j++) ser+=c[j]/++y;
+  return -tmp+Math.log(2.5066282746310005*ser/x);
+}
+function betacf(a,b,x){
+  const MAXIT=300, EPS=3e-12, FPMIN=1e-300;
+  const qab=a+b, qap=a+1, qam=a-1;
+  let c=1, d=1-qab*x/qap;
+  if(Math.abs(d)<FPMIN) d=FPMIN;
+  d=1/d; let h=d;
+  for(let m=1;m<=MAXIT;m++){
+    const m2=2*m;
+    let aa=m*(b-m)*x/((qam+m2)*(a+m2));
+    d=1+aa*d; if(Math.abs(d)<FPMIN)d=FPMIN;
+    c=1+aa/c; if(Math.abs(c)<FPMIN)c=FPMIN;
+    d=1/d; h*=d*c;
+    aa=-(a+m)*(qab+m)*x/((a+m2)*(qap+m2));
+    d=1+aa*d; if(Math.abs(d)<FPMIN)d=FPMIN;
+    c=1+aa/c; if(Math.abs(c)<FPMIN)c=FPMIN;
+    d=1/d; const del=d*c; h*=del;
+    if(Math.abs(del-1)<EPS) break;
+  }
+  return h;
+}
+function ibeta(a,b,x){
+  if(x<=0) return 0;
+  if(x>=1) return 1;
+  const bt=Math.exp(gammln(a+b)-gammln(a)-gammln(b)+a*Math.log(x)+b*Math.log(1-x));
+  return x < (a+1)/(a+b+2) ? bt*betacf(a,b,x)/a : 1-bt*betacf(b,a,1-x)/b;
+}
+function tPval(t, df){       // two-sided p-value of Student-t
+  if(t===null||!isFinite(t)||df<1) return null;
+  return ibeta(df/2, 0.5, df/(df+t*t));
+}
+function sigStars(p){ return (p===null) ? "" : (p<0.01?"***":(p<0.05?"**":(p<0.10?"*":""))); }
+function tTestMean(arr){     // H0: mean = 0
+  const ms = meanStd(arr);
+  if(ms.mean===null||ms.sd===0) return {t:null,p:null,n:ms.n};
+  const t = ms.mean/(ms.sd/Math.sqrt(ms.n));
+  return {t, p:tPval(t, ms.n-1), n:ms.n, mean:ms.mean, sd:ms.sd};
+}
+function olsAlphaBeta(y, x){ // r_p = a + b r_bm + e ; arrays aligned, nulls skipped
+  let n=0,sx=0,sy=0,sxx=0,sxy=0,syy=0;
+  for(let k=0;k<y.length;k++){
+    const a=y[k], b=x[k];
+    if(a===null||b===null) continue;
+    n++; sx+=b; sy+=a; sxx+=b*b; sxy+=a*b; syy+=a*a;
+  }
+  if(n<10) return null;
+  const mx=sx/n, my=sy/n, Sxx=sxx-n*mx*mx;
+  if(Sxx<=0) return null;
+  const beta=(sxy-n*mx*my)/Sxx, alpha=my-beta*mx;
+  let sse=0;
+  for(let k=0;k<y.length;k++){
+    const a=y[k], b=x[k];
+    if(a===null||b===null) continue;
+    const e=a-alpha-beta*b; sse+=e*e;
+  }
+  const s2=sse/(n-2);
+  const seA=Math.sqrt(s2*(1/n+mx*mx/Sxx)), seB=Math.sqrt(s2/Sxx);
+  const Syy=syy-n*my*my, r2= Syy>0 ? 1-sse/Syy : null;
+  const tA=alpha/seA, tB=beta/seB;
+  return {alpha,beta,tA,tB,pA:tPval(tA,n-2),pB:tPval(tB,n-2),r2,n};
+}
+
+let STATS = null;
+function computeStats(){
+  const idx = windowIndices();
+  if(idx.length < 30){ alert("선택 기간의 거래일이 너무 적습니다."); return; }
+  const rets = [], stats = [];
+  for(let j=0;j<N_COL;j++){
+    const r = colReturns(j, idx);
+    rets.push(r);
+    const ms = meanStd(r);
+    const tt = tTestMean(r);
+    stats.push({
+      name:DATA.names[j], ticker:DATA.tickers[j], dur:DATA.durations[j],
+      first:DATA.firstValid[j], n:ms.n,
+      meanD: ms.mean===null?null:ms.mean*100,
+      sdD: ms.sd===null?null:ms.sd*100,
+      annR: ms.mean===null?null:(Math.pow(1+ms.mean,ANN)-1)*100,
+      annV: ms.sd===null?null:ms.sd*Math.sqrt(ANN)*100,
+      tstat: tt.t, pval: tt.p
+    });
+  }
+  STATS = {idx, rets, stats};
+  renderStatsTable();
+  renderCorr();
+  fillUnivHist();
+}
+
+function renderStatsTable(){
+  const tb = $("statsTable").querySelector("tbody");
+  tb.innerHTML = "";
+  STATS.stats.forEach((s,j)=>{
+    const isBM = j>=BM_US_IDX;
+    const tr = document.createElement("tr");
+    if(isBM) tr.style.background = "var(--accent-soft)";
+    tr.innerHTML =
+      "<td>"+s.name+(isBM?' <span class="badge">BM</span>':"")+"</td>"+
+      "<td style='text-align:left'>"+s.ticker+"</td>"+
+      "<td>"+(s.dur===null?"–":fmt(s.dur,2))+"</td>"+
+      "<td>"+fmtDate(s.first)+"</td>"+
+      "<td>"+(s.n||0).toLocaleString()+"</td>"+
+      "<td class='"+signClass(s.meanD)+"'>"+fmt(s.meanD,4)+"</td>"+
+      "<td>"+fmt(s.sdD,4)+"</td>"+
+      "<td class='"+signClass(s.annR)+"'>"+fmt(s.annR,2)+"</td>"+
+      "<td>"+fmt(s.annV,2)+"</td>"+
+      "<td>"+fmt(s.tstat,2)+"</td>"+
+      "<td>"+(s.pval===null?"–":fmt(s.pval,3))+"<sup class='sig'>"+sigStars(s.pval)+"</sup></td>";
+    tb.appendChild(tr);
+  });
+  // significance legend under the table (once)
+  if(!document.getElementById("statsLegend")){
+    const p = document.createElement("p");
+    p.id = "statsLegend"; p.className = "note"; p.style.marginTop = "6px";
+    p.textContent = "주: t(μ=0)는 일평균수익률이 0이라는 귀무가설에 대한 양측 t-검정. 유의수준: * p<0.10, ** p<0.05, *** p<0.01.";
+    $("statsTable").parentElement.after(p);
+  }
+}
+
+function renderCorr(){
+  const th = $("corrTable").querySelector("thead");
+  const tb = $("corrTable").querySelector("tbody");
+  const shortName = n => n.length>7 ? n.slice(0,7) : n;
+  let h = "<tr><th></th>";
+  for(let j=0;j<N_COL;j++) h += "<th>"+shortName(DATA.names[j])+"</th>";
+  th.innerHTML = h + "</tr>";
+  tb.innerHTML = "";
+  const {C, M} = corrMatrix();
+  for(let i=0;i<N_COL;i++){
+    const tr = document.createElement("tr");
+    let row = "<td style='white-space:nowrap'>"+DATA.names[i]+"</td>";
+    for(let j=0;j<N_COL;j++){
+      const c = C[i][j], m = M[i][j];
+      if(c===null){ row += "<td>–</td>"; continue; }
+      let p = null;
+      if(i!==j && m>2 && Math.abs(c)<1){
+        const t = c*Math.sqrt(m-2)/Math.sqrt(1-c*c);
+        p = tPval(t, m-2);
+      }
+      const alpha = Math.min(Math.abs(c),1)*0.55;
+      const bg = c>=0 ? "rgba(31,58,110,"+alpha.toFixed(3)+")" : "rgba(160,48,48,"+alpha.toFixed(3)+")";
+      const fg = Math.abs(c)>0.65 ? "#ffffff" : "var(--ink)";
+      const tip = "n="+m+(p===null?"":", p="+(p<0.001?"<0.001":p.toFixed(3)));
+      row += "<td style='background:"+bg+"; color:"+fg+"' title='"+tip+"'>"+c.toFixed(2)
+           + (i===j?"":"<sup class='sig'>"+sigStars(p)+"</sup>")+"</td>";
+    }
+    tr.innerHTML = row; tb.appendChild(tr);
+  }
+}
+function corrMatrix(){
+  const R = STATS.rets, n = N_COL;
+  const C = Array.from({length:n},()=>new Array(n).fill(null));
+  const M = Array.from({length:n},()=>new Array(n).fill(0));
+  for(let i=0;i<n;i++) for(let j=i;j<n;j++){
+    let sx=0,sy=0,sxx=0,syy=0,sxy=0,m=0;
+    for(let k=0;k<R[i].length;k++){
+      const a=R[i][k], b=R[j][k];
+      if(a===null||b===null) continue;
+      sx+=a; sy+=b; sxx+=a*a; syy+=b*b; sxy+=a*b; m++;
+    }
+    M[i][j]=M[j][i]=m;
+    if(m>20){
+      const cov = sxy/m - (sx/m)*(sy/m);
+      const vx = sxx/m-(sx/m)**2, vy = syy/m-(sy/m)**2;
+      const c = (vx>0&&vy>0)? cov/Math.sqrt(vx*vy) : null;
+      C[i][j]=C[j][i]=c;
+    }
+  }
+  return {C, M};
+}
+$("toggleCorr").addEventListener("click", ()=>$("corrWrap").classList.toggle("hidden"));
+$("applySettings").addEventListener("click", ()=>{ computeStats(); buildUniverse(); });
+
+/* ============================================================
+   WEIGHT INPUT & PORTFOLIO RECORDS
+============================================================ */
+const PF_COUNT = 3;
+function buildWeightTable(){
+  const eq = +(100/BM_US_IDX).toFixed(1);
+  let h1 = "<th rowspan='3'>자산</th><th rowspan='3'>티커</th><th rowspan='3'>듀레이션</th><th rowspan='3'>데이터 시작</th>";
+  for(let p=0;p<PF_COUNT;p++) h1 += "<th><input type='text' class='pf-name' data-p='"+p+"' value='Portfolio "+(p+1)+"' style='width:130px; font-family:inherit; font-size:13px; padding:3px 5px; border:1px solid var(--rule)'></th>";
+  h1 += "<th>균등비중 EW</th>";
+  $("wtHeadName").innerHTML = h1;
+  let h2 = "";
+  for(let p=0;p<PF_COUNT;p++) h2 += "<th><input type='date' class='pf-date' data-p='"+p+"' style='font-family:inherit; font-size:12px; padding:2px 4px; border:1px solid var(--rule); width:130px'></th>";
+  h2 += "<th><span class='note'>(자동)</span></th>";
+  $("wtHeadCtl").innerHTML = h2;
+  let h3 = "";
+  for(let p=0;p<PF_COUNT;p++) h3 += "<th><button class='small pf-eq' data-p='"+p+"'>균등</button> <button class='small pf-save' data-p='"+p+"'>저장</button></th>";
+  h3 += "<th><button class='small' id='btnSaveEW'>저장</button></th>";
+  $("wtHeadCol").innerHTML = h3;
+  const tb = $("wtTable").querySelector("tbody");
+  tb.innerHTML = "";
+  const {kr, us} = assetOrderKRfirst();
+  const blocks = [["한국 (KR)", kr, "Kr"], ["미국 (US)", us, "Us"]];
+  for(const [label, list, tag] of blocks){
+    if(list.length===0) continue;
+    const hr = document.createElement("tr");
+    hr.innerHTML = "<td colspan='"+(4+PF_COUNT+1)+"' style='text-align:left; background:#eef1f6; font-weight:bold'>"+label+"</td>";
+    tb.appendChild(hr);
+    for(const j of list){
+      const tr = document.createElement("tr");
+      let cells =
+        "<td>"+DATA.names[j]+"</td>"+
+        "<td style='text-align:left'>"+DATA.tickers[j]+"</td>"+
+        "<td>"+(DATA.durations[j]===null?"–":fmt(DATA.durations[j],2))+"</td>"+
+        "<td>"+fmtDate(DATA.firstValid[j])+"</td>";
+      for(let p=0;p<PF_COUNT;p++)
+        cells += "<td><input type='number' class='wt-input' data-p='"+p+"' data-j='"+j+"' value='0' step='0.1' min='0' style='width:74px'></td>";
+      cells += "<td class='ew-cell' data-j='"+j+"'>"+fmt(eq,1)+"</td>";
+      tr.innerHTML = cells;
+      tb.appendChild(tr);
+    }
+    const sr = document.createElement("tr");
+    let scells = "<td colspan='4' style='text-align:right; font-weight:bold; background:#f7f9fc'>"+label.split(" ")[0]+" 합계</td>";
+    for(let p=0;p<PF_COUNT;p++) scells += "<td style='font-weight:bold; background:#f7f9fc' id='wtSum"+tag+p+"'>0.0%</td>";
+    scells += "<td style='font-weight:bold; background:#f7f9fc'>"+fmt(eq*list.length,1)+"%</td>";
+    sr.innerHTML = scells;
+    tb.appendChild(sr);
+  }
+  let f = "<td colspan='4' style='text-align:right; font-weight:bold'>합계</td>";
+  for(let p=0;p<PF_COUNT;p++) f += "<td class='wt-sum' id='wtSum"+p+"'>0.0%</td>";
+  f += "<td class='wt-sum'>100.0%</td>";
+  $("wtFoot").innerHTML = f;
+
+  tb.querySelectorAll(".wt-input").forEach(inp=>inp.addEventListener("input", ()=>updateWtSum(+inp.dataset.p)));
+  $("wtTable").querySelectorAll(".pf-eq").forEach(b=>b.addEventListener("click", e=>{
+    const p=+e.target.dataset.p, eq2=+(100/BM_US_IDX).toFixed(1);
+    const w={}; for(let j2=0;j2<BM_US_IDX;j2++) w[j2]=eq2;
+    setWeights(w,p);
+  }));
+  $("wtTable").querySelectorAll(".pf-save").forEach(b=>b.addEventListener("click", e=>savePortfolio(+e.target.dataset.p)));
+  $("btnSaveEW").addEventListener("click", ()=>{
+    const eq2=+(100/BM_US_IDX).toFixed(1); const w={}; for(let j2=0;j2<BM_US_IDX;j2++) w[j2]=eq2;
+    saveWeightsAs(w, "균등비중 (EW)", $("startDate").value);
+  });
+  for(let p=0;p<PF_COUNT;p++) updateWtSum(p);
+}
+function getWeights(p){
+  p = p||0;
+  const w = {};
+  document.querySelectorAll("#wtTable .wt-input[data-p='"+p+"']").forEach(inp=>{
+    const v = parseFloat(inp.value);
+    if(!isNaN(v) && v!==0) w[+inp.dataset.j] = v;
+  });
+  return w;
+}
+function setWeights(w, p){
+  p = p||0;
+  document.querySelectorAll("#wtTable .wt-input[data-p='"+p+"']").forEach(inp=>{
+    inp.value = w[+inp.dataset.j] !== undefined ? w[+inp.dataset.j] : 0;
+  });
+  updateWtSum(p);
+}
+function updateWtSum(p){
+  const w = getWeights(p);
+  const s = Object.values(w).reduce((a,b)=>a+b,0);
+  const el = $("wtSum"+p);
+  if(el){ el.textContent = fmt(s,1)+"%"; el.classList.toggle("bad", Math.abs(s-100)>0.01); }
+  const {kr, us} = assetOrderKRfirst();
+  for(const [list, tag] of [[kr,"Kr"],[us,"Us"]]){
+    const e = $("wtSum"+tag+p);
+    if(e) e.textContent = fmt(list.reduce((a,j)=>a+(w[j]||0),0),1)+"%";
+  }
+}
+$("btnNormalizeAll").addEventListener("click", ()=>{
+  for(let p=0;p<PF_COUNT;p++){
+    const w = getWeights(p);
+    const s = Object.values(w).reduce((a,b)=>a+b,0);
+    if(s<=0) continue;
+    const nw = {}; Object.keys(w).forEach(k=>nw[k]=+(w[k]/s*100).toFixed(1));
+    setWeights(nw,p);
+  }
+});
+$("btnClearAll").addEventListener("click", ()=>{ for(let p=0;p<PF_COUNT;p++) setWeights({},p); });
+$("btnCopyEW").addEventListener("click", ()=>{
+  const eq=+(100/BM_US_IDX).toFixed(1); const w={}; for(let j=0;j<BM_US_IDX;j++) w[j]=eq;
+  setWeights(w,0);
+});
+
+async function saveWeightsAs(w, name, effDate){
+  const msg = $("wtMsg");
+  const s = Object.values(w).reduce((a,b)=>a+b,0);
+  if(Object.keys(w).length===0){ msg.className="msg err"; msg.textContent="비중이 모두 0입니다."; return false; }
+  if(Math.abs(s-100)>0.01){ msg.className="msg err"; msg.textContent="「"+name+"」 비중 합계가 100%가 아닙니다 (현재 "+fmt(s,1)+"%). 「정규화」를 이용하세요."; return false; }
+  if(!effDate){ msg.className="msg err"; msg.textContent="적용일을 입력하세요."; return false; }
+  savedPortfolios.push({
+    id: Date.now() + "-" + Math.floor(Math.random()*1e4),
+    name, effDate,
+    savedAt: new Date().toISOString().replace("T"," ").slice(0,19),
+    weights: w, compare: true
+  });
+  await persistSaved();
+  renderSaved();
+  msg.className="msg ok"; msg.textContent = "「"+name+"」 (적용일 "+effDate+") 저장 완료. 백테스트 비교 대상에 포함되었습니다.";
+  return true;
+}
+function savePortfolio(p){
+  const w = getWeights(p);
+  const nameInp = document.querySelector(".pf-name[data-p='"+p+"']");
+  const dateInp = document.querySelector(".pf-date[data-p='"+p+"']");
+  const name = (nameInp.value.trim() || ("Portfolio "+(p+1)));
+  const eff = dateInp.value || $("startDate").value;
+  saveWeightsAs(w, name, eff);
+}
+
+function renderSaved(){
+  const tbl = $("savedTable"), tb = tbl.querySelector("tbody");
+  tb.innerHTML = "";
+  if(savedPortfolios.length===0){ tbl.classList.add("hidden"); $("savedEmpty").classList.remove("hidden"); return; }
+  tbl.classList.remove("hidden"); $("savedEmpty").classList.add("hidden");
+  const sorted = [...savedPortfolios].sort((a,b)=> (a.effDate||"")<(b.effDate||"") ? -1 : 1);
+  sorted.forEach(p=>{
+    const topW = Object.entries(p.weights).sort((a,b)=>b[1]-a[1]).slice(0,4)
+      .map(([j,v])=> (DATA?DATA.names[+j]:("#"+j)) + " " + fmt(v,1) + "%").join(", ");
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      "<td style='text-align:center'><input type='checkbox' "+(p.compare?"checked":"")+" data-id='"+p.id+"' class='cmp-chk'></td>"+
+      "<td style='text-align:left'><b>"+p.name+"</b></td>"+
+      "<td style='text-align:left'>"+(p.effDate||"–")+"</td>"+
+      "<td style='text-align:left'>"+p.savedAt+"</td>"+
+      "<td style='text-align:left'>"+topW+(Object.keys(p.weights).length>4?" 외":"")+"</td>"+
+      "<td><button class='small' data-load='"+p.id+"'>불러오기</button> <button class='small' data-del='"+p.id+"'>삭제</button></td>";
+    tb.appendChild(tr);
+  });
+  tb.querySelectorAll(".cmp-chk").forEach(c=>c.addEventListener("change", async e=>{
+    const p = savedPortfolios.find(x=>x.id===e.target.dataset.id);
+    if(p){ p.compare = e.target.checked; await persistSaved(); }
+  }));
+  tb.querySelectorAll("[data-load]").forEach(b=>b.addEventListener("click", e=>{
+    const p = savedPortfolios.find(x=>x.id===e.target.dataset.load);
+    if(p){
+      setWeights(p.weights, 0);
+      const n0 = document.querySelector(".pf-name[data-p='0']"); if(n0) n0.value = p.name;
+      const d0 = document.querySelector(".pf-date[data-p='0']"); if(d0 && p.effDate) d0.value = p.effDate;
+      window.scrollTo({top:$("sec-weights").offsetTop, behavior:"smooth"});
+    }
+  }));
+  tb.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click", async e=>{
+    savedPortfolios = savedPortfolios.filter(x=>x.id!==e.target.dataset.del);
+    await persistSaved(); renderSaved();
+  }));
+}
+
+/* ---------- weight history Excel round-trip ---------- */
+$("btnDlHistory").addEventListener("click", ()=>{
+  if(!DATA){ return; }
+  if(savedPortfolios.length===0){ $("histMsg").className="msg err"; $("histMsg").textContent="저장된 기록이 없습니다."; return; }
+  const wb = XLSX.utils.book_new();
+  const aoa = [["포트폴리오 비중 기록 — 이 파일을 「비중 기록 업로드」로 다시 불러오면 이력이 복원됩니다. 비중 단위: %, 적용일 형식: YYYY-MM-DD"],
+               [],
+               ["이름","적용일","저장시각", ...DATA.tickers.slice(0,BM_US_IDX)],
+               ["","","(자산명)", ...DATA.names.slice(0,BM_US_IDX)]];
+  const sorted = [...savedPortfolios].sort((a,b)=> (a.effDate||"")<(b.effDate||"") ? -1 : 1);
+  sorted.forEach(p=>{
+    const row = [p.name, p.effDate||"", p.savedAt];
+    for(let j=0;j<BM_US_IDX;j++) row.push(p.weights[j]!==undefined ? p.weights[j] : 0);
+    aoa.push(row);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws["!cols"] = [{wch:28},{wch:12},{wch:20}, ...Array.from({length:BM_US_IDX},()=>({wch:13}))];
+  XLSX.utils.book_append_sheet(wb, ws, "WeightHistory");
+  XLSX.writeFile(wb, "weight_history_"+new Date().toISOString().slice(0,10)+".xlsx");
+  $("histMsg").className="msg ok"; $("histMsg").textContent = sorted.length+"건 다운로드 완료.";
+});
+
+$("btnUlHistory").addEventListener("click", ()=>$("historyFile").click());
+$("historyFile").addEventListener("change", e=>{
+  if(!e.target.files.length) return;
+  const f = e.target.files[0];
+  const reader = new FileReader();
+  reader.onload = ev=>{
+    try{ importWeightHistory(new Uint8Array(ev.target.result), f.name); }
+    catch(err){ $("histMsg").className="msg err"; $("histMsg").textContent="업로드 실패: "+err.message; }
+    e.target.value = "";
+  };
+  reader.readAsArrayBuffer(f);
+});
+async function importWeightHistory(buf, fname){
+  const wb = XLSX.read(buf, {type:"array"});
+  const sn = wb.SheetNames.includes("WeightHistory") ? "WeightHistory" : wb.SheetNames[0];
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, raw:true, defval:null});
+  // locate header row: contains "이름" and "적용일"
+  let hr = -1;
+  for(let r=0;r<Math.min(rows.length,15);r++){
+    const a = (rows[r]||[]).map(x=>String(x||"").trim());
+    if(a.includes("이름") && a.includes("적용일")){ hr = r; break; }
+  }
+  if(hr<0) throw new Error("헤더 행(이름/적용일)을 찾지 못했습니다.");
+  const head = rows[hr].map(x=>String(x||"").trim());
+  const cName = head.indexOf("이름"), cDate = head.indexOf("적용일");
+  // map asset columns by ticker first, then by asset name
+  const colMap = {};   // sheet col -> asset idx j
+  head.forEach((h,c)=>{
+    if(!h || c===cName || c===cDate) return;
+    let j = DATA.tickers.slice(0,BM_US_IDX).indexOf(h);
+    if(j<0) j = DATA.names.slice(0,BM_US_IDX).indexOf(h);
+    if(j>=0) colMap[c] = j;
+  });
+  if(Object.keys(colMap).length===0) throw new Error("자산 칼럼(티커/자산명)을 찾지 못했습니다.");
+  let added=0, skipped=0;
+  for(let r=hr+1;r<rows.length;r++){
+    const row = rows[r];
+    if(!row || row[cName]===null || String(row[cName]).trim()==="" || String(row[cName]).startsWith("(")) continue;
+    // effective date: string / Date / serial
+    let eff = row[cDate];
+    if(typeof eff === "number") eff = fmtDate(excelSerialToDate(eff));
+    else if(eff instanceof Date) eff = fmtDate(eff);
+    else eff = String(eff||"").slice(0,10);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(eff)){ skipped++; continue; }
+    const w = {};
+    let s = 0;
+    Object.entries(colMap).forEach(([c,j])=>{
+      const v = row[+c];
+      if(typeof v === "number" && v>0){ w[j] = +v.toFixed(1); s += v; }
+    });
+    if(Object.keys(w).length===0){ skipped++; continue; }
+    if(Math.abs(s-100)>0.5){  // normalize if off
+      Object.keys(w).forEach(k=>w[k]=+(w[k]/s*100).toFixed(1));
+    }
+    savedPortfolios.push({
+      id: Date.now()+"-"+r+"-"+Math.floor(Math.random()*1e3),
+      name: String(row[cName]).trim(), effDate: eff,
+      savedAt: new Date().toISOString().replace("T"," ").slice(0,19)+" (업로드)",
+      weights: w, compare: true
+    });
+    added++;
+  }
+  await persistSaved();
+  renderSaved();
+  $("histMsg").className = "msg ok";
+  $("histMsg").textContent = "「"+fname+"」에서 "+added+"건 불러옴"+(skipped?" ("+skipped+"건 건너뜀: 날짜/비중 형식 확인)":"")+".";
+}
+
+/* ---------- matrix helpers ---------- */
+function matMul(A,B){
+  const n=A.length, m=B[0].length, p=B.length;
+  const C=Array.from({length:n},()=>new Array(m).fill(0));
+  for(let i=0;i<n;i++) for(let k=0;k<p;k++){ const a=A[i][k]; for(let j=0;j<m;j++) C[i][j]+=a*B[k][j]; }
+  return C;
+}
+function matInv(A0){
+  const n=A0.length;
+  const A=A0.map((r,i)=>[...r, ...Array.from({length:n},(_,j)=>i===j?1:0)]);
+  for(let c=0;c<n;c++){
+    let piv=c;
+    for(let r=c+1;r<n;r++) if(Math.abs(A[r][c])>Math.abs(A[piv][c])) piv=r;
+    if(Math.abs(A[piv][c])<1e-14) return null;
+    [A[c],A[piv]]=[A[piv],A[c]];
+    const d=A[c][c];
+    for(let j=0;j<2*n;j++) A[c][j]/=d;
+    for(let r=0;r<n;r++){
+      if(r===c) continue;
+      const f=A[r][c];
+      if(f===0) continue;
+      for(let j=0;j<2*n;j++) A[r][j]-=f*A[c][j];
+    }
+  }
+  return A.map(r=>r.slice(n));
+}
+
+/* ---------- NSS (Nelson–Siegel–Svensson) curve factors ---------- */
+function computeNSSFactors(){
+  // fixed-tau NSS: y(m) = b0 + b1·f1(m) + b2·f2(m) + b3·f3(m), daily OLS via precomputed pseudo-inverse
+  const X = TENORS.map(m=>{
+    const a1 = (1-Math.exp(-m/NSS_T1))/(m/NSS_T1);
+    const a2 = a1 - Math.exp(-m/NSS_T1);
+    const a3 = (1-Math.exp(-m/NSS_T2))/(m/NSS_T2) - Math.exp(-m/NSS_T2);
+    return [1, a1, a2, a3];
+  });
+  const Xt = [0,1,2,3].map(i=>X.map(r=>r[i]));               // 4x7
+  const XtX = matMul(Xt, X);
+  const P = matMul(matInv(XtX), Xt);                          // 4x7 pseudo-inverse
+  const T = DATA.dates.length;
+  const mk = ()=>({L:new Array(T).fill(null), S:new Array(T).fill(null), C:new Array(T).fill(null), B3:new Array(T).fill(null)});
+  const us = mk(), kr = mk();
+  const ig = new Array(T).fill(null), hy = new Array(T).fill(null);
+  let usFirst=null, krFirst=null;
+  for(let i=0;i<T;i++){
+    const row = DATA.yc[i];
+    // US curve = cols 0..6, KR curve = cols 7..13, IG = 14, HY = 15
+    for(const [off, F] of [[0,us],[7,kr]]){
+      let ok = true;
+      for(let j=0;j<7;j++) if(row[off+j]===null){ ok=false; break; }
+      if(!ok) continue;
+      const b = [0,1,2,3].map(k=>{ let s=0; for(let j=0;j<7;j++) s+=P[k][j]*row[off+j]; return s; });
+      F.L[i]=b[0]; F.S[i]=-b[1]; F.C[i]=b[2]; F.B3[i]=b[3];
+      if(off===0 && usFirst===null) usFirst=DATA.dates[i];
+      if(off===7 && krFirst===null) krFirst=DATA.dates[i];
+    }
+    ig[i]=row[14]; hy[i]=row[15];
+  }
+  NSSF = {us, kr, ig, hy, usFirst, krFirst};
+}
+
+/* ---------- multi-factor OLS with Newey–West (HAC) standard errors ---------- */
+function olsNW(y, Xcols, L){
+  const k = Xcols.length+1;
+  const rows = [];
+  for(let t=0;t<y.length;t++){
+    if(y[t]===null||y[t]===undefined) continue;
+    let ok = true;
+    const r = [1];
+    for(const xc of Xcols){
+      const v = xc[t];
+      if(v===null||v===undefined){ ok=false; break; }
+      r.push(v);
+    }
+    if(ok) rows.push({x:r, y:y[t]});
+  }
+  const n = rows.length;
+  if(n < k+20) return null;
+  const XtX = Array.from({length:k},()=>new Array(k).fill(0));
+  const Xty = new Array(k).fill(0);
+  for(const r of rows){
+    for(let i=0;i<k;i++){
+      Xty[i]+=r.x[i]*r.y;
+      for(let j=0;j<k;j++) XtX[i][j]+=r.x[i]*r.x[j];
+    }
+  }
+  const XtXi = matInv(XtX);
+  if(!XtXi) return null;
+  const b = XtXi.map(row=>{ let s=0; for(let i=0;i<k;i++) s+=row[i]*Xty[i]; return s; });
+  const e = rows.map(r=>{ let f=0; for(let i=0;i<k;i++) f+=b[i]*r.x[i]; return r.y-f; });
+  // Newey–West S with Bartlett kernel
+  const S = Array.from({length:k},()=>new Array(k).fill(0));
+  for(let l=0;l<=L;l++){
+    const w = l===0 ? 1 : 1-l/(L+1);
+    for(let t=l;t<n;t++){
+      const c = w*e[t]*e[t-l], xt = rows[t].x, xs = rows[t-l].x;
+      for(let i=0;i<k;i++) for(let j=0;j<k;j++){
+        S[i][j] += c*xt[i]*xs[j];
+        if(l>0) S[i][j] += c*xs[i]*xt[j];
+      }
+    }
+  }
+  const V = matMul(matMul(XtXi,S),XtXi);
+  const se = b.map((_,i)=>Math.sqrt(Math.max(V[i][i],0)));
+  const tst = b.map((bi,i)=> se[i]>0 ? bi/se[i] : null);
+  const my = rows.reduce((a,r)=>a+r.y,0)/n;
+  const sst = rows.reduce((a,r)=>a+(r.y-my)*(r.y-my),0);
+  const sse = e.reduce((a,x)=>a+x*x,0);
+  return {b, se, t:tst, p:tst.map(x=>x===null?null:tPval(x,n-k)), r2: sst>0?1-sse/sst:null, n};
+}
+/* ============================================================
+   MEAN-VARIANCE OPTIMIZATION ENGINE
+   Long-only, weight-cap constrained, projected (mirror-descent) solver
+============================================================ */
+let lastOptim = null;       // {label, weights:{j:pct}, expRet, expVol, sharpe, period, n}
+let lastOptimRuns = [];     // history for Excel export
+let lastFrontier = null;
+
+function assetOrderKRfirst(){
+  const kr=[], us=[];
+  for(let j=0;j<BM_US_IDX;j++) (isKRasset(j)?kr:us).push(j);
+  return {kr, us};
+}
+function buildUniverse(){
+  const tb = $("univTable").querySelector("tbody");
+  tb.innerHTML = "";
+  const winStart = new Date($("startDate").value || fmtDate(DATA.dates[0]));
+  const {kr, us} = assetOrderKRfirst();
+  const blocks = [["한국 (KR)", kr, "Kr"], ["미국 (US)", us, "Us"]];
+  for(const [label, list, tag] of blocks){
+    if(list.length===0) continue;
+    const hr = document.createElement("tr");
+    hr.innerHTML = "<td colspan='8' style='text-align:left; background:#eef1f6; font-weight:bold'>"+label+" — "+list.length+"종</td>";
+    tb.appendChild(hr);
+    for(const j of list){
+      const late = DATA.firstValid[j] === null || DATA.firstValid[j] > winStart;
+      const tr = document.createElement("tr");
+      tr.innerHTML =
+        "<td style='text-align:center'><input type='checkbox' class='univ-chk' data-j='"+j+"' checked></td>"+
+        "<td"+(late?" class='late'":"")+">"+DATA.names[j]+"</td>"+
+        "<td style='text-align:left'>"+DATA.tickers[j]+"</td>"+
+        "<td"+(late?" class='late'":"")+">"+fmtDate(DATA.firstValid[j])+"</td>"+
+        "<td class='univ-hist' data-j='"+j+"'>–</td>"+
+        "<td><input type='number' class='wt-input univ-er' data-j='"+j+"' step='0.1' placeholder='(과거치)' style='width:90px'></td>"+
+        "<td><input type='number' class='wt-input univ-min' data-j='"+j+"' value='1' step='0.5' min='0' max='100'></td>"+
+        "<td><input type='number' class='wt-input univ-max' data-j='"+j+"' value='30' step='0.5' min='0' max='100'></td>";
+      tb.appendChild(tr);
+    }
+    const sr = document.createElement("tr");
+    sr.innerHTML = "<td colspan='6' style='text-align:right; font-weight:bold; background:#f7f9fc'>"+label.split(" ")[0]+" 합계 <span class='note' id='univCnt"+tag+"'></span></td>"+
+      "<td style='font-weight:bold; background:#f7f9fc' id='univMin"+tag+"'>–</td>"+
+      "<td style='font-weight:bold; background:#f7f9fc' id='univMax"+tag+"'>–</td>";
+    tb.appendChild(sr);
+  }
+  tb.querySelectorAll(".univ-chk,.univ-min,.univ-max").forEach(el=>{
+    el.addEventListener("input", updateUnivSums);
+    el.addEventListener("change", updateUnivSums);
+  });
+  fillUnivHist();
+  updateUnivSums();
+}
+function updateUnivSums(){
+  const {kr, us} = assetOrderKRfirst();
+  for(const [list, tag] of [[kr,"Kr"],[us,"Us"]]){
+    let mn=0, mx=0, cnt=0;
+    for(const j of list){
+      const chk = document.querySelector(".univ-chk[data-j='"+j+"']");
+      if(!chk || !chk.checked) continue;
+      cnt++;
+      mn += parseFloat(document.querySelector(".univ-min[data-j='"+j+"']").value)||0;
+      mx += parseFloat(document.querySelector(".univ-max[data-j='"+j+"']").value)||0;
+    }
+    const eMin=$("univMin"+tag), eMax=$("univMax"+tag), eCnt=$("univCnt"+tag);
+    if(eMin){ eMin.textContent = fmt(mn,1)+"%"; eMax.textContent = fmt(mx,1)+"%"; eCnt.textContent = "(선택 "+cnt+"종)"; }
+  }
+}
+function histMuAnn(j){  // arithmetic annualized mean over the asset's available data in the window (%)
+  if(!STATS || !STATS.stats[j] || STATS.stats[j].meanD===null) return null;
+  return STATS.stats[j].meanD*ANN;
+}
+function fillUnivHist(){
+  document.querySelectorAll(".univ-hist").forEach(td=>{
+    const m = histMuAnn(+td.dataset.j);
+    td.textContent = m===null ? "–" : fmt(m,2);
+  });
+}
+$("btnFillHist").addEventListener("click", ()=>{
+  document.querySelectorAll(".univ-er").forEach(inp=>{
+    const m = histMuAnn(+inp.dataset.j);
+    if(m!==null) inp.value = m.toFixed(1);
+  });
+});
+$("btnClearER").addEventListener("click", ()=>{
+  document.querySelectorAll(".univ-er").forEach(inp=>inp.value="");
+});
+$("btnCapAll").addEventListener("click", ()=>{
+  const cap = Math.max(1, Math.min(100, parseFloat($("optCap").value)||100));
+  document.querySelectorAll(".univ-max").forEach(inp=>inp.value=cap);
+});
+function dot(a,b){ let s=0; for(let i=0;i<a.length;i++) s+=a[i]*b[i]; return s; }
+function matVec(S,w){ return S.map(row=>dot(row,w)); }
+
+// daily mu / Sigma over common window for given columns -> annualized (x252)
+function covMatrix(cols, idx){
+  // annualized (×252) sample covariance of daily returns over row indices idx
+  const R = cols.map(j=>colReturns(j, idx));
+  const n = cols.length;
+  const md = R.map(r=>{ let s=0,m=0; for(let k=1;k<r.length;k++){ if(r[k]!==null){s+=r[k];m++;} } return m?s/m:0; });
+  const S = Array.from({length:n},()=>new Array(n).fill(0));
+  for(let i=0;i<n;i++) for(let j2=i;j2<n;j2++){
+    let s=0,m=0;
+    for(let k=1;k<R[i].length;k++){
+      const a=R[i][k], b=R[j2][k];
+      if(a===null||b===null) continue;
+      s+=(a-md[i])*(b-md[j2]); m++;
+    }
+    S[i][j2]=S[j2][i] = (m>1 ? s/(m-1) : 0)*ANN;
+  }
+  return S;
+}
+function estimateMuSigma(cols){
+  let idx = windowIndices();
+  let minStart = null;
+  for(const j of cols){
+    const f = DATA.firstValid[j];
+    if(f===null) return {err:"자산 「"+DATA.names[j]+"」의 데이터가 없습니다."};
+    if(minStart===null || f>minStart) minStart = f;
+  }
+  idx = idx.filter(i=>DATA.dates[i]>=minStart);
+  if(idx.length<60) return {err:"공통 추정 기간이 너무 짧습니다 (시작 가능일: "+fmtDate(minStart)+")."};
+  const R = cols.map(j=>colReturns(j, idx));
+  const n = cols.length, T = R[0].length;
+  const mu = R.map(r=>{ let s=0,m=0; for(let k=1;k<T;k++){ if(r[k]!==null){s+=r[k];m++;} } return s/m*ANN; });
+  const S = Array.from({length:n},()=>new Array(n).fill(0));
+  const md = R.map(r=>{ let s=0,m=0; for(let k=1;k<T;k++){ if(r[k]!==null){s+=r[k];m++;} } return s/m; });
+  for(let i=0;i<n;i++) for(let j2=i;j2<n;j2++){
+    let s=0,m=0;
+    for(let k=1;k<T;k++){
+      const a=R[i][k], b=R[j2][k];
+      if(a===null||b===null) continue;
+      s+=(a-md[i])*(b-md[j2]); m++;
+    }
+    S[i][j2]=S[j2][i] = (m>1 ? s/(m-1) : 0)*ANN;
+  }
+  return {mu, S, idx, start:minStart, T:idx.length};
+}
+
+// minimize f over {w >= 0, sum w = 1} via normalized exponentiated-gradient descent
+function mirrorDescent(n, gradFn, iters){
+  let w = new Array(n).fill(1/n);
+  for(let t=0;t<iters;t++){
+    const g = gradFn(w);
+    let gmax = 1e-12;
+    for(const x of g) gmax = Math.max(gmax, Math.abs(x));
+    const eta = 0.5/gmax/(1+t/400);
+    let s = 0;
+    for(let i=0;i<n;i++){ w[i] = w[i]*Math.exp(-eta*g[i]); s += w[i]; }
+    for(let i=0;i<n;i++) w[i] /= s;
+  }
+  return w;
+}
+function projBS(w, lb, ub, n, target){
+  // in-place exact projection onto {lb<=w<=ub, sum w = target}: w_i = clip(w_i - lam)
+  const tg = target===undefined ? 1 : target;
+  let lo=-4, hi=4;
+  for(let it=0; it<64; it++){
+    const lam=(lo+hi)/2;
+    let s=0;
+    for(let i=0;i<n;i++){
+      let x=w[i]-lam;
+      if(x<lb[i]) x=lb[i]; else if(x>ub[i]) x=ub[i];
+      s+=x;
+    }
+    if(s>tg) lo=lam; else hi=lam;
+  }
+  const lam=(lo+hi)/2;
+  for(let i=0;i<n;i++){
+    let x=w[i]-lam;
+    if(x<lb[i]) x=lb[i]; else if(x>ub[i]) x=ub[i];
+    w[i]=x;
+  }
+  return w;
+}
+function projSub(w, lb, ub, idxs, target){
+  // in-place projection of the subvector w[idxs] onto {box, sum = target}
+  let lo=-4, hi=4;
+  for(let it=0; it<64; it++){
+    const lam=(lo+hi)/2;
+    let s=0;
+    for(const i of idxs){
+      let x=w[i]-lam;
+      if(x<lb[i]) x=lb[i]; else if(x>ub[i]) x=ub[i];
+      s+=x;
+    }
+    if(s>target) lo=lam; else hi=lam;
+  }
+  const lam=(lo+hi)/2;
+  for(const i of idxs){
+    let x=w[i]-lam;
+    if(x<lb[i]) x=lb[i]; else if(x>ub[i]) x=ub[i];
+    w[i]=x;
+  }
+}
+function projGrouped(w, lb, ub, n, grp){
+  // exact projection onto {box, Σw=1, grp.lo ≤ Σ_{US} w ≤ grp.hi} for a 2-group partition.
+  // d(s)=min‖w−v‖² s.t. Σ_US=s is convex; the plain projection's US share s̃ minimizes it,
+  // so the optimal group share is clip(s̃). When binding, project the ORIGINAL subvectors.
+  if(!grp){ projBS(w, lb, ub, n, 1); return w; }
+  const v = w.slice();
+  projBS(w, lb, ub, n, 1);
+  let s=0;
+  for(const i of grp.us) s+=w[i];
+  const sStar = Math.min(Math.max(s, grp.lo), grp.hi);
+  if(Math.abs(sStar - s) < 1e-12) return w;
+  for(let i=0;i<n;i++) w[i]=v[i];
+  projSub(w, lb, ub, grp.us, sStar);
+  projSub(w, lb, ub, grp.kr, 1 - sStar);
+  return w;
+}
+function projBoxSimplex(v, lb, ub){
+  return projBS(v.slice(), lb, ub, v.length);
+}
+function lmaxOf(S, n){
+  // largest eigenvalue via power iteration (S symmetric PSD)
+  let v=new Array(n).fill(1/Math.sqrt(n));
+  const tmp=new Array(n);
+  let lam=1e-12;
+  for(let it=0;it<50;it++){
+    let nrm=0;
+    for(let i=0;i<n;i++){
+      const Si=S[i]; let s=0;
+      for(let k=0;k<n;k++) s+=Si[k]*v[k];
+      tmp[i]=s; nrm+=s*s;
+    }
+    nrm=Math.sqrt(nrm);
+    if(nrm<1e-15) break;
+    lam=nrm;
+    for(let i=0;i<n;i++) v[i]=tmp[i]/nrm;
+  }
+  return lam;
+}
+function solveMeanVar(S, mu, gamma, lb, ub, iters, w0, grp){
+  // FISTA (accelerated projected gradient) on  w'Σw − γ·w'μ  over the (group-)constrained simplex
+  const n = S.length;
+  const w=new Array(n), y=new Array(n), wPrev=new Array(n), g=new Array(n);
+  for(let i=0;i<n;i++) w[i] = w0 ? w0[i] : 1/n;
+  projGrouped(w, lb, ub, n, grp);
+  for(let i=0;i<n;i++){ y[i]=w[i]; wPrev[i]=w[i]; }
+  const eta = 1/(2*lmaxOf(S,n) + 1e-12);
+  let tk = 1;
+  const TT = iters||3000;
+  for(let t=0;t<TT;t++){
+    for(let i=0;i<n;i++){
+      const Si=S[i]; let s=0;
+      for(let k=0;k<n;k++) s+=Si[k]*y[k];
+      g[i] = 2*s - gamma*mu[i];
+    }
+    for(let i=0;i<n;i++){ wPrev[i]=w[i]; w[i]=y[i]-eta*g[i]; }
+    projGrouped(w, lb, ub, n, grp);
+    const tk1 = (1+Math.sqrt(1+4*tk*tk))/2;
+    const beta = (tk-1)/tk1;
+    for(let i=0;i<n;i++) y[i] = w[i] + beta*(w[i]-wPrev[i]);
+    tk = tk1;
+  }
+  return w;
+}
+function findGammaMax(S, mu, lb, ub, retMax, grp){
+  let g = 0.01;
+  while(g < 2000 && dot(solveMeanVar(S,mu,g,lb,ub,1200,null,grp), mu) < retMax-1e-5) g *= 2.5;
+  return g;
+}
+function solveTargetReturn(S, mu, tgt, lb, ub, gMax, grp){
+  let lo=0, hi=gMax;
+  for(let it=0;it<14;it++){
+    const g=(lo+hi)/2;
+    const w=solveMeanVar(S,mu,g,lb,ub,2000,null,grp);
+    if(dot(w,mu)<tgt) lo=g; else hi=g;
+  }
+  return solveMeanVar(S,mu,(lo+hi)/2,lb,ub,4000,null,grp);
+}
+function goldenMaxSharpe(S, mu, rf, lb, ub, gMax, grp){
+  const sh = g=>{ const w=solveMeanVar(S,mu,g,lb,ub,2000,null,grp); const pr=portRiskRet(w,S,mu); return {w, s: pr.vol>0?(pr.ret-rf)/pr.vol:-1e9}; };
+  const phi=(Math.sqrt(5)-1)/2;
+  let a=0, b=gMax, c=b-phi*(b-a), d=a+phi*(b-a);
+  let fc=sh(c).s, fd=sh(d).s;
+  for(let it=0;it<22;it++){
+    if(fc>fd){ b=d; d=c; fd=fc; c=b-phi*(b-a); fc=sh(c).s; }
+    else { a=c; c=d; fc=fd; d=a+phi*(b-a); fd=sh(d).s; }
+  }
+  return solveMeanVar(S,mu,(a+b)/2,lb,ub,5000,null,grp);
+}
+function enforceBounds(w, lb, ub){
+  // clip into [lb,ub] and redistribute the residual among assets with remaining room
+  const n = w.length;
+  for(let i=0;i<n;i++) w[i] = Math.min(Math.max(w[i], lb[i]), ub[i]);
+  for(let pass=0; pass<60; pass++){
+    let s = w.reduce((a,b)=>a+b,0);
+    const d = 1 - s;
+    if(Math.abs(d) < 1e-10) break;
+    let room = 0;
+    for(let i=0;i<n;i++) room += d>0 ? (ub[i]-w[i]) : (w[i]-lb[i]);
+    if(room <= 1e-12) break;
+    for(let i=0;i<n;i++){
+      const r = d>0 ? (ub[i]-w[i]) : (w[i]-lb[i]);
+      w[i] += d*r/room;
+      w[i] = Math.min(Math.max(w[i], lb[i]), ub[i]);
+    }
+  }
+  return w;
+}
+function solveRiskParity(S, lb, ub){
+  const n = S.length;
+  const obj = w=>{
+    const Sw = matVec(S,w), tot = dot(w,Sw);
+    let f=0;
+    for(let i=0;i<n;i++){ const rc=w[i]*Sw[i]/tot-1/n; f+=rc*rc; }
+    for(let i=0;i<n;i++){
+      const eu=Math.max(0,w[i]-ub[i]), el=Math.max(0,lb[i]-w[i]);
+      f += 50*(eu*eu+el*el);
+    }
+    return f;
+  };
+  const grad = w=>{           // numerical gradient (n is small)
+    const g = new Array(n), h = 1e-6, f0 = obj(w);
+    for(let i=0;i<n;i++){
+      const wi = w[i]; w[i] = wi+h;
+      g[i] = (obj(w)-f0)/h;
+      w[i] = wi;
+    }
+    return g;
+  };
+  return enforceBounds(mirrorDescent(n, grad, 2500), lb, ub);
+}
+function maxReturnUnderBounds(mu, lb, ub){
+  const n = mu.length;
+  const w = lb.slice();
+  let rem = 1 - lb.reduce((a,b)=>a+b,0);
+  const ord = mu.map((m,i)=>i).sort((a,b)=>mu[b]-mu[a]);
+  for(const i of ord){
+    if(rem<=1e-12) break;
+    const take = Math.min(ub[i]-w[i], rem);
+    w[i]+=take; rem-=take;
+  }
+  return dot(w,mu);
+}
+function maxReturnGrouped(mu, lb, ub, grp){
+  // max μ'w s.t. box, Σw=1, US share ∈ [grp.lo, grp.hi]: 1-D search over the share s
+  const fill = (idxs, target)=>{
+    // greedy: start at lb, pour (target − Σlb) into highest-μ assets up to ub; returns return contribution
+    let rem = target;
+    const w = {};
+    for(const i of idxs){ w[i]=lb[i]; rem-=lb[i]; }
+    const ord = [...idxs].sort((a,b)=>mu[b]-mu[a]);
+    for(const i of ord){
+      if(rem<=1e-12) break;
+      const take = Math.min(ub[i]-w[i], rem);
+      w[i]+=take; rem-=take;
+    }
+    let r=0;
+    for(const i of idxs) r+=w[i]*mu[i];
+    return r;
+  };
+  let best=-Infinity;
+  const NPTS=41;
+  for(let k=0;k<NPTS;k++){
+    const s = grp.lo + (grp.hi-grp.lo)*k/(NPTS-1);
+    best = Math.max(best, fill(grp.us, s) + fill(grp.kr, 1-s));
+  }
+  return best;
+}
+function maxSharpeDirect(S, mu, rf, lb, ub){
+  // mirror ascent on Sharpe ratio (quasi-concave on the simplex), multi-start
+  const n = mu.length;
+  const sharpe = w=>{ const m=dot(w,mu)-rf, s=Math.sqrt(dot(w,matVec(S,w))); return s>0?m/s:-1e9; };
+  const iv = S.map((r,i)=>1/Math.sqrt(Math.max(S[i][i],1e-12)));
+  const ivs = iv.reduce((a,b)=>a+b,0);
+  const starts = [new Array(n).fill(1/n), iv.map(x=>x/ivs)];
+  let bestW=null, bestS=-1e9;
+  for(const w0 of starts){
+    let w = w0.slice();
+    for(let t=0;t<6000;t++){
+      const Sw = matVec(S,w), v = dot(w,Sw), s = Math.sqrt(v), m = dot(w,mu)-rf;
+      const g = new Array(n);
+      for(let i=0;i<n;i++) g[i] = mu[i]/s - m*Sw[i]/(v*s);
+      for(let i=0;i<n;i++){
+        const eu=Math.max(0,w[i]-ub[i]), el=Math.max(0,lb[i]-w[i]);
+        if(eu>0) g[i]-=600*eu;
+        if(el>0) g[i]+=600*el;
+      }
+      let gmax=1e-12; for(const x of g) gmax=Math.max(gmax,Math.abs(x));
+      const eta = 0.5/gmax/(1+t/600);
+      let sum=0;
+      for(let i=0;i<n;i++){ w[i]*=Math.exp(eta*g[i]); sum+=w[i]; }
+      for(let i=0;i<n;i++) w[i]/=sum;
+    }
+    w = enforceBounds(w, lb, ub);
+    const sc = sharpe(w);
+    if(sc>bestS){ bestS=sc; bestW=w; }
+  }
+  return bestW;
+}
+function portRiskRet(w, S, mu){ return {ret:dot(w,mu), vol:Math.sqrt(Math.max(dot(w,matVec(S,w)),0))}; }
+
+/* ============================================================
+   ROBUST (RESAMPLED) EFFICIENT FRONTIER — Michaud-style Monte Carlo
+   Σ_b ~ Wishart(T−1, Σ̂)/(T−1) via Bartlett,  μ_b | Σ_b ~ N(μ̂, Σ_b·252/T)
+============================================================ */
+let _rnCache = null;
+function randn(){
+  if(_rnCache!==null){ const v=_rnCache; _rnCache=null; return v; }
+  let u=0; while(u===0) u=Math.random();
+  const v=Math.random(), r=Math.sqrt(-2*Math.log(u)), a=2*Math.PI*v;
+  _rnCache = r*Math.sin(a);
+  return r*Math.cos(a);
+}
+function chi2(df){  // Wilson–Hilferty approximation (df is large here: thousands)
+  const z=randn();
+  return Math.max(df*Math.pow(1-2/(9*df)+z*Math.sqrt(2/(9*df)),3), 1e-8);
+}
+function cholesky(S){
+  const n=S.length, L=Array.from({length:n},()=>new Array(n).fill(0));
+  for(let i=0;i<n;i++) for(let j=0;j<=i;j++){
+    let s=S[i][j];
+    for(let k=0;k<j;k++) s-=L[i][k]*L[j][k];
+    if(i===j) L[i][i]=Math.sqrt(Math.max(s,1e-12));
+    else L[i][j]=s/L[j][j];
+  }
+  return L;
+}
+function sampleEstimates(L, mu, T){
+  // L = chol(Σ̂_ann);  returns one simulated (μ_b, Σ_b) pair in annualized units
+  const n=mu.length;
+  const A=Array.from({length:n},()=>new Array(n).fill(0));
+  for(let i=0;i<n;i++){
+    A[i][i]=Math.sqrt(chi2(T-1-i));
+    for(let j=0;j<i;j++) A[i][j]=randn();
+  }
+  const LA=matMul(L,A);
+  const Sb=Array.from({length:n},()=>new Array(n).fill(0));
+  for(let i=0;i<n;i++) for(let j=i;j<n;j++){
+    let s=0;
+    for(let k=0;k<n;k++) s+=LA[i][k]*LA[j][k];
+    Sb[i][j]=Sb[j][i]=s/(T-1);
+  }
+  const Lb=cholesky(Sb);
+  const z=new Array(n);
+  for(let i=0;i<n;i++) z[i]=randn();
+  const f=Math.sqrt(ANN/T);          // Var(μ̂_ann) = Σ_ann·(252/T)
+  const mb=mu.map((m,i)=>{ let s=0; for(let k=0;k<=i;k++) s+=Lb[i][k]*z[k]; return m+s*f; });
+  return {mu:mb, S:Sb};
+}
+function quantileOf(arr, p){
+  const a=[...arr].sort((x,y)=>x-y);
+  const i=(a.length-1)*p, lo=Math.floor(i), hi=Math.ceil(i);
+  return a[lo]+(a[hi]-a[lo])*(i-lo);
+}
+async function runRobustFrontier(S, mu, lb, ub, T, B, gGrid, rf, extraGamma, progressEl, grp){
+  const K=gGrid.length, n=mu.length;
+  const L=cholesky(S);
+  const simPts=Array.from({length:K},()=>[]);
+  const wSum=Array.from({length:K},()=>new Array(n).fill(0));
+  const msrSum=new Array(n).fill(0);
+  const extraSum=new Array(n).fill(0);
+  const cloud=[];
+  for(let b=0;b<B;b++){
+    const est=sampleEstimates(L, mu, T);
+    let w0=null, bestS=-Infinity, bestW=null;
+    const line=[];
+    for(let k=0;k<K;k++){
+      const wk=solveMeanVar(est.S, est.mu, gGrid[k], lb, ub, 400, w0, grp);
+      w0=wk;
+      const pr=portRiskRet(wk, est.S, est.mu);
+      simPts[k].push({x:pr.vol*100, y:pr.ret*100});
+      for(let i=0;i<n;i++) wSum[k][i]+=wk[i];
+      line.push({x:pr.vol*100, y:pr.ret*100});
+      const sh=pr.vol>0?(pr.ret-rf)/pr.vol:-Infinity;
+      if(sh>bestS){ bestS=sh; bestW=wk; }
+    }
+    for(let i=0;i<n;i++) msrSum[i]+=bestW[i];
+    if(extraGamma!==null){
+      const we=solveMeanVar(est.S, est.mu, extraGamma, lb, ub, 400, w0, grp);
+      for(let i=0;i<n;i++) extraSum[i]+=we[i];
+    }
+    if(b<60) cloud.push(line);
+    if((b+1)%10===0 || b===B-1){
+      if(progressEl){ progressEl.className="msg"; progressEl.textContent="Monte Carlo 리샘플링 "+(b+1)+"/"+B+" 시뮬레이션 진행 중…"; }
+      await new Promise(r=>setTimeout(r,0));
+    }
+  }
+  // resampled frontier: rank(γ)-matched average weights, evaluated under base estimates
+  const resampled=[], resW=[];
+  for(let k=0;k<K;k++){
+    const w=projGrouped(enforceBounds(wSum[k].map(x=>x/B), lb, ub), lb, ub, n, grp);
+    resW.push(w);
+    const pr=portRiskRet(w, S, mu);
+    resampled.push({x:pr.vol*100, y:pr.ret*100});
+  }
+  const bands=simPts.map(pts=>{
+    const xs=pts.map(p=>p.x), ys=pts.map(p=>p.y);
+    return {x:quantileOf(xs,0.5), y50:quantileOf(ys,0.5),
+            y05:quantileOf(ys,0.05), y25:quantileOf(ys,0.25),
+            y75:quantileOf(ys,0.75), y95:quantileOf(ys,0.95)};
+  });
+  const msrW=projGrouped(enforceBounds(msrSum.map(x=>x/B), lb, ub), lb, ub, n, grp);
+  const extraW=extraGamma!==null ? projGrouped(enforceBounds(extraSum.map(x=>x/B), lb, ub), lb, ub, n, grp) : null;
+  return {resampled, resW, bands, cloud, msrW, extraW, B};
+}
+function niceStep(range, slots){
+  const raw = range/(slots||8);
+  const pow = Math.pow(10, Math.floor(Math.log10(Math.max(raw,1e-9))));
+  const m = raw/pow;
+  const s = m<=1 ? 1 : m<=2 ? 2 : m<=2.5 ? 2.5 : m<=5 ? 5 : 10;
+  return s*pow;
+}
+
+$("btnOptimize").addEventListener("click", runOptimization);
+async function runOptimization(){
+  $("optErr").textContent = "";
+  const cols = [...document.querySelectorAll(".univ-chk:checked")].map(c=>+c.dataset.j);
+  if(cols.length<2){ $("optErr").textContent="최소 2개 이상의 자산을 선택하세요."; return; }
+  // per-asset bounds (fractions)
+  const minMap={}, maxMap={}, erMap={};
+  document.querySelectorAll(".univ-min").forEach(i=>minMap[+i.dataset.j]=Math.max(0,Math.min(100,parseFloat(i.value)||0)));
+  document.querySelectorAll(".univ-max").forEach(i=>maxMap[+i.dataset.j]=Math.max(0,Math.min(100,isNaN(parseFloat(i.value))?100:parseFloat(i.value))));
+  document.querySelectorAll(".univ-er").forEach(i=>{ const v=parseFloat(i.value); if(!isNaN(v)) erMap[+i.dataset.j]=v; });
+  const lb = cols.map(j=>(minMap[j]||0)/100);
+  const ub = cols.map(j=>(maxMap[j]===undefined?100:maxMap[j])/100);
+  for(let i=0;i<cols.length;i++){
+    if(lb[i]>ub[i]){ $("optErr").textContent="「"+DATA.names[cols[i]]+"」의 최소비중이 최대비중보다 큽니다."; return; }
+  }
+  const sumLb = lb.reduce((a,b)=>a+b,0), sumUb = ub.reduce((a,b)=>a+b,0);
+  if(sumLb > 1.0001){ $("optErr").textContent="포함 자산의 최소비중 합("+fmt(sumLb*100,1)+"%)이 100%를 초과하여 실행 불가합니다."; return; }
+  if(sumUb < 0.9999){ $("optErr").textContent="포함 자산의 최대비중 합("+fmt(sumUb*100,1)+"%)이 100% 미만이어서 실행 불가합니다."; return; }
+  // group (currency-bloc) constraint: US total in [usLo,usHi], KR total in [krLo,krHi]
+  const gv = id => Math.max(0, Math.min(100, parseFloat($(id).value)||0))/100;
+  const usLo=gv("grpUsLo"), usHi=Math.max(gv("grpUsHi"), 0), krLo=gv("grpKrLo"), krHi=Math.max(gv("grpKrHi"), 0);
+  const grpActive = usLo>0 || usHi<1 || krLo>0 || krHi<1;
+  let grp = null;
+  if(grpActive){
+    const usIdx=[], krIdx=[];
+    cols.forEach((j,i)=>{ (isKRasset(j)?krIdx:usIdx).push(i); });
+    let sLbUS=0,sUbUS=0,sLbKR=0,sUbKR=0;
+    usIdx.forEach(i=>{ sLbUS+=lb[i]; sUbUS+=ub[i]; });
+    krIdx.forEach(i=>{ sLbKR+=lb[i]; sUbKR+=ub[i]; });
+    const sLo = Math.max(usLo, sLbUS, 1-krHi, 1-sUbKR);
+    const sHi = Math.min(usHi, sUbUS, 1-krLo, 1-sLbKR);
+    if(sLo > sHi + 1e-9){
+      $("optErr").textContent = "대분류 제약이 실행 불가합니다: 미국 합계 가능범위 ["+fmt(Math.max(usLo,sLbUS,1-sUbKR)*100,1)+"%, "
+        +fmt(Math.min(usHi,sUbUS)*100,1)+"%]와 한국 제약(합계 100% 조건)이 양립하지 않습니다. 그룹/자산별 최소·최대를 확인하세요.";
+      return;
+    }
+    grp = {us:usIdx, kr:krIdx, lo:sLo, hi:sHi};
+  }
+  const est = estimateMuSigma(cols);
+  if(est.err){ $("optErr").textContent = est.err; return; }
+  const {idx, start} = est;
+  let S = est.S.map(r=>r.slice());
+  // expected return: blend historical with keyed-in views
+  const blend = Math.max(0, Math.min(1, (parseFloat($("muBlend").value)||0)/100));
+  let nKeyed = 0;
+  const mu = est.mu.map((m,i)=>{
+    const j = cols[i];
+    if(erMap[j]!==undefined){ nKeyed++; return (1-blend)*m + blend*erMap[j]/100; }
+    return m;
+  });
+  // covariance shrinkage toward the diagonal
+  const lamS = Math.max(0, Math.min(1, parseFloat($("covShrink").value)||0));
+  if(lamS>0){
+    const n0 = S.length;
+    for(let i=0;i<n0;i++) for(let j2=0;j2<n0;j2++) if(i!==j2) S[i][j2]*=(1-lamS);
+  }
+  const rf = (parseFloat($("rfRate").value)||0)/100;
+  const method = $("optMethod").value;
+  const n = cols.length;
+
+  // classical frontier via risk-aversion (γ) parametrization, exact box-simplex projection
+  const wGMV = solveMeanVar(S, mu, 0, lb, ub, 4000, null, grp);
+  const gmvPt = portRiskRet(wGMV, S, mu);
+  const retMax = grp ? maxReturnGrouped(mu, lb, ub, grp) : maxReturnUnderBounds(mu, lb, ub);
+  const gMax = findGammaMax(S, mu, lb, ub, retMax, grp);
+  const NPTS = 35, frontier = [];
+  let wPrevF = wGMV;
+  for(let k=0;k<NPTS;k++){
+    const gam = gMax*Math.pow(k/(NPTS-1), 2);
+    const wk = k===0 ? wGMV : solveMeanVar(S, mu, gam, lb, ub, 1500, wPrevF, grp);
+    wPrevF = wk;
+    const pr = portRiskRet(wk, S, mu);
+    frontier.push({x:pr.vol*100, y:pr.ret*100});
+  }
+  frontier.sort((a,b)=>a.x-b.x);
+
+  // ----- robust (resampled) frontier via Monte Carlo -----
+  const useRobustW = $("mcRobustW").checked;
+  const B = Math.max(50, Math.min(1000, parseInt($("mcB").value,10)||200));
+  const K = 15;
+  const gGrid = Array.from({length:K},(_,k)=>gMax*Math.pow(k/(K-1),2));
+  const gammaRA = Math.max(0.1, parseFloat($("optGamma").value)||10);
+  const extraGamma = method==="ra" ? 2/gammaRA : null;
+  const btn = $("btnOptimize");
+  btn.disabled = true;
+  let robust = null;
+  try{
+    robust = await runRobustFrontier(S, mu, lb, ub, est.T, B, gGrid, rf, extraGamma, $("optErr"), grp);
+    $("optErr").textContent = "";
+  }catch(err){
+    $("optErr").className = "msg err";
+    $("optErr").textContent = "Monte Carlo 시뮬레이션 실패: " + err.message;
+  }finally{
+    btn.disabled = false;
+  }
+
+  // choose weights by method (robust = resampled average when enabled)
+  let w, label, robustUsed = false;
+  if(method==="gmv"){
+    if(useRobustW && robust){ w = robust.resW[0]; robustUsed = true; }
+    else w = wGMV;
+    label = "최소분산 (GMV)";
+  }
+  else if(method==="msr"){
+    if(useRobustW && robust){ w = robust.msrW; robustUsed = true; }
+    else {
+      const w1 = grp ? projGrouped(maxSharpeDirect(S, mu, rf, lb, ub), lb, ub, n, grp) : maxSharpeDirect(S, mu, rf, lb, ub);
+      const w2 = goldenMaxSharpe(S, mu, rf, lb, ub, gMax, grp);
+      const s1 = portRiskRet(w1,S,mu), s2 = portRiskRet(w2,S,mu);
+      const sh1 = s1.vol>0?(s1.ret-rf)/s1.vol:-1e9, sh2 = s2.vol>0?(s2.ret-rf)/s2.vol:-1e9;
+      w = sh1>=sh2 ? w1 : w2;
+    }
+    label = "최대 샤프 (Tangency)";
+  }
+  else if(method==="tgt"){
+    let tgt = (parseFloat($("optTarget").value)||0)/100;
+    const lo = Math.min(gmvPt.ret, retMax), hi = Math.max(gmvPt.ret, retMax);
+    if(tgt<lo || tgt>hi){
+      $("optErr").className = "msg err";
+      $("optErr").textContent = "목표수익률이 달성가능 범위("+fmt(lo*100)+"% ~ "+fmt(hi*100)+"%)를 벗어나 가장 가까운 값으로 조정했습니다.";
+      tgt = Math.min(Math.max(tgt, lo), hi);
+    }
+    if(useRobustW && robust){
+      // pick the resampled-frontier rank whose base-case return is closest to the target
+      let bi=0, bd=Infinity;
+      robust.resampled.forEach((p,k)=>{ const d=Math.abs(p.y/100-tgt); if(d<bd){bd=d; bi=k;} });
+      w = robust.resW[bi]; robustUsed = true;
+    } else {
+      w = solveTargetReturn(S, mu, tgt, lb, ub, gMax, grp);
+    }
+    label = "목표수익률 "+fmt(tgt*100)+"% 최소분산";
+  }
+  else if(method==="ra"){
+    if(useRobustW && robust && robust.extraW){ w = robust.extraW; robustUsed = true; }
+    else w = solveMeanVar(S, mu, 2/gammaRA, lb, ub, 5000, null, grp);
+    label = "위험회피 γ="+fmt(gammaRA,1);
+  }
+  else if(method==="rp"){
+    w = solveRiskParity(S, lb, ub);
+    if(grp) w = projGrouped(w, lb, ub, n, grp);
+    label = "위험균형 (Risk Parity)";
+  }
+  else {
+    w = enforceBounds(new Array(n).fill(1/n), lb, ub);
+    if(grp) w = projGrouped(w, lb, ub, n, grp);
+    label = "균등비중 (1/N)";
+  }
+  if(robustUsed) label += " · 로버스트";
+
+  // clean tiny weights (respecting lower bounds) & round to 0.1%
+  let wPct = w.map((x,i)=> (x*100 < 0.05 && lb[i]===0) ? 0 : x*100);
+  const s0 = wPct.reduce((a,b)=>a+b,0);
+  wPct = wPct.map(x=>+(x/s0*100).toFixed(1));
+  const pr = portRiskRet(wPct.map(x=>x/100), S, mu);
+  const sharpe = pr.vol>0 ? (pr.ret-rf)/pr.vol : null;
+  const weights = {};
+  cols.forEach((j,i)=>{ if(wPct[i]>0) weights[j] = wPct[i]; });
+  // fix rounding to exactly 100 (adjust largest position)
+  const keys = Object.keys(weights).sort((a,b)=>weights[b]-weights[a]);
+  const sumW = keys.reduce((a,k)=>a+weights[k],0);
+  if(keys.length) weights[keys[0]] = +(weights[keys[0]] + (100-sumW)).toFixed(1);
+
+  const hasBounds = lb.some(x=>x>0) || ub.some(x=>x<1);
+  const muDesc = nKeyed===0 ? "과거 평균"
+    : (blend>=1 ? "키인 "+nKeyed+"개" : "블렌딩 "+(blend*100).toFixed(0)+"% (키인 "+nKeyed+"개)");
+  const paramsDesc = "μ: "+muDesc + (lamS>0 ? " · Σ수축 λ="+lamS : "") + (hasBounds ? " · 자산별 제약" : "")
+                   + (grp ? " · US "+fmt(usLo*100,0)+"–"+fmt(usHi*100,0)+"% / KR "+fmt(krLo*100,0)+"–"+fmt(krHi*100,0)+"%" : "")
+                   + (robust ? " · MC B="+B : "");
+  const run = {id: Date.now()+"-"+Math.floor(Math.random()*1e3),
+               label, params: paramsDesc, weights, expRet:pr.ret*100, expVol:pr.vol*100, sharpe,
+               period: fmtDate(start)+" ~ "+$("endDate").value,
+               capPct: hasBounds ? "자산별 [최소,최대] 적용" : "제약 없음",
+               nAssets:cols.length, T:est.T,
+               color: PALETTE[lastOptimRuns.length % PALETTE.length]};
+  lastOptimRuns.push(run);
+  lastOptim = run;
+  lastFrontier = {frontier, cols, S, mu, idx, gmvPt, rf, robust, B, T:est.T};
+  renderOptim();
+  // auto-fill the chosen weight-input column (Step V)
+  const tgtP = parseInt($("optApplyTarget").value, 10);
+  if(tgtP >= 0 && tgtP < PF_COUNT){
+    setWeights(run.weights, tgtP);
+    const nm = document.querySelector(".pf-name[data-p='"+tgtP+"']");
+    if(nm) nm.value = run.label;
+    const dt = document.querySelector(".pf-date[data-p='"+tgtP+"']");
+    if(dt && !dt.value) dt.value = $("startDate").value;
+    $("optSummary").innerHTML += " <span class='num-pos'>→ Portfolio "+(tgtP+1)+" 칸에 자동입력됨</span>";
+  }
+}
+
+function renderOptim(){
+  $("optResult").classList.remove("hidden");
+  // Table 3a: run comparison
+  const cb = $("optCompare").querySelector("tbody");
+  cb.innerHTML = "";
+  lastOptimRuns.forEach((o,i)=>{
+    const topW = Object.entries(o.weights).sort((a,b)=>b[1]-a[1]).slice(0,3)
+      .map(([j,v])=>DATA.names[+j]+" "+fmt(v,1)+"%").join(", ");
+    const tr = document.createElement("tr");
+    if(lastOptim && o.id===lastOptim.id) tr.className = "run-selected";
+    tr.innerHTML =
+      "<td><span style='color:"+o.color+"'>◆</span> "+(i+1)+"</td>"+
+      "<td style='text-align:left'>"+o.label+"</td>"+
+      "<td style='text-align:left'>"+o.params+"</td>"+
+      "<td style='text-align:left'>"+o.period+"</td>"+
+      "<td class='"+signClass(o.expRet)+"'>"+fmt(o.expRet)+"</td>"+
+      "<td>"+fmt(o.expVol)+"</td>"+
+      "<td><b>"+fmt(o.sharpe)+"</b></td>"+
+      "<td style='text-align:left'>"+topW+(Object.keys(o.weights).length>3?" 외":"")+"</td>"+
+      "<td><button class='small' data-sel='"+o.id+"'>상세</button> <button class='small' data-rdel='"+o.id+"'>삭제</button></td>";
+    cb.appendChild(tr);
+  });
+  cb.querySelectorAll("[data-sel]").forEach(b=>b.addEventListener("click", e=>{
+    const o = lastOptimRuns.find(x=>x.id===e.target.dataset.sel);
+    if(o){ lastOptim = o; renderOptim(); }
+  }));
+  cb.querySelectorAll("[data-rdel]").forEach(b=>b.addEventListener("click", e=>{
+    lastOptimRuns = lastOptimRuns.filter(x=>x.id!==e.target.dataset.rdel);
+    if(lastOptim && lastOptim.id===e.target.dataset.rdel) lastOptim = lastOptimRuns[lastOptimRuns.length-1]||null;
+    if(lastOptimRuns.length===0){ $("optResult").classList.add("hidden"); return; }
+    renderOptim();
+  }));
+  // Table 3b: detail of selected run
+  const O = lastOptim;
+  if(!O) return;
+  $("optCaption").textContent = "Table 3b. 선택 실행 상세 — "+O.label+" ("+O.params+" · 추정 "+O.period+", "+O.T.toLocaleString()+"일)";
+  const tb = $("optTable").querySelector("tbody");
+  tb.innerHTML = "";
+  Object.entries(O.weights).sort((a,b)=>b[1]-a[1]).forEach(([j,v])=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = "<td>"+DATA.names[+j]+"</td><td style='text-align:left'>"+DATA.tickers[+j]+"</td><td><b>"+fmt(v,1)+"</b></td>";
+    tb.appendChild(tr);
+  });
+  $("optSummary").innerHTML = "기대수익률(연) <b>"+fmt(O.expRet)+"%</b> · 기대변동성(연) <b>"+fmt(O.expVol)+"%</b> · Sharpe <b>"+fmt(O.sharpe)+"</b> <span class='note'>(in-sample, 산술 연환산)</span>";
+  buildCmpRefOptions();
+  renderCmpTable();
+}
+function buildCmpRefOptions(){
+  const sel = $("cmpRef");
+  const prev = sel.value;
+  sel.innerHTML = "";
+  for(let p2=0;p2<PF_COUNT;p2++){
+    const nm = document.querySelector(".pf-name[data-p='"+p2+"']");
+    const o = document.createElement("option");
+    o.value = "pf:"+p2;
+    o.textContent = "입력칸: "+(nm && nm.value.trim() ? nm.value.trim() : "Portfolio "+(p2+1));
+    sel.appendChild(o);
+  }
+  [...savedPortfolios].reverse().forEach(s=>{
+    const o = document.createElement("option");
+    o.value = "saved:"+s.id;
+    o.textContent = "저장: "+s.name+(s.effDate?(" ("+s.effDate+"~)"):"");
+    sel.appendChild(o);
+  });
+  if([...sel.options].some(o=>o.value===prev)) sel.value = prev;
+  sel.onchange = renderCmpTable;
+}
+function cmpRefWeights(){
+  const v = $("cmpRef").value || "pf:0";
+  if(v.startsWith("pf:")) return getWeights(+v.slice(3));
+  const s = savedPortfolios.find(x=>x.id===v.slice(6));
+  return s ? s.weights : {};
+}
+function renderCmpTable(){
+  const runs = lastOptimRuns;
+  const ref = cmpRefWeights();
+  // header
+  let h = "<tr><th>자산</th><th>기준 비중(%)</th>";
+  runs.forEach((o,i)=>{ h += "<th>#"+(i+1)+" "+o.label+"</th>"; });
+  h += "</tr>";
+  $("cmpTable").querySelector("thead").innerHTML = h;
+  // asset rows: union of ref + runs, KR first
+  const universe = new Set(Object.keys(ref).map(Number));
+  runs.forEach(o=>Object.keys(o.weights).forEach(j=>universe.add(+j)));
+  const {kr, us} = assetOrderKRfirst();
+  const ordered = [...kr.filter(j=>universe.has(j)), ...us.filter(j=>universe.has(j))];
+  const tb = $("cmpTable").querySelector("tbody");
+  tb.innerHTML = "";
+  const cell = (w, base)=>{
+    if(w===0 && base===0) return "<td class='note'>–</td>";
+    const d = w-base;
+    return "<td>"+fmt(w,1)+" <span class='"+signClass(d)+"' style='font-size:12px'>("+(d>=0?"+":"")+fmt(d,1)+")</span></td>";
+  };
+  const blocks = [["한국 (KR)", kr.filter(j=>universe.has(j))], ["미국 (US)", us.filter(j=>universe.has(j))]];
+  for(const [label, list] of blocks){
+    if(list.length===0) continue;
+    const hr = document.createElement("tr");
+    hr.innerHTML = "<td colspan='"+(2+runs.length)+"' style='text-align:left; background:#eef1f6; font-weight:bold'>"+label+"</td>";
+    tb.appendChild(hr);
+    for(const j of list){
+      const base = ref[j]||0;
+      const tr = document.createElement("tr");
+      let cells = "<td>"+DATA.names[j]+"</td><td><b>"+fmt(base,1)+"</b></td>";
+      runs.forEach(o=>{ cells += cell(o.weights[j]||0, base); });
+      tr.innerHTML = cells;
+      tb.appendChild(tr);
+    }
+    // country subtotal
+    const sr = document.createElement("tr");
+    const baseSum = list.reduce((a,j)=>a+(ref[j]||0),0);
+    let scells = "<td style='text-align:right; font-weight:bold; background:#f7f9fc'>"+label.split(" ")[0]+" 합계</td>"
+               + "<td style='font-weight:bold; background:#f7f9fc'>"+fmt(baseSum,1)+"</td>";
+    runs.forEach(o=>{
+      const s = list.reduce((a,j)=>a+(o.weights[j]||0),0), d = s-baseSum;
+      scells += "<td style='font-weight:bold; background:#f7f9fc'>"+fmt(s,1)+" <span class='"+signClass(d)+"' style='font-size:12px'>("+(d>=0?"+":"")+fmt(d,1)+")</span></td>";
+    });
+    sr.innerHTML = scells;
+    tb.appendChild(sr);
+  }
+  // total footer
+  const refTot = Object.values(ref).reduce((a,b)=>a+b,0);
+  let f = "<tr style='font-weight:bold'><td>합계</td><td>"+fmt(refTot,1)+"</td>";
+  runs.forEach(o=>{ f += "<td>"+fmt(Object.values(o.weights).reduce((a,b)=>a+b,0),1)+"</td>"; });
+  f += "</tr>";
+  $("cmpTable").querySelector("tfoot").innerHTML = f;
+}
+
+$("btnClearRuns").addEventListener("click", ()=>{
+  lastOptimRuns = []; lastOptim = null;
+  $("optResult").classList.add("hidden");
+});
+
+$("btnApplyOpt").addEventListener("click", ()=>{
+  if(!lastOptim) return;
+  setWeights(lastOptim.weights, 0);
+  const n0 = document.querySelector(".pf-name[data-p='0']"); if(n0) n0.value = lastOptim.label;
+  window.scrollTo({top:$("sec-weights").offsetTop-10, behavior:"smooth"});
+});
+$("btnSaveOpt").addEventListener("click", async ()=>{
+  if(!lastOptim) return;
+  const eff = $("startDate").value;
+  savedPortfolios.push({
+    id: Date.now()+"-"+Math.floor(Math.random()*1e4),
+    name: lastOptim.label+" ("+new Date().toISOString().slice(0,10)+")",
+    effDate: eff,
+    savedAt: new Date().toISOString().replace("T"," ").slice(0,19),
+    weights: lastOptim.weights, compare: true
+  });
+  await persistSaved(); renderSaved();
+  $("optErr").textContent = "";
+  $("optSummary").innerHTML += " — <b>기록 저장 완료 (적용일 "+eff+")</b>";
+});
+
+/* ============================================================
+   BACKTEST ENGINE
+============================================================ */
+function rebalanceFlags(dates, freq){
+  // true on first trading day of each new period
+  const f = new Array(dates.length).fill(false);
+  if(freq==="N") return f;
+  for(let i=1;i<dates.length;i++){
+    const a = dates[i-1], b = dates[i];
+    if(freq==="M" && (b.getUTCMonth()!==a.getUTCMonth() || b.getUTCFullYear()!==a.getUTCFullYear())) f[i]=true;
+    if(freq==="Q" && (Math.floor(b.getUTCMonth()/3)!==Math.floor(a.getUTCMonth()/3) || b.getUTCFullYear()!==a.getUTCFullYear())) f[i]=true;
+    if(freq==="Y" && b.getUTCFullYear()!==a.getUTCFullYear()) f[i]=true;
+  }
+  return f;
+}
+
+// weights: {colIdx: pct(sum 100)}. idx: row indices. returns {nav:[], rets:[]} starting at 100
+function simulate(weights, idx, flags){
+  const keys = Object.keys(weights).map(Number);
+  const target = keys.map(k=>weights[k]/100);
+  let cur = target.slice();
+  const nav = [100], rets = [null], wHist = [target.slice()];
+  for(let k=1;k<idx.length;k++){
+    let rp = 0;
+    const r = keys.map((j,m)=>{
+      const p0 = DATA.px[idx[k-1]][j], p1 = DATA.px[idx[k]][j];
+      return (p0!=null && p1!=null && p0!==0) ? p1/p0-1 : 0;
+    });
+    for(let m=0;m<keys.length;m++) rp += cur[m]*r[m];
+    // drift
+    for(let m=0;m<keys.length;m++) cur[m] = cur[m]*(1+r[m])/(1+rp);
+    if(flags[k]) cur = target.slice();
+    nav.push(nav[nav.length-1]*(1+rp));
+    rets.push(rp);
+    wHist.push(cur.slice());
+  }
+  return {nav, rets, keys, wHist};
+}
+
+function perfMetrics(nav, rets, bmRets, rfAnnPct){
+  const n = rets.length-1;
+  const yrs = n/ANN;
+  const cum = nav[nav.length-1]/nav[0]-1;
+  const cagr = Math.pow(nav[nav.length-1]/nav[0], 1/yrs)-1;
+  const ms = meanStd(rets.slice(1));
+  const vol = ms.sd*Math.sqrt(ANN);
+  const rf = rfAnnPct/100;
+  const sharpe = vol>0 ? (cagr-rf)/vol : null;
+  // MDD
+  let peak = -Infinity, mdd = 0;
+  const dd = nav.map(v=>{ peak = Math.max(peak,v); const d = v/peak-1; mdd = Math.min(mdd,d); return d; });
+  // TE & IR
+  let te=null, ir=null;
+  if(bmRets){
+    const ex = rets.map((r,i)=> (r===null||bmRets[i]===null)?null : r-bmRets[i]);
+    const es = meanStd(ex.slice(1));
+    te = es.sd*Math.sqrt(ANN);
+    ir = te>0 ? ((Math.pow(1+ms.mean,ANN)-1) - bmAnn(bmRets)) / te : null;
+  }
+  const winRate = rets.slice(1).filter(r=>r>0).length / n * 100;
+  return {cum:cum*100, cagr:cagr*100, vol:vol*100, sharpe, mdd:mdd*100, te:te===null?null:te*100, ir, winRate, dd};
+}
+function bmAnn(bmRets){
+  const ms = meanStd(bmRets.slice(1));
+  return Math.pow(1+ms.mean,ANN)-1;
+}
+
+const PALETTE = ["#1f3a6e","#a03030","#2e6e46","#8a6d1e","#5b3a8a","#1e6e8a","#6e1f5a","#444444"];
+
+function isKRasset(j){ return /KS\s+EQUITY/i.test(DATA.tickers[j]||""); }
+function annGeo(meanDaily){ return meanDaily===null ? null : (Math.pow(1+meanDaily, ANN)-1)*100; }
+function computeAttribution(weights, idx){
+  // Brinson–Hood–Beebower with two benchmark groups: US(=LBUSTRUU) and KR(=KBPMABIN), each 50%
+  // group benchmark return r_b,group = benchmark node return; group portfolio weight = sum of held weights in that group
+  const meanOf = j => { const ms = meanStd(colReturns(j, idx)); return ms.mean; };
+  const rUS = meanOf(BM_US_IDX), rKR = meanOf(BM_KR_IDX);     // daily
+  const rBnode = {US:rUS, KR:rKR};
+  const wBnode = {US:0.5, KR:0.5};
+  const rB = 0.5*rUS + 0.5*rKR;                               // total benchmark daily
+  // portfolio group weights
+  const wPnode = {US:0, KR:0};
+  Object.entries(weights).forEach(([j,v])=>{ wPnode[isKRasset(+j)?"KR":"US"] += v/100; });
+  const rows = [];
+  let totAlloc=0, totSel=0, totInter=0;
+  Object.entries(weights).forEach(([j,v])=>{
+    j=+j; const wp = v/100;
+    const grp = isKRasset(j)?"KR":"US";
+    const rA = meanOf(j);                                     // asset daily
+    const rGroupB = rBnode[grp];
+    // group-level portfolio weight share for allocation effect uses node weight diff split by asset share within group
+    // standard BHB at asset level within single-node groups:
+    const wGroupP = wPnode[grp] || 1e-9;
+    const wInGroup = wp / wGroupP;                            // asset share within its group
+    // allocation effect attributed at node level, distributed to assets by within-group share
+    const alloc = wInGroup * (wPnode[grp]-wBnode[grp]) * (rBnode[grp]-rB);
+    const sel   = wBnode[grp] * wInGroup * (rA - rGroupB);
+    const inter = (wPnode[grp]-wBnode[grp]) * wInGroup * (rA - rGroupB);
+    const allocA = annGeo(alloc)||0, selA = annGeo(sel)||0, interA = annGeo(inter)||0;
+    // approximate annualized contributions: scale daily effect by 252 then keep linear (small) — use *ANN*100 for additive consistency
+    const allocAnn = alloc*ANN*100, selAnn = sel*ANN*100, interAnn = inter*ANN*100;
+    totAlloc+=allocAnn; totSel+=selAnn; totInter+=interAnn;
+    rows.push({j, name:DATA.names[j], grp, wp:wp*100, wb:(grp==="US"?50:50)*wInGroup,
+               rAsset: annGeo(rA), alloc:allocAnn, sel:selAnn, inter:interAnn, total:allocAnn+selAnn+interAnn});
+  });
+  return {rows, totAlloc, totSel, totInter, tot:totAlloc+totSel+totInter,
+          rUSann:annGeo(rUS), rKRann:annGeo(rKR), rBann:annGeo(rB),
+          wPnode:{US:wPnode.US*100, KR:wPnode.KR*100}};
+}
+
+$("btnRun").addEventListener("click", runBacktest);
+function simulateDynamic(schedule, idx, flags){
+  // schedule: [{name, dateObj, weights:{j:pct}}] sorted by date asc
+  const keySet = new Set();
+  schedule.forEach(s=>Object.keys(s.weights).forEach(k=>keySet.add(+k)));
+  const keys = [...keySet];
+  const tgts = schedule.map(s=>keys.map(j=>(s.weights[j]||0)/100));
+  let si = 0;
+  let target = tgts[0].slice(), cur = target.slice();
+  const nav = [100], rets = [null], changes = [{k:0, si:0}], wHist = [target.slice()];
+  for(let k=1;k<idx.length;k++){
+    let rp = 0;
+    const r = keys.map(j=>{
+      const p0 = DATA.px[idx[k-1]][j], p1 = DATA.px[idx[k]][j];
+      return (p0!=null && p1!=null && p0!==0) ? p1/p0-1 : 0;
+    });
+    for(let m=0;m<keys.length;m++) rp += cur[m]*r[m];
+    for(let m=0;m<keys.length;m++) cur[m] = cur[m]*(1+r[m])/(1+rp);
+    // weight-change activation at close of the first trading day >= effective date
+    let activated = false;
+    while(si+1 < schedule.length && DATA.dates[idx[k]] >= schedule[si+1].dateObj){ si++; activated = true; }
+    if(activated){ target = tgts[si].slice(); cur = target.slice(); changes.push({k, si}); }
+    else if(flags[k]) cur = target.slice();
+    nav.push(nav[nav.length-1]*(1+rp));
+    rets.push(rp);
+    wHist.push(cur.slice());
+  }
+  return {nav, rets, changes, keys, wHist};
+}
+
+function runBacktest(){
+  $("btErr").textContent = "";
+  if(!DATA) return;
+  const mode = $("btMode").value;
+  // candidate portfolios
+  const cands = [];
+  if(mode === "dynamic"){
+    const recs = savedPortfolios.filter(p=>p.compare && p.effDate)
+                  .map(p=>({name:p.name, effDate:p.effDate, dateObj:new Date(p.effDate), weights:p.weights}))
+                  .sort((a,b)=>a.dateObj-b.dateObj);
+    if(recs.length===0){
+      $("btErr").textContent = "동적 이력 모드: 적용일이 입력된 기록이 없습니다. 저장 목록에서 「비교」에 체크된 기록(적용일 포함)이 필요합니다.";
+      return;
+    }
+    const skippedNoDate = savedPortfolios.filter(p=>p.compare && !p.effDate).length;
+    cands.push({name:"비중 조절 전략 ("+recs.length+"개 시점)", schedule:recs});
+    if(skippedNoDate) $("btErr").textContent = "참고: 적용일이 없는 기록 "+skippedNoDate+"건은 제외되었습니다.";
+  } else {
+    // include each of the 3 input columns that sums to 100%
+    for(let p=0;p<PF_COUNT;p++){
+      const cw = getWeights(p);
+      const cs = Object.values(cw).reduce((a,b)=>a+b,0);
+      if(Object.keys(cw).length>0 && Math.abs(cs-100)<=0.01){
+        const nm = (document.querySelector(".pf-name[data-p='"+p+"']").value.trim()) || ("Portfolio "+(p+1));
+        cands.push({name:nm, weights:cw});
+      }
+    }
+    // always-on equal-weight portfolio
+    const eq=+(100/BM_US_IDX).toFixed(1); const ewW={}; for(let j=0;j<BM_US_IDX;j++) ewW[j]=eq;
+    cands.push({name:"균등비중 (EW)", weights:ewW, isEW:true});
+    // checked saved records (avoid duplicates of identical weights)
+    savedPortfolios.filter(p=>p.compare).forEach(p=>{
+      if(!cands.some(c=>sameWeights(c.weights, p.weights)))
+        cands.push({name:p.name, weights:p.weights});
+    });
+    if(cands.length===0){
+      $("btErr").textContent = "평가할 포트폴리오가 없습니다. 비중 합계 100%를 입력하거나 저장 목록에서 「비교」에 체크하세요.";
+      return;
+    }
+  }
+  // analysis window: clip start to data availability of all used assets + benchmarks
+  let idxAll = windowIndices();
+  if(idxAll.length<30){ $("btErr").textContent="선택 기간의 거래일이 부족합니다."; return; }
+  const usedCols = new Set([BM_US_IDX, BM_KR_IDX]);
+  cands.forEach(c=>{
+    if(c.schedule) c.schedule.forEach(s=>Object.keys(s.weights).forEach(j=>usedCols.add(+j)));
+    else Object.keys(c.weights).forEach(j=>usedCols.add(+j));
+  });
+  let minStart = null;
+  usedCols.forEach(j=>{
+    const f = DATA.firstValid[j];
+    if(f===null){ $("btErr").textContent = "자산 「"+DATA.names[j]+"」의 데이터가 없습니다."; return; }
+    if(minStart===null || f>minStart) minStart = f;
+  });
+  if(mode==="dynamic"){
+    const firstEff = cands[0].schedule[0].dateObj;
+    if(minStart===null || firstEff>minStart) minStart = firstEff;
+  }
+  const idx = idxAll.filter(i=>DATA.dates[i]>=minStart);
+  if(idx.length<30){
+    $("btErr").textContent = "공통 데이터 기간이 부족합니다. 분석 가능 시작일: "+fmtDate(minStart)+".";
+    return;
+  }
+  const clipped = idx.length < idxAll.length;
+  const dates = idx.map(i=>DATA.dates[i]);
+  const flags = rebalanceFlags(dates, $("rebalFreq").value);
+  const rf = parseFloat($("rfRate").value)||0;
+
+  // benchmark 50/50 — rebalanced annually (year-end → first trading day of each year), independent of portfolio rebal setting
+  const bmW = {}; bmW[BM_US_IDX]=50; bmW[BM_KR_IDX]=50;
+  const bmFlags = rebalanceFlags(dates, "Y");
+  const bm = simulate(bmW, idx, bmFlags);
+  const bmPerf = perfMetrics(bm.nav, bm.rets, null, rf);
+
+  // NSS factor regression series (daily changes over the backtest window)
+  const useCredit = $("chkCredit").checked;
+  const mkD = arr => {
+    const o = [null];
+    for(let k=1;k<idx.length;k++){
+      const a = arr[idx[k-1]], b = arr[idx[k]];
+      o.push((a===null||a===undefined||b===null||b===undefined) ? null : b-a);
+    }
+    return o;
+  };
+  const fDefs = [
+    ["ΔLevel US", NSSF.us.L], ["ΔSlope US", NSSF.us.S], ["ΔCurv US", NSSF.us.C],
+    ["ΔLevel KR", NSSF.kr.L], ["ΔSlope KR", NSSF.kr.S], ["ΔCurv KR", NSSF.kr.C]
+  ];
+  if(useCredit) fDefs.push(["ΔIG OAS", NSSF.ig], ["ΔHY OAS", NSSF.hy]);
+  const fSeries = fDefs.map(d=>mkD(d[1]).slice(1));
+  const factorLabels = fDefs.map(d=>d[0]);
+
+  const results = cands.map((c,i)=>{
+    const sim = c.schedule ? simulateDynamic(c.schedule, idx, flags) : simulate(c.weights, idx, flags);
+    const perf = perfMetrics(sim.nav, sim.rets, bm.rets, rf);
+    // statistical significance vs benchmark
+    const ex = sim.rets.map((r,k)=> (r===null||bm.rets[k]===null)?null : r-bm.rets[k]);
+    const exT = tTestMean(ex.slice(1));
+    const reg = olsAlphaBeta(sim.rets.slice(1), bm.rets.slice(1));
+    const sig = {
+      exAnn: exT.mean===undefined||exT.mean===null ? null : exT.mean*ANN*100,
+      t: exT.t, p: exT.p,
+      alphaAnn: reg ? reg.alpha*ANN*100 : null,
+      tA: reg ? reg.tA : null, pA: reg ? reg.pA : null,
+      beta: reg ? reg.beta : null, r2: reg ? reg.r2 : null
+    };
+    // factor regressions with Newey-West(5): excess return and raw return
+    const freg = {
+      ex: olsNW(ex.slice(1), fSeries, 5),
+      raw: olsNW(sim.rets.slice(1), fSeries, 5)
+    };
+    // Brinson attribution vs 50/50 benchmark (group: US / KR)
+    const attr = computeAttribution(c.schedule ? c.schedule[c.schedule.length-1].weights : c.weights, idx);
+    return {name:c.name, weights: c.schedule ? c.schedule[c.schedule.length-1].weights : c.weights,
+            schedule: c.schedule||null, sim, perf, sig, freg, attr, color:PALETTE[i%PALETTE.length]};
+  });
+  lastBacktest = {dates, idx, results, bm, bmPerf, rf, clipped, minStart, factorLabels, useCredit, mode,
+                  rebal:$("rebalFreq").options[$("rebalFreq").selectedIndex].text};
+  renderBacktest();
+  if(clipped && !$("btErr").textContent){
+    $("btErr").textContent = "참고: 데이터 가용성 및 첫 적용일에 따라 분석 시작일이 "+fmtDate(dates[0])+"로 조정되었습니다.";
+  }
+}
+
+function sameWeights(a,b){
+  const ka = Object.keys(a), kb = Object.keys(b);
+  if(ka.length!==kb.length) return false;
+  return ka.every(k=>Math.abs((a[k]||0)-(b[k]||0))<1e-9);
+}
+
+/* ============================================================
+   RESULTS RENDERING
+============================================================ */
+function periodReturns(nav, dates, mode){  // mode: 'Y' or 'M'
+  const keyOf = d => mode==="Y" ? String(d.getUTCFullYear())
+                                : d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0");
+  const out = [];
+  let startNav = nav[0], key = keyOf(dates[0]);
+  for(let k=1;k<dates.length;k++){
+    const nk = keyOf(dates[k]);
+    if(nk!==key){ out.push({key, ret:nav[k-1]/startNav-1}); startNav = nav[k-1]; key = nk; }
+  }
+  out.push({key, ret:nav[nav.length-1]/startNav-1});
+  return out;
+}
+
+function renderBacktest(){
+  const B = lastBacktest;
+  $("btResults").classList.remove("hidden");
+  const period = fmtDate(B.dates[0]) + " ~ " + fmtDate(B.dates[B.dates.length-1]);
+  const tb = $("perfTable").querySelector("tbody");
+  tb.innerHTML = "";
+  const row = (name, p, isBM, color) => {
+    const tr = document.createElement("tr");
+    if(isBM) tr.style.background = "var(--accent-soft)";
+    tr.innerHTML =
+      "<td>"+(color?'<span style="color:'+color+'">■</span> ':"")+name+(isBM?' <span class="badge">BM</span>':"")+"</td>"+
+      "<td style='text-align:left'>"+period+"</td>"+
+      "<td class='"+signClass(p.cum)+"'>"+fmt(p.cum)+"</td>"+
+      "<td class='"+signClass(p.cagr)+"'>"+fmt(p.cagr)+"</td>"+
+      "<td>"+fmt(p.vol)+"</td>"+
+      "<td>"+fmt(p.sharpe)+"</td>"+
+      "<td class='num-neg'>"+fmt(p.mdd)+"</td>"+
+      "<td>"+(p.te===null?"–":fmt(p.te))+"</td>"+
+      "<td>"+(p.ir===null?"–":fmt(p.ir))+"</td>"+
+      "<td>"+fmt(p.winRate,1)+"</td>";
+    tb.appendChild(tr);
+  };
+  B.results.forEach(r=>row(r.name, r.perf, false, r.color));
+  row("벤치마크 (LBUSTRUU 50% + KBPMABIN 50%)", B.bmPerf, true, "#888888");
+
+  // Table 5: significance vs benchmark
+  const sb = $("sigTable").querySelector("tbody");
+  sb.innerHTML = "";
+  const pCell = (p)=> p===null ? "–" : (p<0.001?"&lt;0.001":fmt(p,3))+"<sup class='sig'>"+sigStars(p)+"</sup>";
+  B.results.forEach(r=>{
+    const s = r.sig;
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      "<td><span style='color:"+r.color+"'>■</span> "+r.name+"</td>"+
+      "<td class='"+signClass(s.exAnn)+"'>"+fmt(s.exAnn)+"</td>"+
+      "<td>"+fmt(s.t,2)+"</td>"+
+      "<td>"+pCell(s.p)+"</td>"+
+      "<td class='"+signClass(s.alphaAnn)+"'>"+fmt(s.alphaAnn)+"</td>"+
+      "<td>"+fmt(s.tA,2)+"</td>"+
+      "<td>"+pCell(s.pA)+"</td>"+
+      "<td>"+fmt(s.beta,3)+"</td>"+
+      "<td>"+fmt(s.r2,3)+"</td>";
+    sb.appendChild(tr);
+  });
+
+  // --- outperform / underperform summary + yearly table ---
+  B.yearly = B.results.map(r=>periodReturns(r.sim.nav, B.dates, "Y"));
+  B.yearlyBM = periodReturns(B.bm.nav, B.dates, "Y");
+  const monBM = periodReturns(B.bm.nav, B.dates, "M");
+  $("opSummary").innerHTML = "";
+  B.results.forEach((r,i)=>{
+    const cumEx = r.perf.cum - B.bmPerf.cum;
+    const cagrEx = r.perf.cagr - B.bmPerf.cagr;
+    const yrs = B.yearly[i];
+    let win=0;
+    yrs.forEach((y,k)=>{ if(y.ret > B.yearlyBM[k].ret) win++; });
+    const mon = periodReturns(r.sim.nav, B.dates, "M");
+    let mWin=0, curStreak=0, maxStreak=0;
+    mon.forEach((m,k)=>{
+      const out = m.ret > monBM[k].ret;
+      if(out){ mWin++; curStreak=0; }
+      else { curStreak++; maxStreak=Math.max(maxStreak,curStreak); }
+    });
+    const div = document.createElement("div");
+    div.className = "op-card";
+    div.style.borderLeftColor = r.color;
+    const tag = cumEx>=0 ? "<b class='win'>아웃퍼폼</b>" : "<b class='lose'>언더퍼폼</b>";
+    div.innerHTML = "<b>"+r.name+"</b> — 전체 기간 "+tag+" : 누적 초과수익률 <b class='"+(cumEx>=0?"win":"lose")+"'>"
+      + (cumEx>=0?"+":"")+fmt(cumEx)+"%p</b> (연환산 "+(cagrEx>=0?"+":"")+fmt(cagrEx)+"%p) · "
+      + "연도별 아웃퍼폼 "+win+"/"+yrs.length+"년 · 월간 승률 "+fmt(mWin/mon.length*100,1)+"% ("+mWin+"/"+mon.length+"개월) · "
+      + "최장 연속 언더퍼폼 "+maxStreak+"개월";
+    $("opSummary").appendChild(div);
+  });
+  // yearly table: 연도 | BM | per portfolio: 수익률, 초과
+  let yh = "<tr><th>연도</th><th>벤치마크</th>";
+  B.results.forEach(r=>{ yh += "<th>"+r.name+"</th><th>초과(%p)</th>"; });
+  $("yearTable").querySelector("thead").innerHTML = yh+"</tr>";
+  const yb = $("yearTable").querySelector("tbody");
+  yb.innerHTML = "";
+  B.yearlyBM.forEach((ybm,k)=>{
+    let row = "<td>"+ybm.key+(k===0?" (시작~)":(k===B.yearlyBM.length-1?" (~종료)":""))+"</td>"
+            + "<td>"+fmt(ybm.ret*100)+"</td>";
+    B.results.forEach((r,i)=>{
+      const y = B.yearly[i][k];
+      const ex = (y.ret-ybm.ret)*100;
+      row += "<td class='"+signClass(y.ret)+"'>"+fmt(y.ret*100)+"</td>"
+           + "<td class='"+signClass(ex)+"'><b>"+(ex>=0?"+":"")+fmt(ex)+"</b></td>";
+    });
+    const tr = document.createElement("tr"); tr.innerHTML = row; yb.appendChild(tr);
+  });
+
+  // --- MDD asset contribution & investment value ---
+  ["ddSel","valSel"].forEach(id=>{
+    const sel = $(id);
+    sel.innerHTML = "";
+    B.results.forEach((r,i)=>{ const o=document.createElement("option"); o.value=i; o.textContent=r.name; sel.appendChild(o); });
+  });
+  $("ddSel").onchange = ()=>renderDDContrib(+$("ddSel").value);
+  $("valSel").onchange = ()=>renderValue(+$("valSel").value);
+  $("initAmt").oninput = ()=>renderValue(+$("valSel").value);
+  renderDDContrib(0);
+  renderValue(0);
+
+  // --- Brinson attribution ---
+  const asel = $("attrSel");
+  asel.innerHTML = "";
+  B.results.forEach((r,i)=>{ const o=document.createElement("option"); o.value=i; o.textContent=r.name; asel.appendChild(o); });
+  asel.onchange = ()=>renderAttribution(+asel.value);
+  renderAttribution(0);
+
+  // --- Table 7: NSS factor regression ---
+  $("fregCaption").textContent = "Table 7. 채권시장 팩터 회귀 — NSS 팩터"+(B.useCredit?" + 신용스프레드":"")+" 통제 후 알파 점검 (Newey–West 5)";
+  let fh = "<tr><th>포트폴리오</th><th>종속변수</th><th>α (연, %)</th><th>t(α)</th>";
+  B.factorLabels.forEach(l=>{ fh += "<th>"+l+"</th>"; });
+  fh += "<th>R²</th><th>N</th></tr>";
+  $("fregTable").querySelector("thead").innerHTML = fh;
+  const fb = $("fregTable").querySelector("tbody");
+  fb.innerHTML = "";
+  const betaCell = (reg,i)=>{
+    if(!reg) return "<td>–</td>";
+    const b = reg.b[i+1], t = reg.t[i+1], p = reg.p[i+1];
+    return "<td title='t = "+fmt(t,2)+"'>"+fmt(b*100,2)+"<sup class='sig'>"+sigStars(p)+"</sup></td>";
+  };
+  B.results.forEach(r=>{
+    [["초과수익률 (r\u209A−r\u2099\u2098)", r.freg.ex], ["포트폴리오 수익률", r.freg.raw]].forEach(([dep,reg],si)=>{
+      const tr = document.createElement("tr");
+      let row = si===0 ? "<td rowspan='2'><span style='color:"+r.color+"'>■</span> "+r.name+"</td>" : "";
+      if(!reg){
+        row += "<td style='text-align:left'>"+dep+"</td><td colspan='"+(B.factorLabels.length+3)+"' style='text-align:left'>팩터 데이터 부족 (커브 가용 기간과 백테스트 기간의 교집합이 부족합니다)</td>";
+      } else {
+        row += "<td style='text-align:left'>"+dep+"</td>"
+             + "<td class='"+signClass(reg.b[0])+"' title='t = "+fmt(reg.t[0],2)+"'><b>"+fmt(reg.b[0]*ANN*100,2)+"</b><sup class='sig'>"+sigStars(reg.p[0])+"</sup></td>"
+             + "<td>"+fmt(reg.t[0],2)+"</td>";
+        B.factorLabels.forEach((_,i)=>{ row += betaCell(reg,i); });
+        row += "<td>"+fmt(reg.r2,3)+"</td><td>"+reg.n.toLocaleString()+"</td>";
+      }
+      tr.innerHTML = row; fb.appendChild(tr);
+    });
+  });
+
+  drawCharts();
+}
+
+function chartFont(size=12){ return {family:'"Times New Roman", serif', size}; }
+function baseOpts(yTitle){
+  return {
+    responsive:true, maintainAspectRatio:true, aspectRatio:2.3,
+    interaction:{mode:"index", intersect:false},
+    plugins:{
+      legend:{labels:{font:chartFont(12.5), boxWidth:18, usePointStyle:false}},
+      tooltip:{titleFont:chartFont(12), bodyFont:chartFont(12)}
+    },
+    scales:{
+      x:{ticks:{font:chartFont(11), maxTicksLimit:12}, grid:{color:"#eeeeee"}},
+      y:{title:{display:true, text:yTitle, font:chartFont(12)}, ticks:{font:chartFont(11)}, grid:{color:"#eeeeee"}}
+    },
+    backgroundColor:"#ffffff"
+  };
+}
+const whiteBg = {
+  id:"whiteBg",
+  beforeDraw(c){ const {ctx} = c; ctx.save(); ctx.fillStyle="#ffffff"; ctx.fillRect(0,0,c.width,c.height); ctx.restore(); }
+};
+
+function ddEpisode(nav){
+  // identify the maximum-drawdown episode: peak index, trough index, recovery index (or null)
+  let peak=0, troughK=0, peakK=0, mdd=0, runPeak=0;
+  for(let k=1;k<nav.length;k++){
+    if(nav[k]>nav[runPeak]) runPeak=k;
+    const d = nav[k]/nav[runPeak]-1;
+    if(d<mdd){ mdd=d; troughK=k; peakK=runPeak; }
+  }
+  let recK=null;
+  for(let k=troughK+1;k<nav.length;k++){ if(nav[k]>=nav[peakK]){ recK=k; break; } }
+  return {peakK, troughK, recK, mdd:mdd*100};
+}
+function computeDDContrib(sim, B, peakK, troughK){
+  // contribution_i = Σ_{k=peakK+1..troughK} w_{i,k-1} · r_{i,k}
+  const keys = sim.keys, n = keys.length;
+  const contrib = new Array(n).fill(0), wAvg = new Array(n).fill(0), own = new Array(n).fill(1);
+  for(let k=peakK+1;k<=troughK;k++){
+    for(let m=0;m<n;m++){
+      const j = keys[m];
+      const p0 = DATA.px[B.idx[k-1]][j], p1 = DATA.px[B.idx[k]][j];
+      const r = (p0!=null && p1!=null && p0!==0) ? p1/p0-1 : 0;
+      contrib[m] += sim.wHist[k-1][m]*r;
+      wAvg[m] += sim.wHist[k-1][m];
+      own[m] *= (1+r);
+    }
+  }
+  const days = troughK-peakK;
+  return keys.map((j,m)=>({j, name:DATA.names[j],
+    wAvg: days>0 ? wAvg[m]/days*100 : 0,
+    own: (own[m]-1)*100,
+    contrib: contrib[m]*100}));
+}
+function renderDDContrib(ri){
+  const B = lastBacktest, r = B.results[ri];
+  const ep = ddEpisode(r.sim.nav);
+  const rows = computeDDContrib(r.sim, B, ep.peakK, ep.troughK).sort((a,b)=>a.contrib-b.contrib);
+  const totC = rows.reduce((a,x)=>a+x.contrib,0);
+  $("ddEpisode").innerHTML =
+    "<b>"+r.name+"</b> — 최대 낙폭 <b class='lose'>"+fmt(ep.mdd,2)+"%</b> · 고점 "+fmtDate(B.dates[ep.peakK])
+    +" → 저점 "+fmtDate(B.dates[ep.troughK])+" ("+(ep.troughK-ep.peakK)+" 거래일)"
+    +(ep.recK!==null ? " · 회복 "+fmtDate(B.dates[ep.recK])+" (저점 후 "+(ep.recK-ep.troughK)+" 거래일)" : " · <b class='lose'>기간 내 미회복</b>");
+  $("ddCaption").textContent = "Table 5b. MDD 구간 자산별 손실 기여도 — "+r.name+" ("+fmtDate(B.dates[ep.peakK])+" ~ "+fmtDate(B.dates[ep.troughK])+")";
+  const tb = $("ddTable").querySelector("tbody");
+  tb.innerHTML = "";
+  rows.forEach(x=>{
+    const share = Math.abs(totC)>1e-9 ? x.contrib/totC*100 : null;
+    const tr = document.createElement("tr");
+    tr.innerHTML = "<td>"+x.name+"</td>"
+      +"<td>"+fmt(x.wAvg,1)+"</td>"
+      +"<td class='"+signClass(x.own)+"'>"+fmt(x.own,2)+"</td>"
+      +"<td class='"+signClass(x.contrib)+"'><b>"+fmt(x.contrib,2)+"</b></td>"
+      +"<td>"+(share===null?"–":fmt(share,1))+"</td>";
+    tb.appendChild(tr);
+  });
+  $("ddTable").querySelector("tfoot").innerHTML =
+    "<tr style='font-weight:bold'><td>합계 (산술)</td><td>"+fmt(rows.reduce((a,x)=>a+x.wAvg,0),1)+"</td><td>–</td>"
+    +"<td class='"+signClass(totC)+"'>"+fmt(totC,2)+"</td><td>100.0</td></tr>";
+  // Figure 5b: horizontal bar chart of contributions (sorted, loss first)
+  if(charts.ddc){ charts.ddc.destroy(); delete charts.ddc; }
+  charts.ddc = new Chart($("ddcChart"), {
+    type:"bar", plugins:[whiteBg],
+    data:{labels: rows.map(x=>x.name), datasets:[{
+      label:"기여도 (%p)", data: rows.map(x=>x.contrib),
+      backgroundColor: rows.map(x=>x.contrib<0 ? "#a03030" : "#2e6e46"),
+      borderColor: rows.map(x=>x.contrib<0 ? "#a03030" : "#2e6e46")
+    }]},
+    options:{
+      indexAxis:"y", responsive:true, maintainAspectRatio:true, aspectRatio:2.2, animation:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{titleFont:chartFont(12), bodyFont:chartFont(12),
+          callbacks:{label:c=>"기여도 "+fmt(c.raw,2)+"%p"}}
+      },
+      scales:{
+        x:{title:{display:true, text:"MDD 구간 손실 기여 (%p)", font:chartFont(12)}, ticks:{font:chartFont(11)}, grid:{color:"#eeeeee"}},
+        y:{ticks:{font:chartFont(11)}, grid:{display:false}}
+      }
+    }
+  });
+}
+function renderValue(ri){
+  const B = lastBacktest, r = B.results[ri];
+  const amt = Math.max(1, parseFloat($("initAmt").value)||100000000);
+  const sim = r.sim;
+  const last = sim.wHist.length-1;
+  const navMult = sim.nav[sim.nav.length-1]/100;
+  const finalTotal = amt*navMult;
+  const fmtW = x => Math.round(x).toLocaleString("ko-KR");
+  $("valSummary").innerHTML =
+    "<b>"+r.name+"</b> — 초기 <b>"+fmtW(amt)+"원</b> ("+fmtDate(B.dates[0])+") → 기말 <b class='"+(navMult>=1?"win":"lose")+"'>"+fmtW(finalTotal)+"원</b> ("
+    +fmtDate(B.dates[B.dates.length-1])+") · 누적수익률 "+fmt((navMult-1)*100,2)+"% · 리밸런싱: "+B.rebal;
+  $("valCaption").textContent = "Table 5c. 자산별 평가금액 및 비중 변화 — "+r.name;
+  const tb = $("valTable").querySelector("tbody");
+  tb.innerHTML = "";
+  let sumInit=0, sumFin=0;
+  sim.keys.map((j,m)=>({j, name:DATA.names[j], w0:sim.wHist[0][m]*100, w1:sim.wHist[last][m]*100}))
+    .sort((a,b)=>b.w1-a.w1)
+    .forEach(x=>{
+      const a0 = amt*x.w0/100, a1 = finalTotal*x.w1/100, d = a1-a0;
+      sumInit+=a0; sumFin+=a1;
+      const tr = document.createElement("tr");
+      tr.innerHTML = "<td>"+x.name+"</td>"
+        +"<td>"+fmt(x.w0,1)+"</td><td>"+fmtW(a0)+"</td>"
+        +"<td><b>"+fmt(x.w1,1)+"</b> <span class='note'>("+(x.w1-x.w0>=0?"+":"")+fmt(x.w1-x.w0,1)+"%p)</span></td>"
+        +"<td>"+fmtW(a1)+"</td>"
+        +"<td class='"+signClass(d)+"'>"+(d>=0?"+":"")+fmtW(d)+"</td>";
+      tb.appendChild(tr);
+    });
+  $("valTable").querySelector("tfoot").innerHTML =
+    "<tr style='font-weight:bold'><td>합계</td><td>100.0</td><td>"+fmtW(sumInit)+"</td><td>100.0</td><td>"+fmtW(sumFin)+"</td>"
+    +"<td class='"+signClass(sumFin-sumInit)+"'>"+(sumFin-sumInit>=0?"+":"")+fmtW(sumFin-sumInit)+"</td></tr>";
+}
+
+function renderAttribution(ri){
+  const B = lastBacktest, r = B.results[ri], A = r.attr;
+  $("attrCaption").textContent = "Table 6b. 자산별 초과수익 기여도 분해 — "+r.name+" (연환산, %p)";
+  const tb = $("attrTable").querySelector("tbody");
+  const tf = $("attrTable").querySelector("tfoot");
+  tb.innerHTML = "";
+  A.rows.sort((a,b)=>b.total-a.total).forEach(row=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      "<td>"+row.name+" <span class='badge'>"+row.grp+"</span></td>"+
+      "<td>"+fmt(row.wp,1)+"</td>"+
+      "<td>"+fmt(row.wb,1)+"</td>"+
+      "<td class='"+signClass(row.rAsset)+"'>"+fmt(row.rAsset,2)+"</td>"+
+      "<td class='"+signClass(row.alloc)+"'>"+fmt(row.alloc,2)+"</td>"+
+      "<td class='"+signClass(row.sel)+"'>"+fmt(row.sel,2)+"</td>"+
+      "<td class='"+signClass(row.inter)+"'>"+fmt(row.inter,2)+"</td>"+
+      "<td class='"+signClass(row.total)+"'><b>"+(row.total>=0?"+":"")+fmt(row.total,2)+"</b></td>";
+    tb.appendChild(tr);
+  });
+  tf.innerHTML =
+    "<tr style='font-weight:bold'><td>합계</td><td>"+fmt(A.wPnode.US+A.wPnode.KR,1)+"</td><td>100.0</td><td>–</td>"+
+    "<td class='"+signClass(A.totAlloc)+"'>"+fmt(A.totAlloc,2)+"</td>"+
+    "<td class='"+signClass(A.totSel)+"'>"+fmt(A.totSel,2)+"</td>"+
+    "<td class='"+signClass(A.totInter)+"'>"+fmt(A.totInter,2)+"</td>"+
+    "<td class='"+signClass(A.tot)+"'>"+(A.tot>=0?"+":"")+fmt(A.tot,2)+"</td></tr>";
+  drawAttrChart(ri);
+  renderAttrYearly(ri);
+}
+function renderAttrYearly(ri){
+  const B = lastBacktest, r = B.results[ri];
+  // group window row-indices by calendar year
+  const byYear = {};
+  for(let k=0;k<B.dates.length;k++){
+    const y = B.dates[k].getUTCFullYear();
+    (byYear[y] = byYear[y] || []).push(B.idx[k]);
+  }
+  const years = Object.keys(byYear).sort();
+  const rows = [];
+  years.forEach(y=>{
+    const sub = byYear[y];
+    if(sub.length < 20) return;
+    const A = computeAttribution(r.weights, sub);
+    const sc = (sub.length-1)/ANN;          // annualized → period contribution
+    rows.push({y, alloc:A.totAlloc*sc, sel:A.totSel*sc, inter:A.totInter*sc, tot:A.tot*sc, days:sub.length-1});
+  });
+  $("attrYCaption").textContent = "Table 6c. 연도별 Brinson 효과 분해 — "+r.name+" (기간 기여, %p)";
+  const tb = $("attrYTable").querySelector("tbody");
+  tb.innerHTML = "";
+  rows.forEach(x=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = "<td>"+x.y+"</td>"
+      +"<td class='"+signClass(x.alloc)+"'>"+fmt(x.alloc,2)+"</td>"
+      +"<td class='"+signClass(x.sel)+"'>"+fmt(x.sel,2)+"</td>"
+      +"<td class='"+signClass(x.inter)+"'>"+fmt(x.inter,2)+"</td>"
+      +"<td class='"+signClass(x.tot)+"'><b>"+(x.tot>=0?"+":"")+fmt(x.tot,2)+"</b></td>";
+    tb.appendChild(tr);
+  });
+  if(charts.attrY){ charts.attrY.destroy(); delete charts.attrY; }
+  charts.attrY = new Chart($("attrYChart"), {
+    plugins:[whiteBg],
+    data:{labels: rows.map(x=>x.y), datasets:[
+      {type:"bar", label:"배분효과", data:rows.map(x=>x.alloc), backgroundColor:"#1f3a6e", stack:"s"},
+      {type:"bar", label:"선택효과", data:rows.map(x=>x.sel), backgroundColor:"#2e6e46", stack:"s"},
+      {type:"bar", label:"상호작용", data:rows.map(x=>x.inter), backgroundColor:"#a06a1e", stack:"s"},
+      {type:"line", label:"총기여", data:rows.map(x=>x.tot), borderColor:"#a03030", backgroundColor:"#a03030",
+       borderWidth:2, pointRadius:3, tension:0, fill:false}
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:true, aspectRatio:2.4, animation:false,
+      plugins:{
+        legend:{labels:{font:chartFont(12)}},
+        tooltip:{titleFont:chartFont(12), bodyFont:chartFont(12),
+          callbacks:{label:c=>c.dataset.label+": "+fmt(c.raw,2)+"%p"}}
+      },
+      scales:{
+        x:{stacked:true, ticks:{font:chartFont(11)}, grid:{display:false}},
+        y:{stacked:true, title:{display:true, text:"기간 기여 (%p)", font:chartFont(12)}, ticks:{font:chartFont(11)}, grid:{color:"#eeeeee"}}
+      }
+    }
+  });
+}
+function drawAttrChart(ri){
+  const B = lastBacktest, A = B.results[ri].attr;
+  if(charts.attr) charts.attr.destroy();
+  const rows = [...A.rows].sort((a,b)=>b.total-a.total);
+  charts.attr = new Chart($("attrChart"), {
+    type:"bar", plugins:[whiteBg],
+    data:{labels: rows.map(r=>r.name), datasets:[
+      {label:"배분효과", data:rows.map(r=>r.alloc), backgroundColor:"#1f3a6e"},
+      {label:"선택효과", data:rows.map(r=>r.sel), backgroundColor:"#2e6e46"},
+      {label:"상호작용", data:rows.map(r=>r.inter), backgroundColor:"#a06a1e"}
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:true, aspectRatio:2.4,
+      plugins:{
+        legend:{labels:{font:chartFont(12)}},
+        tooltip:{titleFont:chartFont(12), bodyFont:chartFont(12),
+          callbacks:{label:c=>c.dataset.label+": "+fmt(c.raw,2)+"%p"}}
+      },
+      scales:{
+        x:{stacked:true, ticks:{font:chartFont(10.5), maxRotation:45, minRotation:30}, grid:{display:false}},
+        y:{stacked:true, title:{display:true, text:"연환산 기여 (%p)", font:chartFont(12)}, ticks:{font:chartFont(11)}, grid:{color:"#eeeeee"}}
+      }
+    }
+  });
+}
+
+function nssLoadings(){
+  return TENORS.map(m=>{
+    const a1 = (1-Math.exp(-m/NSS_T1))/(m/NSS_T1);
+    const a2 = a1 - Math.exp(-m/NSS_T1);
+    const a3 = (1-Math.exp(-m/NSS_T2))/(m/NSS_T2) - Math.exp(-m/NSS_T2);
+    return [1, a1, a2, a3];
+  });
+}
+function nssFitRow(row, off){
+  // cross-sectional OLS for one day; returns {actual[7], fitted[7]} or null
+  for(let j=0;j<7;j++) if(row[off+j]===null || row[off+j]===undefined) return null;
+  const X = nssLoadings();
+  const Xt = [0,1,2,3].map(i=>X.map(r2=>r2[i]));
+  const P = matMul(matInv(matMul(Xt, X)), Xt);
+  const b = [0,1,2,3].map(k=>{ let s=0; for(let j=0;j<7;j++) s+=P[k][j]*row[off+j]; return s; });
+  const fitted = X.map(x=> x[0]*b[0]+x[1]*b[1]+x[2]*b[2]+x[3]*b[3]);
+  const actual = []; for(let j=0;j<7;j++) actual.push(row[off+j]);
+  return {actual, fitted};
+}
+function renderNssDeviation(){
+  if(!NSSF || !DATA.factorsAvail){ return; }
+  // latest day with a complete curve, per country (may differ)
+  let iUS=null, iKR=null;
+  for(let i=DATA.dates.length-1;i>=0;i--){
+    const row = DATA.yc[i];
+    if(iUS===null && nssFitRow(row,0)) iUS=i;
+    if(iKR===null && nssFitRow(row,7)) iKR=i;
+    if(iUS!==null && iKR!==null) break;
+  }
+  const us = iUS!==null ? nssFitRow(DATA.yc[iUS],0) : null;
+  const kr = iKR!==null ? nssFitRow(DATA.yc[iKR],7) : null;
+  $("nssDevCaption").textContent = "Table 8. 만기별 실제 금리 vs NSS 적합치 괴리 — 미국 "
+    +(iUS!==null?fmtDate(DATA.dates[iUS]):"N/A")+" · 한국 "+(iKR!==null?fmtDate(DATA.dates[iKR]):"N/A")+" 기준";
+  const tnames = ["3개월","1년","2년","3년","5년","10년","30년"];
+  const tb = $("nssDevTable").querySelector("tbody");
+  tb.innerHTML = "";
+  let sseU=0, sseK=0;
+  for(let t=0;t<7;t++){
+    const du = us ? (us.actual[t]-us.fitted[t])*100 : null;
+    const dk = kr ? (kr.actual[t]-kr.fitted[t])*100 : null;
+    if(du!==null) sseU+=du*du;
+    if(dk!==null) sseK+=dk*dk;
+    const tr = document.createElement("tr");
+    tr.innerHTML = "<td>"+tnames[t]+"</td>"
+      +(us ? "<td>"+fmt(us.actual[t],3)+"</td><td>"+fmt(us.fitted[t],3)+"</td><td class='"+signClass(du)+"'><b>"+(du>=0?"+":"")+fmt(du,1)+"</b></td>"
+           : "<td colspan='3'>–</td>")
+      +(kr ? "<td>"+fmt(kr.actual[t],3)+"</td><td>"+fmt(kr.fitted[t],3)+"</td><td class='"+signClass(dk)+"'><b>"+(dk>=0?"+":"")+fmt(dk,1)+"</b></td>"
+           : "<td colspan='3'>–</td>");
+    tb.appendChild(tr);
+  }
+  $("nssDevTable").querySelector("tfoot").innerHTML =
+    "<tr style='font-weight:bold'><td>RMSE</td><td colspan='2' style='text-align:right'>적합오차</td><td>"+(us?fmt(Math.sqrt(sseU/7),1):"–")+" bp</td>"
+    +"<td colspan='2' style='text-align:right'>적합오차</td><td>"+(kr?fmt(Math.sqrt(sseK/7),1):"–")+" bp</td></tr>";
+}
+function drawFactChart(){
+  // NSS factor series rebased to 100pt at the chosen start date: index = 100 + (f_t − f_0), 1pt = 1%p
+  const B = lastBacktest;
+  if(!B || !NSSF) return;
+  if(charts.fact){ charts.fact.destroy(); delete charts.fact; }
+  const sd = new Date($("factStart").value || fmtDate(B.dates[0]));
+  // positions within the backtest window from the rebase date onward
+  const pos = [];
+  for(let k=0;k<B.dates.length;k++) if(B.dates[k] >= sd) pos.push(k);
+  if(pos.length < 5) return;
+  const labels = pos.map(k=>fmtDate(B.dates[k]));
+  const fcol = {L:"#1f3a6e", S:"#a03030", C:"#2e6e46"};
+  const mkSer = (F,key)=>{
+    // base = first non-null value at/after the rebase date
+    let base = null;
+    const raw = pos.map(k=>{ const v = F[key][B.idx[k]]; return (v===null||v===undefined)?null:v; });
+    for(const v of raw){ if(v!==null){ base=v; break; } }
+    if(base===null) return raw;
+    return raw.map(v=> v===null ? null : +(100 + (v - base)).toFixed(4));
+  };
+  const lineDs = (label, data, color, dash) => ({
+    label, data, borderColor:color, backgroundColor:color, borderWidth:1.6,
+    pointRadius:0, tension:0, borderDash:dash||[], spanGaps:false
+  });
+  charts.fact = new Chart($("factChart"), {
+    type:"line", plugins:[whiteBg],
+    data:{labels, datasets:[
+      lineDs("Level US", mkSer(NSSF.us,"L"), fcol.L),
+      lineDs("Slope US", mkSer(NSSF.us,"S"), fcol.S),
+      lineDs("Curvature US", mkSer(NSSF.us,"C"), fcol.C),
+      lineDs("Level KR", mkSer(NSSF.kr,"L"), fcol.L, [5,4]),
+      lineDs("Slope KR", mkSer(NSSF.kr,"S"), fcol.S, [5,4]),
+      lineDs("Curvature KR", mkSer(NSSF.kr,"C"), fcol.C, [5,4])
+    ]},
+    options: (()=>{ const o = baseOpts("지수 (기준일 = 100pt)"); o.spanGaps = false; return o; })()
+  });
+  $("factNote").textContent = "기준일("+fmtDate(sd)+") = 100pt로 환산한 가산 지수: 100 + (팩터 − 기준일 팩터). 1pt = 1%p 변화에 해당. Level=β₀, Slope=−β₁, Curvature=β₂ (Diebold–Li, τ₁="+NSS_T1+", τ₂="+NSS_T2+").";
+}
+$("factStart").addEventListener("change", drawFactChart);
+
+/* left navigation: smooth scroll to sections/anchors */
+document.querySelectorAll("#sideNav a[data-go]").forEach(a=>a.addEventListener("click", ()=>{
+  const el = $(a.dataset.go);
+  if(!el) return;
+  const sec = el.closest("section");
+  if((sec && sec.classList.contains("hidden")) || el.classList.contains("hidden")) return;
+  el.scrollIntoView({behavior:"smooth", block:"start"});
+}));
+
+function drawCharts(){  const B = lastBacktest;
+  const labels = B.dates.map(d=>fmtDate(d));
+  ["comp","cum","rel","dd","rr","fact"].forEach(k=>{ if(charts[k]) { charts[k].destroy(); delete charts[k]; } });
+
+  const lineDs = (label, data, color, dash) => ({
+    label, data, borderColor:color, backgroundColor:color,
+    borderWidth:1.6, pointRadius:0, tension:0, borderDash:dash||[]
+  });
+
+  // Figure 2: portfolio composition (stacked horizontal bars)
+  const assetColor = j => "hsl("+((j*47+15)%360)+", 42%, "+(38+(j%3)*9)+"%)";
+  const dyn = B.mode==="dynamic" && B.results[0].schedule;
+  const usedAssets = new Set();
+  if(dyn) B.results[0].schedule.forEach(s=>Object.keys(s.weights).forEach(j=>usedAssets.add(+j)));
+  else B.results.forEach(r=>Object.keys(r.weights).forEach(j=>usedAssets.add(+j)));
+  usedAssets.add(BM_US_IDX); usedAssets.add(BM_KR_IDX);
+  const compLabels = dyn
+    ? [...B.results[0].schedule.map(s=>s.name+" ("+s.effDate+"~)"), "벤치마크 50/50"]
+    : [...B.results.map(r=>r.name), "벤치마크 50/50"];
+  const compDs = [...usedAssets].sort((a,b)=>a-b).map(j=>({
+    label: DATA.names[j],
+    data: dyn
+      ? [...B.results[0].schedule.map(s=>s.weights[j]||0), (j===BM_US_IDX||j===BM_KR_IDX)?50:0]
+      : [...B.results.map(r=>r.weights[j]||0), (j===BM_US_IDX||j===BM_KR_IDX)?50:0],
+    backgroundColor: assetColor(j), borderColor:"#ffffff", borderWidth:1
+  }));
+  charts.comp = new Chart($("compChart"), {
+    type:"bar", plugins:[whiteBg],
+    data:{labels:compLabels, datasets:compDs},
+    options:{
+      indexAxis:"y", responsive:true, maintainAspectRatio:true,
+      aspectRatio: Math.max(1.6, 5.5-compLabels.length*0.55),
+      plugins:{
+        legend:{position:"bottom", labels:{font:chartFont(11.5), boxWidth:14}},
+        tooltip:{titleFont:chartFont(12), bodyFont:chartFont(12),
+          callbacks:{label:c=> c.dataset.label+": "+fmt(c.raw,1)+"%"},
+          filter:c=>c.raw>0}
+      },
+      scales:{
+        x:{stacked:true, min:0, max:100, title:{display:true, text:"비중 (%)", font:chartFont(12)}, ticks:{font:chartFont(11)}, grid:{color:"#eeeeee"}},
+        y:{stacked:true, ticks:{font:chartFont(12)}, grid:{display:false}}
+      }
+    }
+  });
+
+  charts.cum = new Chart($("cumChart"), {
+    type:"line", plugins:[whiteBg],
+    data:{labels, datasets:[
+      ...B.results.map(r=>lineDs(r.name, r.sim.nav, r.color)),
+      lineDs("벤치마크 50/50", B.bm.nav, "#888888", [6,4])
+    ]},
+    options: baseOpts("누적지수 (시작=100)")
+  });
+
+  // Figure 4: relative performance vs benchmark
+  charts.rel = new Chart($("relChart"), {
+    type:"line", plugins:[whiteBg],
+    data:{labels, datasets:[
+      ...B.results.map(r=>lineDs(r.name, r.sim.nav.map((v,k)=>v/B.bm.nav[k]*100), r.color)),
+      lineDs("기준선 (=100)", B.dates.map(()=>100), "#aaaaaa", [3,3])
+    ]},
+    options: baseOpts("상대지수 (BM=100)")
+  });
+
+  charts.dd = new Chart($("ddChart"), {
+    type:"line", plugins:[whiteBg],
+    data:{labels, datasets:[
+      ...B.results.map(r=>lineDs(r.name, r.perf.dd.map(x=>x*100), r.color)),
+      lineDs("벤치마크 50/50", B.bmPerf.dd.map(x=>x*100), "#888888", [6,4])
+    ]},
+    options: baseOpts("낙폭 (%)")
+  });
+
+  const pts = B.results.map(r=>({x:r.perf.vol, y:r.perf.cagr, label:r.name, color:r.color}));
+  pts.push({x:B.bmPerf.vol, y:B.bmPerf.cagr, label:"벤치마크 50/50", color:"#888888"});
+  // individual assets over same window (arithmetic annualized to match frontier basis)
+  const rrCols = [], rrMu = [], assetPts = [];
+  for(let j=0;j<BM_US_IDX;j++){
+    const r = colReturns(j, B.idx);
+    const ms = meanStd(r);
+    if(ms.mean!==null && DATA.firstValid[j]<=B.dates[0]){
+      rrCols.push(j); rrMu.push(ms.mean*ANN);
+      assetPts.push({x:ms.sd*Math.sqrt(ANN)*100, y:(Math.pow(1+ms.mean,ANN)-1)*100, label:DATA.names[j]});
+    }
+  }
+  // efficient frontier from these assets' sample mean/cov (long-only, fully invested)
+  let frontierRR = [];
+  if(rrCols.length>=2){
+    const Srr = covMatrix(rrCols, B.idx);
+    const lb = rrCols.map(()=>0), ub = rrCols.map(()=>1);
+    const wG = solveMeanVar(Srr, rrMu, 0, lb, ub, 3000);
+    const gP = portRiskRet(wG, Srr, rrMu);
+    const rMax = maxReturnUnderBounds(rrMu, lb, ub);
+    const gMax = findGammaMax(Srr, rrMu, lb, ub, rMax);
+    for(let k=0;k<32;k++){
+      const gam = gMax*Math.pow(k/31, 2);
+      const wk = k===0 ? wG : solveMeanVar(Srr, rrMu, gam, lb, ub, 1200);
+      const pr = portRiskRet(wk, Srr, rrMu);
+      // convert arithmetic annualized mean to geometric (CAGR) for axis consistency with portfolios
+      const cagr = (Math.pow(1+pr.ret/ANN, ANN)-1)*100;
+      frontierRR.push({x:pr.vol*100, y:cagr});
+    }
+    frontierRR.sort((a,b)=>a.x-b.x);
+  }
+  B.frontierRR = frontierRR;
+  charts.rr = new Chart($("rrChart"), {
+    type:"scatter", plugins:[whiteBg],
+    data:{datasets:[
+      {type:"line", label:"효율적 투자선 (개별 ETF 기준)", data:frontierRR, borderColor:"#1f3a6e",
+       borderWidth:1.8, pointRadius:0, showLine:true, tension:.2, fill:false},
+      {label:"개별 ETF", data:assetPts, pointStyle:"circle", radius:4, backgroundColor:"#bbbbbb", borderColor:"#999999"},
+      ...pts.map(p=>({label:p.label, data:[p], pointStyle:"rectRot", radius:7, backgroundColor:p.color, borderColor:p.color}))
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:true, aspectRatio:2,
+      plugins:{
+        legend:{labels:{font:chartFont(12)}},
+        tooltip:{titleFont:chartFont(12), bodyFont:chartFont(12),
+          callbacks:{label:(c)=> (c.raw.label||c.dataset.label)+": σ "+fmt(c.raw.x,2)+"%, r "+fmt(c.raw.y,2)+"%"}}
+      },
+      scales:{
+        x:{title:{display:true, text:"연환산변동성 (%)", font:chartFont(12)}, ticks:{font:chartFont(11)}, grid:{color:"#eeeeee"}},
+        y:{title:{display:true, text:"연환산수익률 (%)", font:chartFont(12)}, ticks:{font:chartFont(11)}, grid:{color:"#eeeeee"}}
+      }
+    }
+  });
+
+  // Figure 7: NSS factors, rebased to 100pt at a user-chosen start date
+  if(!$("factStart").value || new Date($("factStart").value) < B.dates[0] || new Date($("factStart").value) > B.dates[B.dates.length-1])
+    $("factStart").value = fmtDate(B.dates[0]);
+  drawFactChart();
+  renderNssDeviation();
+}
+
+/* PNG download buttons */
+document.querySelectorAll("[data-dl]").forEach(b=>b.addEventListener("click", e=>{
+  const id = e.target.dataset.dl;
+  const map = {compChart:"comp", cumChart:"cum", relChart:"rel", ddChart:"dd", rrChart:"rr", factChart:"fact", attrChart:"attr", ddcChart:"ddc", attrYChart:"attrY"};
+  const ch = charts[map[id]];
+  if(!ch) return;
+  const a = document.createElement("a");
+  a.href = ch.toBase64Image("image/png", 1);
+  a.download = id + "_" + new Date().toISOString().slice(0,10) + ".png";
+  a.click();
+}));
+
+/* per-table Excel export: a small button injected above each result table */
+const EXPORT_TABLES = ["statsTable","corrTable","univTable","optCompare","optTable","cmpTable","wtTable","savedTable",
+                       "perfTable","sigTable","yearTable","attrTable","attrYTable","ddTable","valTable","fregTable","nssDevTable","tickerPreviewTable"];
+EXPORT_TABLES.forEach(id=>{
+  const tbl = $(id);
+  if(!tbl) return;
+  const wrap = tbl.closest(".tbl-wrap") || tbl.parentElement;
+  const bar = document.createElement("div");
+  bar.style.cssText = "text-align:right; margin:10px 0 4px;";
+  const btn = document.createElement("button");
+  btn.className = "small";
+  btn.textContent = "표 엑셀 (.xlsx)";
+  btn.addEventListener("click", ()=>exportTableXlsx(id));
+  bar.appendChild(btn);
+  wrap.parentElement.insertBefore(bar, wrap);
+});
+function exportTableXlsx(id){
+  const tbl = $(id);
+  if(!tbl) return;
+  const aoa = [];
+  const cap = tbl.querySelector("caption");
+  if(cap && cap.textContent.trim()){ aoa.push([cap.textContent.trim()]); aoa.push([]); }
+  tbl.querySelectorAll("thead tr, tbody tr, tfoot tr").forEach(tr=>{
+    const row = [];
+    tr.querySelectorAll("th, td").forEach(c=>{
+      let t = c.textContent.replace(/\s+/g," ").trim();
+      // numeric coercion (handles %, comma thousands, +/-)
+      const num = t.replace(/[,%]/g,"").replace(/^\+/,"");
+      const v = (t!=="" && !isNaN(num) && num!=="") ? +num : t;
+      row.push(v);
+      const cs = parseInt(c.getAttribute("colspan")||"1",10);
+      for(let k=1;k<cs;k++) row.push(null);
+    });
+    if(row.some(x=>x!==null && x!=="")) aoa.push(row);
+  });
+  const wb = XLSX.utils.book_new();
+  addSheet(wb, aoa, id.slice(0,28), aoa[0] ? new Array(Math.max(...aoa.map(r=>r.length))).fill(15) : [15]);
+  XLSX.writeFile(wb, id+"_"+new Date().toISOString().slice(0,10)+".xlsx");
+}
+
+/* per-chart data download (.xlsx): exports the exact series shown in the figure */
+document.querySelectorAll("[data-dlx]").forEach(b=>b.addEventListener("click", e=>{
+  const id = e.target.dataset.dlx;
+  const map = {compChart:"comp", cumChart:"cum", relChart:"rel", ddChart:"dd", rrChart:"rr", factChart:"fact", attrChart:"attr", ddcChart:"ddc", attrYChart:"attrY"};
+  const ch = charts[map[id]];
+  if(!ch) return;
+  const dsets = ch.data.datasets.filter(d=>!String(d.label||"").startsWith("_"));
+  const aoa = [];
+  const hasLabels = Array.isArray(ch.data.labels) && ch.data.labels.length>0
+                    && dsets.every(d=>d.data.length===0 || typeof d.data[0]!=="object" || d.data[0]===null);
+  if(hasLabels){
+    // category/time-series charts: one row per label, one column per series
+    aoa.push(["구분", ...dsets.map(d=>d.label)]);
+    ch.data.labels.forEach((lb,i)=>{
+      aoa.push([lb, ...dsets.map(d=>{ const v=d.data[i]; return (v===null||v===undefined)?null:+v; })]);
+    });
+  } else {
+    // xy charts (scatter / frontier): long format
+    aoa.push(["시리즈","x (σ, %)","y (μ, %)","점 라벨"]);
+    dsets.forEach(d=>{
+      (d.data||[]).forEach(p=>{
+        if(p===null||p===undefined) return;
+        aoa.push([d.label, +(+p.x).toFixed(6), +(+p.y).toFixed(6), p.label||null]);
+      });
+    });
+  }
+  const wb = XLSX.utils.book_new();
+  addSheet(wb, aoa, "ChartData", [22, ...new Array(Math.max(1,(aoa[0]||[]).length-1)).fill(14)]);
+  XLSX.writeFile(wb, id + "_data_" + new Date().toISOString().slice(0,10) + ".xlsx");
+}));
+
+/* ============================================================
+   EXCEL EXPORT
+============================================================ */
+$("btnDlExcel").addEventListener("click", ()=>{
+  if(!lastBacktest || !STATS) return;
+  const B = lastBacktest;
+  const wb = XLSX.utils.book_new();
+
+  // 1. Summary
+  const sum = [["Table 4. 성과 요약  ·  기간: "+fmtDate(B.dates[0])+" ~ "+fmtDate(B.dates[B.dates.length-1])
+                +"  ·  리밸런싱: "+B.rebal+"  ·  무위험수익률: "+B.rf+"%"],
+               [],
+               ["포트폴리오","누적수익률(%)","CAGR(%)","연변동성(%)","Sharpe","MDD(%)","추적오차(%)","정보비율(IR)","일간승률(%)"]];
+  const pRow = (n,p)=>[n, rnd(p.cum), rnd(p.cagr), rnd(p.vol), rnd(p.sharpe,3), rnd(p.mdd), p.te===null?null:rnd(p.te), p.ir===null?null:rnd(p.ir,3), rnd(p.winRate,1)];
+  B.results.forEach(r=>sum.push(pRow(r.name, r.perf)));
+  sum.push(pRow("벤치마크 (LBUSTRUU 50% + KBPMABIN 50%)", B.bmPerf));
+  addSheet(wb, sum, "Summary", [42,14,10,12,9,10,12,12,12]);
+
+  // 2. Significance (Table 5)
+  const sg = [["Table 5. 벤치마크 대비 성과의 통계적 유의성 (일간수익률 양측 t-검정, OLS: r_p = α + β·r_bm + ε, α는 252일 연환산)"],
+              ["유의수준: * p<0.10, ** p<0.05, *** p<0.01"],
+              [],
+              ["포트폴리오","연초과수익률(%)","t-통계량","p-값","유의성","α(연,%)","t(α)","p(α)","유의성(α)","β","R²"]];
+  B.results.forEach(r=>{
+    const s = r.sig;
+    sg.push([r.name, rnd(s.exAnn), rnd(s.t,3), rnd(s.p,4), sigStars(s.p),
+             rnd(s.alphaAnn), rnd(s.tA,3), rnd(s.pA,4), sigStars(s.pA), rnd(s.beta,4), rnd(s.r2,4)]);
+  });
+  addSheet(wb, sg, "Significance", [42,15,10,10,8,10,8,10,10,8,8]);
+
+  // 2b. Yearly performance & outperform summary (Table 6)
+  const yp = [["Table 6. 연도별 수익률 및 벤치마크 대비 초과수익률 (%)"],[],
+              ["연도","벤치마크", ...B.results.flatMap(r=>[r.name, r.name+" 초과(%p)"])]];
+  B.yearlyBM.forEach((ybm,k)=>{
+    const row = [ybm.key, rnd(ybm.ret*100)];
+    B.results.forEach((r,i)=>{
+      const y = B.yearly[i][k];
+      row.push(rnd(y.ret*100), rnd((y.ret-ybm.ret)*100));
+    });
+    yp.push(row);
+  });
+  yp.push([]);
+  yp.push(["아웃퍼폼 요약"]);
+  yp.push(["포트폴리오","누적 초과수익률(%p)","연환산 초과(%p)","연도별 아웃퍼폼","월간 승률(%)"]);
+  const monBM2 = periodReturns(B.bm.nav, B.dates, "M");
+  B.results.forEach((r,i)=>{
+    let win=0;
+    B.yearly[i].forEach((y,k)=>{ if(y.ret>B.yearlyBM[k].ret) win++; });
+    const mon = periodReturns(r.sim.nav, B.dates, "M");
+    let mWin=0;
+    mon.forEach((m,k)=>{ if(m.ret>monBM2[k].ret) mWin++; });
+    yp.push([r.name, rnd(r.perf.cum-B.bmPerf.cum), rnd(r.perf.cagr-B.bmPerf.cagr),
+             win+"/"+B.yearly[i].length, rnd(mWin/mon.length*100,1)]);
+  });
+  addSheet(wb, yp, "YearlyPerf", [12,12, ...B.results.flatMap(()=>[14,14])]);
+
+  // 2b-attr. Brinson attribution per portfolio (Table 6b)
+  const at = [["Table 6b. 벤치마크 아웃퍼폼 기여도 분석 (Brinson-Hood-Beebower, 연환산 %p)"],
+              ["벤치마크 그룹: 미국종합(US) 50% + 한국종합(KR) 50%. 각 ETF는 통화권에 따라 매핑."],[]];
+  B.results.forEach(r=>{
+    const A = r.attr;
+    at.push(["■ "+r.name+"  (US비중 "+rnd(A.wPnode.US,1)+"% / KR비중 "+rnd(A.wPnode.KR,1)+"%, US종합 "+rnd(A.rUSann)+"% · KR종합 "+rnd(A.rKRann)+"%)"]);
+    at.push(["자산","그룹","P비중(%)","B비중(%)","자산수익률(연,%)","배분효과","선택효과","상호작용","총기여(%p)"]);
+    [...A.rows].sort((a,b)=>b.total-a.total).forEach(row=>{
+      at.push([row.name, row.grp, rnd(row.wp,1), rnd(row.wb,1), rnd(row.rAsset), rnd(row.alloc), rnd(row.sel), rnd(row.inter), rnd(row.total)]);
+    });
+    at.push(["합계","",rnd(A.wPnode.US+A.wPnode.KR,1),100,"",rnd(A.totAlloc),rnd(A.totSel),rnd(A.totInter),rnd(A.tot)]);
+    at.push([]);
+  });
+  addSheet(wb, at, "Attribution", [18,7,11,11,15,12,12,12,12]);
+
+  // 2b-dd. MDD asset contribution per portfolio
+  const dc = [["Table 5b. 최대 낙폭(MDD) 자산별 손실 기여도 — 기여도 = Σ w(t-1)·r(t), 고점 익일~저점 (산술 합산)"],[]];
+  B.results.forEach(r=>{
+    const ep = ddEpisode(r.sim.nav);
+    const rows = computeDDContrib(r.sim, B, ep.peakK, ep.troughK).sort((a,b)=>a.contrib-b.contrib);
+    const totC = rows.reduce((a,x)=>a+x.contrib,0);
+    dc.push(["■ "+r.name+"  MDD "+rnd(ep.mdd)+"%  고점 "+fmtDate(B.dates[ep.peakK])+" → 저점 "+fmtDate(B.dates[ep.troughK])
+             +(ep.recK!==null?("  회복 "+fmtDate(B.dates[ep.recK])):"  미회복")]);
+    dc.push(["자산","구간 평균 비중(%)","자산 자체 수익률(%)","기여도(%p)","기여율(%)"]);
+    rows.forEach(x=>dc.push([x.name, rnd(x.wAvg,1), rnd(x.own), rnd(x.contrib), Math.abs(totC)>1e-9?rnd(x.contrib/totC*100,1):null]));
+    dc.push(["합계(산술)","","",rnd(totC),100]);
+    dc.push([]);
+  });
+  addSheet(wb, dc, "MDD_Contribution", [18,16,17,12,11]);
+
+  // 2b-attrY. yearly Brinson effects per portfolio
+  const ay = [["Table 6c. 연도별 Brinson 효과 분해 (기간 기여 %p = 일평균 효과 × 연간 거래일수, 정태적 비중 가정)"],[]];
+  B.results.forEach(r=>{
+    const byYear = {};
+    for(let k=0;k<B.dates.length;k++){
+      const y = B.dates[k].getUTCFullYear();
+      (byYear[y] = byYear[y] || []).push(B.idx[k]);
+    }
+    ay.push(["■ "+r.name]);
+    ay.push(["연도","배분효과","선택효과","상호작용","총기여(%p)"]);
+    Object.keys(byYear).sort().forEach(y=>{
+      const sub = byYear[y];
+      if(sub.length<20) return;
+      const A2 = computeAttribution(r.weights, sub);
+      const sc = (sub.length-1)/ANN;
+      ay.push([y, rnd(A2.totAlloc*sc), rnd(A2.totSel*sc), rnd(A2.totInter*sc), rnd(A2.tot*sc)]);
+    });
+    ay.push([]);
+  });
+  addSheet(wb, ay, "Attribution_Yearly", [10,12,12,12,12]);
+
+  // NSS fit deviation (latest business day)
+  if(DATA.factorsAvail){
+    let iUS=null, iKR=null;
+    for(let i2=DATA.dates.length-1;i2>=0;i2--){
+      if(iUS===null && nssFitRow(DATA.yc[i2],0)) iUS=i2;
+      if(iKR===null && nssFitRow(DATA.yc[i2],7)) iKR=i2;
+      if(iUS!==null && iKR!==null) break;
+    }
+    const usf = iUS!==null?nssFitRow(DATA.yc[iUS],0):null, krf = iKR!==null?nssFitRow(DATA.yc[iKR],7):null;
+    const nd = [["Table 8. 만기별 실제 금리 vs NSS 적합치 괴리 (bp) — 미국 "+(iUS!==null?fmtDate(DATA.dates[iUS]):"N/A")+" · 한국 "+(iKR!==null?fmtDate(DATA.dates[iKR]):"N/A")],[],
+                ["만기","US 실제(%)","US 적합(%)","US 괴리(bp)","KR 실제(%)","KR 적합(%)","KR 괴리(bp)"]];
+    const tn = ["3개월","1년","2년","3년","5년","10년","30년"];
+    for(let t=0;t<7;t++){
+      nd.push([tn[t],
+        usf?rnd(usf.actual[t],3):null, usf?rnd(usf.fitted[t],3):null, usf?rnd((usf.actual[t]-usf.fitted[t])*100,1):null,
+        krf?rnd(krf.actual[t],3):null, krf?rnd(krf.fitted[t],3):null, krf?rnd((krf.actual[t]-krf.fitted[t])*100,1):null]);
+    }
+    addSheet(wb, nd, "NSS_Deviation", [9,11,11,11,11,11,11]);
+  }
+
+  // 2b-val. investment value & weight drift per portfolio
+  const amt0 = Math.max(1, parseFloat($("initAmt").value)||100000000);
+  const vv = [["Table 5c. 초기투자금액 기준 자산가치·비중 변화 — 초기 "+Math.round(amt0).toLocaleString("ko-KR")+"원, "
+               +fmtDate(B.dates[0])+" ~ "+fmtDate(B.dates[B.dates.length-1])+", 리밸런싱: "+B.rebal],[]];
+  B.results.forEach(r=>{
+    const sim = r.sim, last = sim.wHist.length-1, navMult = sim.nav[sim.nav.length-1]/100;
+    vv.push(["■ "+r.name+"  최종 평가금액 "+Math.round(amt0*navMult).toLocaleString("ko-KR")+"원 (누적 "+rnd((navMult-1)*100)+"%)"]);
+    vv.push(["자산","초기 비중(%)","초기 금액(원)","기말 비중(%)","기말 평가금액(원)","금액 변화(원)"]);
+    sim.keys.map((j,m)=>({name:DATA.names[j], w0:sim.wHist[0][m]*100, w1:sim.wHist[last][m]*100}))
+      .sort((a,b)=>b.w1-a.w1)
+      .forEach(x=>{
+        const a0=amt0*x.w0/100, a1=amt0*navMult*x.w1/100;
+        vv.push([x.name, rnd(x.w0,1), Math.round(a0), rnd(x.w1,1), Math.round(a1), Math.round(a1-a0)]);
+      });
+    vv.push([]);
+  });
+  addSheet(wb, vv, "InvestmentValue", [18,13,16,13,17,15]);
+
+  // 2c. NSS factor regression (Table 7)
+  const fr = [["Table 7. 채권시장 팩터 회귀 (Newey-West 시차 5, NSS τ1="+NSS_T1+" τ2="+NSS_T2+" 고정, 일별 OLS 적합)"],
+              ["팩터 베타: 해당 팩터 1%p 변화에 대한 일간수익률 반응(%). α는 252일 연환산. 유의수준: * p<0.10, ** p<0.05, *** p<0.01"],
+              [],
+              ["포트폴리오","종속변수","α(연,%)","t(α)","p(α)",
+               ...B.factorLabels.flatMap(l=>[l+" β(%/1%p)", "t", "p"]), "R²","N"]];
+  B.results.forEach(r=>{
+    [["초과수익률(rp-rbm)", r.freg.ex], ["포트폴리오 수익률", r.freg.raw]].forEach(([dep,g])=>{
+      if(!g){ fr.push([r.name, dep, "팩터 데이터 부족"]); return; }
+      const row = [r.name, dep, rnd(g.b[0]*ANN*100,3), rnd(g.t[0],3), rnd(g.p[0],4)];
+      B.factorLabels.forEach((_,i)=>row.push(rnd(g.b[i+1]*100,4), rnd(g.t[i+1],3), rnd(g.p[i+1],4)));
+      row.push(rnd(g.r2,4), g.n);
+      fr.push(row);
+    });
+  });
+  addSheet(wb, fr, "FactorReg", [30,20,10,8,8, ...B.factorLabels.flatMap(()=>[14,7,8]), 8,8]);
+
+  // 2d. NSS factor time series over backtest window
+  const nf = [["NSS 커브 팩터 시계열 (Level=β0, Slope=−β1, Curvature=β2; β3는 제2 곡도항) · 신용스프레드(%)"],[],
+              ["Date","US Level","US Slope","US Curv","US β3","KR Level","KR Slope","KR Curv","KR β3","US IG OAS","US HY OAS"]];
+  B.idx.forEach((i,k)=>{
+    nf.push([fmtDate(B.dates[k]),
+      rnd(NSSF.us.L[i],4), rnd(NSSF.us.S[i],4), rnd(NSSF.us.C[i],4), rnd(NSSF.us.B3[i],4),
+      rnd(NSSF.kr.L[i],4), rnd(NSSF.kr.S[i],4), rnd(NSSF.kr.C[i],4), rnd(NSSF.kr.B3[i],4),
+      rnd(NSSF.ig[i],4), rnd(NSSF.hy[i],4)]);
+  });
+  addSheet(wb, nf, "NSS_Factors", [12,10,10,10,10,10,10,10,10,10,10]);
+
+  // 3. Weights
+  const wRows = [["포트폴리오 비중 기록 (%)"+(B.mode==="dynamic"?" — 동적 비중 이력 모드: 아래 비중은 마지막 적용 시점 기준":"")],[],
+                 ["자산","티커","듀레이션", ...B.results.map(r=>r.name)]];
+  for(let j=0;j<BM_US_IDX;j++){
+    wRows.push([DATA.names[j], DATA.tickers[j], DATA.durations[j], ...B.results.map(r=>r.weights[j]||0)]);
+  }
+  wRows.push(["합계","","", ...B.results.map(r=>rnd(Object.values(r.weights).reduce((a,b)=>a+b,0),1))]);
+  if(B.mode==="dynamic" && B.results[0].schedule){
+    wRows.push([]);
+    wRows.push(["동적 비중 이력 (적용일 순)"]);
+    wRows.push(["이름","적용일", ...DATA.tickers.slice(0,BM_US_IDX)]);
+    B.results[0].schedule.forEach(s=>{
+      const row=[s.name, s.effDate];
+      for(let j=0;j<BM_US_IDX;j++) row.push(s.weights[j]!==undefined?s.weights[j]:0);
+      wRows.push(row);
+    });
+  }
+  wRows.push([]);
+  wRows.push(["전체 저장 기록"]);
+  wRows.push(["이름","적용일","저장 시각","비중(자산명=%)"]);
+  [...savedPortfolios].sort((a,b)=>(a.effDate||"")<(b.effDate||"")?-1:1).forEach(p=>{
+    const ws = Object.entries(p.weights).map(([j,v])=>DATA.names[+j]+"="+v).join("; ");
+    wRows.push([p.name, p.effDate||"", p.savedAt, ws]);
+  });
+  addSheet(wb, wRows, "Weights", [16,18,10, ...B.results.map(()=>14)]);
+
+  // 4. Optimization runs
+  if(lastOptimRuns.length){
+    const op = [["Mean-Variance 최적화 실행 기록 (long-only, in-sample, 252일 산술 연환산)"],[],
+                ["#","방법론","μ 소스 / 파라미터","추정 기간","관측치","비중 제약","기대수익률(연,%)","기대변동성(연,%)","Sharpe","비중(자산명=%)"]];
+    lastOptimRuns.forEach((o,i)=>{
+      const ws = Object.entries(o.weights).map(([j,v])=>DATA.names[+j]+"="+v).join("; ");
+      op.push([i+1, o.label, o.params, o.period, o.T, o.capPct, rnd(o.expRet), rnd(o.expVol), rnd(o.sharpe,3), ws]);
+    });
+    if(lastFrontier){
+      op.push([]); op.push(["고전 효율적 투자선 (표본 μ·Σ, 최신 실행 기준)"]);
+      op.push(["연환산변동성 σ(%)","기대수익률 μ(연,%)"]);
+      lastFrontier.frontier.forEach(p=>op.push([rnd(p.x,4), rnd(p.y,4)]));
+    }
+    addSheet(wb, op, "Optimization", [5,28,30,26,10,20,16,16,9,60]);
+  }
+
+  // 5. Asset statistics
+  const st = [["Table 1. 일간수익률 기초 통계  ·  기간: "+$("startDate").value+" ~ "+$("endDate").value
+               +"  ·  t(μ=0): 일평균수익률 = 0 귀무가설의 양측 t-검정 (* p<0.10, ** p<0.05, *** p<0.01)"],[],
+              ["자산","티커","듀레이션","데이터 시작","관측치","일평균수익률(%)","일표준편차(%)","연환산수익률(%)","연환산변동성(%)","t(μ=0)","p-값","유의성"]];
+  STATS.stats.forEach(s=>st.push([s.name,s.ticker,s.dur,fmtDate(s.first),s.n,rnd(s.meanD,4),rnd(s.sdD,4),rnd(s.annR),rnd(s.annV),rnd(s.tstat,3),rnd(s.pval,4),sigStars(s.pval)]));
+  addSheet(wb, st, "AssetStats", [16,20,10,12,9,15,14,15,15,9,9,8]);
+
+  // 6. Correlation (+ p-values)
+  const CM = corrMatrix();
+  const cr = [["Table 2. 일간수익률 상관계수 행렬 (pair별 공통 관측치 기준)"],[],["",...DATA.names]];
+  for(let i=0;i<N_COL;i++) cr.push([DATA.names[i], ...CM.C[i].map(x=>x===null?null:rnd(x,3))]);
+  cr.push([]); cr.push(["상관계수 p-값 행렬 (t = r·√(n−2)/√(1−r²), 양측)"]); cr.push(["",...DATA.names]);
+  for(let i=0;i<N_COL;i++){
+    const row=[DATA.names[i]];
+    for(let j=0;j<N_COL;j++){
+      const c=CM.C[i][j], m=CM.M[i][j];
+      if(i===j||c===null||m<3||Math.abs(c)>=1){ row.push(i===j?0:null); continue; }
+      const t=c*Math.sqrt(m-2)/Math.sqrt(1-c*c);
+      row.push(rnd(tPval(t,m-2),4));
+    }
+    cr.push(row);
+  }
+  addSheet(wb, cr, "Correlation", [16, ...DATA.names.map(()=>9)]);
+
+  // 7. Backtest time series
+  const ts = [["Figure 2–3 데이터: 누적지수(시작=100) 및 낙폭(%)"],[],
+              ["Date", ...B.results.map(r=>r.name), "벤치마크 50/50",
+               ...B.results.map(r=>r.name+" DD(%)"), "벤치마크 DD(%)"]];
+  for(let k=0;k<B.dates.length;k++){
+    ts.push([fmtDate(B.dates[k]),
+      ...B.results.map(r=>rnd(r.sim.nav[k],4)),
+      rnd(B.bm.nav[k],4),
+      ...B.results.map(r=>rnd(r.perf.dd[k]*100,3)),
+      rnd(B.bmPerf.dd[k]*100,3)]);
+  }
+  addSheet(wb, ts, "Backtest_TS", [12]);
+
+  XLSX.writeFile(wb, "bond_etf_portfolio_results_"+new Date().toISOString().slice(0,10)+".xlsx");
+});
+function rnd(x,d=2){ return (x===null||x===undefined||isNaN(x))?null:+(+x).toFixed(d); }
+function addSheet(wb, aoa, name, widths){
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  if(widths) ws["!cols"] = widths.map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, ws, name);
+}
+
+/* ---------- export all charts as images into one Excel workbook ---------- */
+$("btnDlCharts").addEventListener("click", async ()=>{
+  if(typeof ExcelJS === "undefined"){ alert("그래프 내보내기 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하세요."); return; }
+  const specs = [
+    ["comp","Figure 2. 포트폴리오 구성 비교"],
+    ["attr","Figure 2b. 자산별 초과수익 기여도"],
+    ["cum","Figure 3. 누적수익률 추이"],
+    ["rel","Figure 4. 벤치마크 대비 상대성과"],
+    ["dd","Figure 5. 낙폭(Drawdown) 추이"],
+    ["rr","Figure 6. 위험-수익 산점도 + 효율적 투자선"],
+    ["ddc","Figure 5b. MDD 자산별 손실 기여도"],
+    ["attrY","Figure 2c. 연도별 Brinson 효과 추이"],
+    ["fact","Figure 7. NSS 커브 팩터 추이"]
+  ].filter(s=>charts[s[0]]);
+  if(specs.length===0){ alert("내보낼 그래프가 없습니다. 먼저 백테스트를 실행하세요."); return; }
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("Charts");
+  ws.getColumn(1).width = 2;
+  let row = 2;
+  ws.getCell("B"+row).value = "채권형 ETF 포트폴리오 분석 — 그래프 모음 ("+new Date().toISOString().slice(0,10)+")";
+  ws.getCell("B"+row).font = {name:"Times New Roman", size:14, bold:true};
+  row += 2;
+  for(const [key,title] of specs){
+    const ch = charts[key];
+    const dataUrl = ch.toBase64Image("image/png", 1);
+    ws.getCell("B"+row).value = title;
+    ws.getCell("B"+row).font = {name:"Times New Roman", size:12, bold:true};
+    row += 1;
+    const imgId = wb.addImage({ base64: dataUrl, extension:"png" });
+    const w = ch.width, h = ch.height;
+    const scale = Math.min(1, 900/w);
+    ws.addImage(imgId, { tl:{col:1, row:row-1}, ext:{width:w*scale, height:h*scale} });
+    row += Math.ceil(h*scale/18) + 2;
+  }
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "bond_etf_charts_"+new Date().toISOString().slice(0,10)+".xlsx";
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
+});
+</script>
+<script src="./common.js"></script>
+</body>
+</html>

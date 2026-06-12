@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>금리 계량분석 포털 · Research Workbench</title>
+<style>
+  :root{
+    --ink:#16213a; --ink2:#3a4a6b; --muted:#6b7488;
+    --line:#d9dde6; --line2:#eceef3;
+    --accent:#1f3a6e; --accent-soft:#eaf0f9;
+    --paper:#ffffff; --good:#2f6f6b; --bad:#a23b3b; --warn:#b07d2b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);
+    font-family:'Times New Roman',Times,Georgia,serif;font-size:16px;line-height:1.5;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 28px 90px;}
+
+  /* ---- masthead (분석 페이지들과 동일한 양식) ---- */
+  header.mast{border-bottom:2px solid var(--ink);padding:34px 0 18px;}
+  .eyebrow{font-variant:small-caps;letter-spacing:.14em;font-size:.82rem;color:var(--accent);margin:0 0 6px;}
+  h1.title{font-size:2.3rem;font-weight:700;margin:0 0 6px;letter-spacing:-.01em;line-height:1.12;}
+  .subtitle{font-size:1.04rem;color:var(--ink2);font-style:italic;margin:0;}
+  .mastmeta{display:flex;gap:26px;flex-wrap:wrap;margin-top:14px;font-size:.86rem;color:var(--muted);}
+  .mastmeta b{color:var(--ink);font-weight:700;}
+
+  h2.sec{font-size:1.16rem;margin:40px 0 4px;font-weight:700;}
+  h2.sec .num{font-variant:small-caps;font-size:.78rem;color:var(--accent);margin-right:9px;letter-spacing:.1em;}
+  p.secdesc{margin:0 0 16px;color:var(--ink2);font-size:.94rem;}
+
+  /* ---- 연결 패널 ---- */
+  .connect{border:1px solid var(--line);padding:18px 20px 16px;}
+  .row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;}
+  .field{display:flex;flex-direction:column;gap:4px;}
+  .field label{font-size:.78rem;letter-spacing:.06em;color:var(--muted);font-variant:small-caps;}
+  .field input{font-family:inherit;font-size:.95rem;padding:6px 8px;border:1px solid var(--line);
+    background:#fff;color:var(--ink);min-width:120px;}
+  .field input:focus{outline:2px solid var(--accent-soft);border-color:var(--accent);}
+  #fOwner{width:140px} #fRepo{width:170px} #fRef{width:90px} #fToken{width:300px}
+  button.primary{font-family:inherit;font-size:.95rem;padding:8px 20px;cursor:pointer;
+    background:var(--accent);color:#fff;border:1px solid var(--accent);}
+  button.primary:hover{background:#16305c;}
+  button.ghost{font-family:inherit;font-size:.83rem;padding:4px 10px;cursor:pointer;
+    background:none;border:1px solid var(--line);color:var(--ink2);}
+  button.ghost:hover{border-color:var(--accent);color:var(--accent);}
+  .tokrow{display:flex;align-items:center;gap:8px;}
+  .hint{font-size:.8rem;color:var(--muted);font-style:italic;margin-top:10px;}
+  #status{margin-top:12px;font-size:.9rem;}
+  #status.ok{color:var(--good)} #status.err{color:var(--bad)} #status.busy{color:var(--warn)}
+
+  /* ---- 분석 모듈 목차 ---- */
+  ol.toc{list-style:none;margin:0;padding:0;counter-reset:mod;}
+  ol.toc li{counter-increment:mod;border-bottom:1px solid var(--line2);padding:16px 2px;}
+  ol.toc li:first-child{border-top:1px solid var(--line);}
+  ol.toc a.mod{display:flex;gap:16px;align-items:baseline;text-decoration:none;color:var(--ink);}
+  ol.toc a.mod:hover .modname{color:var(--accent);text-decoration:underline;}
+  ol.toc .modnum::before{content:counter(mod, upper-roman) ".";}
+  ol.toc .modnum{font-size:.92rem;color:var(--accent);min-width:34px;font-weight:700;}
+  .modname{font-size:1.08rem;font-weight:700;}
+  .moddesc{font-size:.88rem;color:var(--muted);margin:3px 0 0 50px;font-style:italic;}
+
+  /* ---- 데이터 원장 ---- */
+  table.ledger{width:100%;border-collapse:collapse;font-size:.92rem;}
+  table.ledger th{font-variant:small-caps;letter-spacing:.08em;font-size:.78rem;color:var(--muted);
+    text-align:left;border-top:1px solid var(--ink);border-bottom:1px solid var(--line);padding:8px 6px;font-weight:700;}
+  table.ledger td{border-bottom:1px solid var(--line2);padding:8px 6px;vertical-align:baseline;}
+  table.ledger td.sz{text-align:right;color:var(--ink2);white-space:nowrap;font-size:.86rem;}
+  table.ledger tr.default td{background:var(--accent-soft);}
+  table.ledger .fname{word-break:break-all;}
+  .defmark{font-variant:small-caps;font-size:.74rem;color:var(--accent);margin-left:8px;letter-spacing:.08em;}
+  #ledgerEmpty{color:var(--muted);font-style:italic;font-size:.92rem;padding:14px 2px;}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;}
+  @media (max-width:860px){.grid2{grid-template-columns:1fr;}}
+
+  footer{margin-top:56px;border-top:1px solid var(--line);padding-top:14px;
+    font-size:.8rem;color:var(--muted);font-style:italic;}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <p class="eyebrow">Research Workbench · Interest-Rate Econometrics</p>
+    <h1 class="title">금리 계량분석 포털</h1>
+    <p class="subtitle">하나의 데이터베이스, 세 개의 분석 모듈 — 토큰은 여기서 한 번만 입력합니다.</p>
+    <div class="mastmeta">
+      <span>저장소 <b id="metaRepo">jeongmmo/research-data</b></span>
+      <span>연결 상태 <b id="metaConn">미연결</b></span>
+      <span>데이터 파일 <b id="metaFiles">—</b></span>
+    </div>
+  </header>
+
+  <h2 class="sec"><span class="num">§ 1</span>저장소 연결</h2>
+  <p class="secdesc">fine-grained PAT(해당 저장소 1개 · Contents: Read-only 권한)를 붙여넣고 연결하세요.
+    입력값은 이 브라우저 세션에서만 유지되며, 아래 분석 모듈을 열면 자동으로 이어받습니다.</p>
+  <div class="connect">
+    <div class="row">
+      <div class="field"><label>Owner</label><input type="text" id="fOwner" value="jeongmmo" autocomplete="off"></div>
+      <div class="field"><label>Repository</label><input type="text" id="fRepo" value="research-data" autocomplete="off"></div>
+      <div class="field"><label>Branch</label><input type="text" id="fRef" placeholder="기본" autocomplete="off"></div>
+      <div class="field"><label>Personal Access Token</label>
+        <div class="tokrow">
+          <input type="password" id="fToken" placeholder="github_pat_…" autocomplete="off" spellcheck="false">
+          <label style="font-size:.8rem;color:var(--muted)"><input type="checkbox" id="fShow"> 표시</label>
+        </div>
+      </div>
+      <button class="primary" id="btnConnect">연결하고 파일 목록 불러오기</button>
+    </div>
+    <p class="hint">토큰은 sessionStorage에 보관되어 탭을 닫으면 사라집니다. 공용 PC에서는 사용 후 탭을 닫으세요.</p>
+    <div id="status"></div>
+  </div>
+
+  <div class="grid2">
+    <section>
+      <h2 class="sec"><span class="num">§ 2</span>분석 모듈</h2>
+      <p class="secdesc">연결 후 모듈을 열면 owner·repo·토큰·기본 데이터 파일이 채워진 상태로 시작합니다.</p>
+      <ol class="toc">
+        <li>
+          <a class="mod" href="korea_neutral_rate.html">
+            <span class="modnum"></span><span class="modname">한국 중립금리 추정기</span>
+          </a>
+          <p class="moddesc">DKW/ACM 기간구조 분해 · 기대 실질단기금리 · 기간프리미엄</p>
+        </li>
+        <li>
+          <a class="mod" href="bond_etf_portfolio_analyzer.html">
+            <span class="modnum"></span><span class="modname">채권 ETF 포트폴리오 분석기</span>
+          </a>
+          <p class="moddesc">성과 귀속 · 누적수익 · 드로다운 · 비중 기록 관리</p>
+        </li>
+        <li>
+          <a class="mod" href="econometrics_toolkit.html">
+            <span class="modnum"></span><span class="modname">계량분석 툴킷</span>
+          </a>
+          <p class="moddesc">변수 선택형 회귀 · 기술통계 · 추세 분해 · CSV/Excel 입출력</p>
+        </li>
+      </ol>
+      <p style="margin-top:18px;font-size:.92rem">
+        <a href="results_viewer.html" style="color:var(--accent)">→ 사전계산 결과 열람 (GitHub Actions · statsmodels)</a>
+      </p>
+    </section>
+
+    <section>
+      <h2 class="sec"><span class="num">§ 3</span>데이터베이스 원장</h2>
+      <p class="secdesc">저장소 안의 데이터 파일(.xlsx/.csv 등) 전체 목록입니다. 파일을 직접 추가·삭제한 뒤
+        다시 연결하면 갱신됩니다. ‘기본 지정’한 파일이 각 모듈의 시작 파일이 됩니다.</p>
+      <div id="ledgerEmpty">아직 연결되지 않았습니다 — § 1에서 토큰을 입력하고 연결하세요.</div>
+      <table class="ledger" id="ledger" style="display:none">
+        <thead><tr><th>파일 경로</th><th style="text-align:right">크기</th><th></th></tr></thead>
+        <tbody id="ledgerBody"></tbody>
+      </table>
+    </section>
+  </div>
+
+  <footer>
+    이 포털과 분석 페이지는 같은 출처(origin)에서 서빙될 때 토큰을 공유합니다 —
+    GitHub Pages 주소로 접속하거나, 로컬에서는 <code>python -m http.server</code> 등으로 띄워 사용하세요.
+  </footer>
+</div>
+
+<script src="./common.js"></script>
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+
+  /* 저장된 세션 값으로 초기화 */
+  var cfg = GHCommon.currentConfig();
+  if (cfg.owner) $("fOwner").value = cfg.owner;
+  if (cfg.repo)  $("fRepo").value  = cfg.repo;
+  if (cfg.ref)   $("fRef").value   = cfg.ref;
+  if (cfg.token) $("fToken").value = cfg.token;
+  $("metaRepo").textContent = $("fOwner").value + "/" + $("fRepo").value;
+
+  $("fShow").addEventListener("change", function(e){
+    $("fToken").type = e.target.checked ? "text" : "password";
+  });
+
+  function setStatus(msg, cls){
+    var s = $("status"); s.textContent = msg; s.className = cls || "";
+  }
+
+  function fmtSize(b){
+    if (b >= 1048576) return (b/1048576).toFixed(1) + " MB";
+    if (b >= 1024)    return (b/1024).toFixed(0) + " KB";
+    return b + " B";
+  }
+
+  function renderLedger(files, repoCfg){
+    var tb = $("ledgerBody"); tb.innerHTML = "";
+    var current = GHCommon.currentConfig().path;
+    if (!current && files.length) {            /* 기본 파일이 없으면 첫 파일로 */
+      current = files[0].path;
+      GHCommon.saveConfig(Object.assign({}, repoCfg, { path: current }));
+    }
+    files.forEach(function(f){
+      var tr = document.createElement("tr");
+      if (f.path === current) tr.className = "default";
+      var td1 = document.createElement("td");
+      td1.innerHTML = '<span class="fname">' + f.path + '</span>' +
+        (f.path === current ? '<span class="defmark">기본</span>' : '');
+      var td2 = document.createElement("td"); td2.className = "sz"; td2.textContent = fmtSize(f.size);
+      var td3 = document.createElement("td"); td3.style.textAlign = "right";
+      if (f.path !== current) {
+        var b = document.createElement("button");
+        b.className = "ghost"; b.textContent = "기본 지정";
+        b.addEventListener("click", function(){
+          GHCommon.saveConfig(Object.assign({}, repoCfg, { path: f.path }));
+          renderLedger(files, repoCfg);
+        });
+        td3.appendChild(b);
+      }
+      tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
+      tb.appendChild(tr);
+    });
+    $("ledgerEmpty").style.display = files.length ? "none" : "";
+    $("ledgerEmpty").textContent = files.length ? "" : "저장소에 데이터 파일(.xlsx/.csv 등)이 없습니다.";
+    $("ledger").style.display = files.length ? "" : "none";
+    $("metaFiles").textContent = files.length + "개";
+  }
+
+  $("btnConnect").addEventListener("click", async function(){
+    var repoCfg = {
+      owner: $("fOwner").value.trim(),
+      repo:  $("fRepo").value.trim(),
+      ref:   $("fRef").value.trim(),
+      token: $("fToken").value.trim()
+    };
+    if (!repoCfg.owner || !repoCfg.repo) { setStatus("owner와 repository를 입력하세요.", "err"); return; }
+    GHCommon.saveConfig(repoCfg);                       /* 분석 페이지로 전달 */
+    $("metaRepo").textContent = repoCfg.owner + "/" + repoCfg.repo;
+    setStatus("연결 확인 중 …", "busy");
+    try {
+      var info  = await GHCommon.repoInfo(repoCfg);
+      var files = await GHCommon.listDataFiles(repoCfg);
+      setStatus("연결됨 — " + info.fullName + (info.isPrivate ? " (private)" : " (public)") +
+                ", 데이터 파일 " + files.length + "개", "ok");
+      $("metaConn").textContent = "연결됨";
+      renderLedger(files, repoCfg);
+    } catch (e) {
+      setStatus(e.message, "err");
+      $("metaConn").textContent = "실패";
+    }
+  });
+
+  /* 토큰이 이미 세션에 있으면 자동 연결 */
+  if (cfg.token) $("btnConnect").click();
+})();
+</script>
+</body>
+</html>

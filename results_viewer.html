@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>사전계산 결과 · Precomputed Results (GitHub Actions)</title>
+<style>
+  :root{
+    --ink:#16213a; --ink2:#3a4a6b; --muted:#6b7488;
+    --line:#d9dde6; --line2:#eceef3;
+    --accent:#1f3a6e; --accent-soft:#eaf0f9;
+    --paper:#ffffff; --good:#2f6f6b; --bad:#a23b3b; --warn:#b07d2b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);
+    font-family:'Times New Roman',Times,Georgia,serif;font-size:16px;line-height:1.5;}
+  .wrap{max-width:980px;margin:0 auto;padding:0 28px 90px;}
+  header.mast{border-bottom:2px solid var(--ink);padding:34px 0 18px;margin-bottom:8px;}
+  .eyebrow{font-variant:small-caps;letter-spacing:.14em;font-size:.82rem;color:var(--accent);margin:0 0 6px;}
+  h1.title{font-size:2rem;font-weight:700;margin:0 0 6px;}
+  .subtitle{font-size:1rem;color:var(--ink2);font-style:italic;margin:0;}
+  a.back{font-size:.86rem;color:var(--accent);}
+  #status{margin:18px 0;font-size:.92rem;}
+  #status.err{color:var(--bad)} #status.busy{color:var(--warn);font-style:italic}
+
+  h2.job{font-size:1.2rem;margin:38px 0 2px;font-weight:700;}
+  .jobmeta{font-size:.85rem;color:var(--muted);font-style:italic;margin:0 0 14px;}
+  h3.sub{font-size:1rem;margin:22px 0 8px;font-weight:700;}
+
+  table.reg{border-collapse:collapse;font-size:.92rem;margin:6px 0 4px;min-width:60%;}
+  table.reg caption{caption-side:top;text-align:left;font-size:.95rem;font-weight:700;padding-bottom:6px;}
+  table.reg th{font-variant:small-caps;font-size:.78rem;letter-spacing:.06em;color:var(--muted);
+    border-top:1.5px solid var(--ink);border-bottom:1px solid var(--line);padding:7px 14px 7px 0;text-align:right;font-weight:700;}
+  table.reg th:first-child{text-align:left;}
+  table.reg td{border-bottom:1px solid var(--line2);padding:6px 14px 6px 0;text-align:right;font-variant-numeric:tabular-nums;}
+  table.reg td:first-child{text-align:left;}
+  table.reg tr:last-child td{border-bottom:1.5px solid var(--ink);}
+  .tnote{font-size:.82rem;color:var(--muted);font-style:italic;margin:2px 0 0;}
+  .star{color:var(--accent);font-weight:700;}
+  .errbox{border-left:3px solid var(--bad);background:#faf0f0;padding:10px 14px;font-size:.9rem;margin:10px 0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">GitHub Actions · statsmodels precomputation</p>
+    <h1 class="title">사전계산 결과</h1>
+    <p class="subtitle">데이터를 푸시할 때마다 GitHub 서버의 파이썬이 재계산한 결과입니다 — 브라우저는 조회만 합니다.</p>
+    <p style="margin:10px 0 0"><a class="back" href="index.html">← 포털로</a></p>
+  </header>
+  <div id="status" class="busy">결과 불러오는 중 …</div>
+  <div id="content"></div>
+</div>
+
+<script src="./common.js"></script>
+<script>
+(async function(){
+  "use strict";
+  var status = document.getElementById("status");
+  var box = document.getElementById("content");
+  var cfg = GHCommon.currentConfig();
+
+  function stars(p){ return p < .01 ? "***" : p < .05 ? "**" : p < .1 ? "*" : ""; }
+  function el(tag, cls, html){ var e=document.createElement(tag); if(cls)e.className=cls; if(html!==undefined)e.innerHTML=html; return e; }
+
+  function regTable(r){
+    if (r.error) return el("div","errbox","<b>"+(r.name||"회귀")+"</b> — "+r.error);
+    var t = el("table","reg");
+    t.appendChild(el("caption","", r.name));
+    var thead = el("thead","", "<tr><th>변수</th><th>계수</th><th>표준오차</th><th>t</th><th>p</th><th>95% 신뢰구간</th></tr>");
+    t.appendChild(thead);
+    var tb = el("tbody");
+    r.terms.forEach(function(k){
+      var ci = r.ci95[k];
+      tb.appendChild(el("tr","",
+        "<td>"+(k==="const"?"상수항":k)+"</td>"+
+        "<td>"+r.coef[k].toFixed(4)+"<span class='star'>"+stars(r.p[k])+"</span></td>"+
+        "<td>("+r.se[k].toFixed(4)+")</td>"+
+        "<td>"+r.t[k].toFixed(2)+"</td>"+
+        "<td>"+r.p[k].toFixed(3)+"</td>"+
+        "<td>["+ci[0].toFixed(3)+", "+ci[1].toFixed(3)+"]</td>"));
+    });
+    t.appendChild(tb);
+    var wrap = el("div");
+    wrap.appendChild(t);
+    wrap.appendChild(el("p","tnote",
+      "N = "+r.nobs+" · 표본 "+r.sample[0]+" ~ "+r.sample[1]+
+      " · R² = "+r.r2.toFixed(3)+" (adj. "+r.r2_adj.toFixed(3)+") · "+r.cov+
+      " · *** p&lt;.01, ** p&lt;.05, * p&lt;.1"));
+    return wrap;
+  }
+
+  function descTable(d){
+    var t = el("table","reg");
+    t.appendChild(el("caption","","기술통계"));
+    t.appendChild(el("thead","","<tr><th>변수</th><th>N</th><th>평균</th><th>표준편차</th><th>최소</th><th>중위</th><th>최대</th></tr>"));
+    var tb = el("tbody");
+    Object.keys(d.stats).forEach(function(k){
+      var s = d.stats[k];
+      tb.appendChild(el("tr","",
+        "<td>"+k+"</td><td>"+s.n+"</td><td>"+s.mean.toFixed(3)+"</td><td>"+s.sd.toFixed(3)+
+        "</td><td>"+s.min.toFixed(3)+"</td><td>"+s.median.toFixed(3)+"</td><td>"+s.max.toFixed(3)+"</td>"));
+    });
+    t.appendChild(tb);
+    return t;
+  }
+
+  try {
+    var manifest = await GHCommon.loadResults(cfg, "manifest");
+    status.textContent = "생성 시각(UTC): " + manifest.generated_utc;
+    status.className = "";
+    for (var i = 0; i < manifest.jobs.length; i++) {
+      var j = manifest.jobs[i];
+      box.appendChild(el("h2","job", j.id));
+      box.appendChild(el("p","jobmeta",
+        "입력: " + j.input + (j.sample ? " · 표본 " + j.sample[0] + " ~ " + j.sample[1] : "") +
+        " · 상태: " + j.status + (j.error ? " — " + j.error : "")));
+      if (j.status === "error") continue;
+      try {
+        var r = await GHCommon.loadResults(cfg, j.id);
+        if (r.descriptive) box.appendChild(descTable(r.descriptive));
+        (r.regressions || []).forEach(function(reg){ box.appendChild(regTable(reg)); });
+      } catch (e) {
+        box.appendChild(el("div","errbox", "results/" + j.id + ".json 로드 실패 — " + e.message));
+      }
+    }
+  } catch (e) {
+    status.className = "err";
+    status.innerHTML = "manifest를 불러오지 못했습니다 — " + e.message +
+      "<br>① Actions가 아직 한 번도 실행되지 않았거나(데이터를 푸시하면 실행됩니다), " +
+      "② 비공개 저장소인데 토큰이 없는 경우입니다. <a href='index.html'>포털</a>에서 먼저 연결하세요.";
+  }
+})();
+</script>
+</body>
+</html>
