@@ -19,24 +19,32 @@
     ghPath:  "gh_path"
   };
 
-  function bridgeFields() {
+  function fillFields() {
     Object.keys(FIELD_KEYS).forEach(function (id) {
       var el = document.getElementById(id);
       if (!el) return;
-      var key = FIELD_KEYS[id];
       var stored = null;
-      try { stored = sessionStorage.getItem(key); } catch (e) { /* file:// 등 */ }
-      if (stored !== null && stored !== "") el.value = stored;      // 포털 값으로 채움
-      el.addEventListener("change", function () {                   // 수정 시 다시 공유
-        try { sessionStorage.setItem(key, el.value); } catch (e) {}
-      });
+      try { stored = sessionStorage.getItem(FIELD_KEYS[id]); } catch (e) { /* file:// 등 */ }
+      // 칸이 비어 있을 때만 채움 (사용자가 타이핑 중인 값은 보존)
+      if (stored && !el.value) {
+        el.value = stored;
+        el.dispatchEvent(new Event("input",  { bubbles: true }));
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      if (!el.dataset.ghBridged) {            // 리스너 중복 부착 방지
+        el.dataset.ghBridged = "1";
+        el.addEventListener("change", function () {
+          try { sessionStorage.setItem(FIELD_KEYS[id], el.value); } catch (e) {}
+        });
+      }
     });
   }
+  // 모듈 스크립트가 초기화하면서 칸을 비워버리는 경우에 대비해 3차례 적용
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", bridgeFields);
-  } else {
-    bridgeFields();
-  }
+    document.addEventListener("DOMContentLoaded", fillFields);
+  } else { fillFields(); }
+  window.addEventListener("load", fillFields);
+  setTimeout(fillFields, 600);
 
   /* ---------- 2. GitHub API 헬퍼 ---------- */
   var DATA_EXT = /\.(xlsx|xlsm|csv|tsv|txt)$/i;
