@@ -73,7 +73,7 @@
       </div>
     </div>
     <p style="font-size:.78rem;color:var(--muted);font-style:italic;margin:0 0 6px;">
-      방향 적중 +10 XP · 오차 ≤0.10%p +8 · ≤0.25 +4 · ≤0.50 +1 — 전망을 정확히 맞힐수록 리트가 진화합니다.</p>
+      방향 적중 +10 XP · 오차 ≤0.10%p +8 · ≤0.25 +4 · ≤0.50 +1 — 전망을 정확히 맞힐수록 흑룡이 진화합니다.</p>
 
     <h2 class="sec"><span class="num">§ 1</span>빈티지 차트</h2>
     <p class="secdesc">굵은 선=실현치, 가는 선=각 시점 전망 경로.</p>
@@ -181,7 +181,7 @@
       var pr=Mascot.progress(x.xp);
       $("mascotArt").innerHTML=Mascot.svg(pr.stage.id,6);
       $("mascotName").textContent=pr.stage.name;
-      $("mascotStage").textContent="Lv."+(pr.stage.id+1)+" / 5";
+      $("mascotStage").textContent="Lv."+(pr.stage.id+1)+" / "+Mascot.STAGES.length;
       $("mascotXP").textContent=x.xp+" XP · 방향 적중 "+x.hits+"/"+x.evaluated+
         " ("+(x.hitRate*100).toFixed(0)+"%) · 정밀 예측 "+x.precise+"건";
       $("mascotBar").style.width=pr.pct+"%";

@@ -93,12 +93,12 @@
           <span>데이터 파일 <b id="metaFiles">—</b></span>
         </div>
       </div>
-      <div id="portalMascot" style="display:none;flex:none;text-align:center;border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(60,50,30,0.05);padding:12px 18px 10px;border-radius:2px;min-width:120px;">
-        <div id="pmArt" style="width:72px;height:72px;margin:0 auto;display:flex;align-items:center;justify-content:center;"></div>
+      <div id="portalMascot" style="display:none;flex:none;text-align:center;border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(60,50,30,0.05);padding:12px 18px 10px;border-radius:2px;min-width:124px;">
+        <div id="pmArt" style="width:76px;height:76px;margin:0 auto;display:flex;align-items:center;justify-content:center;"></div>
         <div id="pmName" style="font-size:.92rem;font-weight:700;color:var(--ink);margin-top:4px;"></div>
         <div id="pmLv" style="font-variant:small-caps;letter-spacing:.06em;font-size:.74rem;color:var(--accent);"></div>
         <div style="background:#ece6d8;border-radius:5px;height:7px;overflow:hidden;border:1px solid #ddd5c4;margin-top:6px;">
-          <div id="pmBar" style="height:100%;width:0%;background:linear-gradient(90deg,#9ec99b,#5aa9d6);transition:width .9s ease;"></div>
+          <div id="pmBar" style="height:100%;width:0%;background:linear-gradient(90deg,#5a5470,#8a6bd0);transition:width .9s ease;"></div>
         </div>
       </div>
     </div>
@@ -159,7 +159,7 @@
           <a class="mod" href="forecast_tracker.html">
             <span class="modnum"></span><span class="modname">전망 적중도 추적</span>
           </a>
-          <p class="moddesc">전망 vs 실현 · 적중도 측정</p>
+          <p class="moddesc">전망 vs 실현 · 흑룡 진화</p>
         </li>
       </ol>
       <p style="margin-top:18px;font-size:.92rem">
@@ -271,7 +271,7 @@
     }
   });
 
-  /* 포털 마스코트: forecast_eval 결과로 진화 단계 표시 */
+  /* 포털 마스코트: forecast_eval 결과로 흑룡 진화 단계 표시 */
   async function loadPortalMascot(repoCfg){
     if(!window.Mascot)return;
     try{
@@ -279,10 +279,10 @@
       var x=Mascot.computeXP(data), pr=Mascot.progress(x.xp);
       document.getElementById("pmArt").innerHTML=Mascot.svg(pr.stage.id,4.5);
       document.getElementById("pmName").textContent=pr.stage.name;
-      document.getElementById("pmLv").textContent="Lv."+(pr.stage.id+1)+" / 5 · "+x.xp+" XP";
+      document.getElementById("pmLv").textContent="Lv."+(pr.stage.id+1)+" / "+Mascot.STAGES.length+" · "+x.xp+" XP";
       document.getElementById("pmBar").style.width=pr.pct+"%";
       document.getElementById("portalMascot").style.display="";
-    }catch(e){ /* forecast_eval 없으면 마스코트 숨김 유지 */ }
+    }catch(e){ /* forecast_eval 없으면 숨김 유지 */ }
   }
 
   /* 기억 모드 표시 동기화 + 지우기 버튼 */
