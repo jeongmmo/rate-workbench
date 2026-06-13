@@ -82,13 +82,25 @@
 <div class="wrap">
 
   <header class="mast">
-    <p class="eyebrow">Research Workbench · Interest-Rate Econometrics</p>
-    <h1 class="title">금리 계량분석 포털</h1>
-    <p class="subtitle">하나의 데이터베이스, 다섯 개의 분석 모듈</p>
-    <div class="mastmeta">
-      <span>저장소 <b id="metaRepo">jeongmmo/research-data</b></span>
-      <span>연결 상태 <b id="metaConn">미연결</b></span>
-      <span>데이터 파일 <b id="metaFiles">—</b></span>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:240px;">
+        <p class="eyebrow">Research Workbench · Interest-Rate Econometrics</p>
+        <h1 class="title">금리 계량분석 포털</h1>
+        <p class="subtitle">하나의 데이터베이스, 다섯 개의 분석 모듈</p>
+        <div class="mastmeta">
+          <span>저장소 <b id="metaRepo">jeongmmo/research-data</b></span>
+          <span>연결 상태 <b id="metaConn">미연결</b></span>
+          <span>데이터 파일 <b id="metaFiles">—</b></span>
+        </div>
+      </div>
+      <div id="portalMascot" style="display:none;flex:none;text-align:center;border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(60,50,30,0.05);padding:12px 18px 10px;border-radius:2px;min-width:120px;">
+        <div id="pmArt" style="width:72px;height:72px;margin:0 auto;display:flex;align-items:center;justify-content:center;"></div>
+        <div id="pmName" style="font-size:.92rem;font-weight:700;color:var(--ink);margin-top:4px;"></div>
+        <div id="pmLv" style="font-variant:small-caps;letter-spacing:.06em;font-size:.74rem;color:var(--accent);"></div>
+        <div style="background:#ece6d8;border-radius:5px;height:7px;overflow:hidden;border:1px solid #ddd5c4;margin-top:6px;">
+          <div id="pmBar" style="height:100%;width:0%;background:linear-gradient(90deg,#9ec99b,#5aa9d6);transition:width .9s ease;"></div>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -173,6 +185,7 @@
 </div>
 
 <script src="./common.js"></script>
+<script src="./mascot.js"></script>
 <script>
 (function(){
   "use strict";
@@ -251,11 +264,26 @@
                 ", 데이터 파일 " + files.length + "개", "ok");
       $("metaConn").textContent = "연결됨";
       renderLedger(files, repoCfg);
+      loadPortalMascot(repoCfg);
     } catch (e) {
       setStatus(e.message, "err");
       $("metaConn").textContent = "실패";
     }
   });
+
+  /* 포털 마스코트: forecast_eval 결과로 진화 단계 표시 */
+  async function loadPortalMascot(repoCfg){
+    if(!window.Mascot)return;
+    try{
+      var data=await GHCommon.loadResults(GHCommon.currentConfig(),"forecast_eval");
+      var x=Mascot.computeXP(data), pr=Mascot.progress(x.xp);
+      document.getElementById("pmArt").innerHTML=Mascot.svg(pr.stage.id,4.5);
+      document.getElementById("pmName").textContent=pr.stage.name;
+      document.getElementById("pmLv").textContent="Lv."+(pr.stage.id+1)+" / 5 · "+x.xp+" XP";
+      document.getElementById("pmBar").style.width=pr.pct+"%";
+      document.getElementById("portalMascot").style.display="";
+    }catch(e){ /* forecast_eval 없으면 마스코트 숨김 유지 */ }
+  }
 
   /* 기억 모드 표시 동기화 + 지우기 버튼 */
   try { $("fRemember").checked = localStorage.getItem("gh_remember") !== "0"; } catch (e) {}

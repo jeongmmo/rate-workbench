@@ -45,6 +45,7 @@
   canvas{max-height:420px;}
 </style>
   <script src="./common.js"></script>
+  <script src="./mascot.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -56,6 +57,23 @@
   </header>
   <div id="status" class="busy">결과 불러오는 중 …</div>
   <div id="content" style="display:none">
+
+    <div id="mascotPanel" style="display:flex;gap:20px;align-items:center;border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(60,50,30,0.05);padding:18px 22px;margin-bottom:8px;border-radius:2px;">
+      <div id="mascotArt" style="flex:none;width:96px;height:96px;display:flex;align-items:center;justify-content:center;"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
+          <span id="mascotName" style="font-size:1.15rem;font-weight:700;color:var(--ink);"></span>
+          <span id="mascotStage" style="font-variant:small-caps;letter-spacing:.08em;font-size:.82rem;color:var(--accent);"></span>
+        </div>
+        <div id="mascotXP" style="font-size:.86rem;color:var(--muted);font-style:italic;margin:3px 0 8px;"></div>
+        <div style="background:#ece6d8;border-radius:6px;height:11px;overflow:hidden;border:1px solid #ddd5c4;">
+          <div id="mascotBar" style="height:100%;width:0%;background:linear-gradient(90deg,#9ec99b,#5aa9d6);transition:width .9s ease;"></div>
+        </div>
+        <div id="mascotNext" style="font-size:.8rem;color:var(--muted);margin-top:5px;"></div>
+      </div>
+    </div>
+    <p style="font-size:.78rem;color:var(--muted);font-style:italic;margin:0 0 6px;">
+      방향 적중 +10 XP · 오차 ≤0.10%p +8 · ≤0.25 +4 · ≤0.50 +1 — 전망을 정확히 맞힐수록 리트가 진화합니다.</p>
 
     <h2 class="sec"><span class="num">§ 1</span>빈티지 차트</h2>
     <p class="secdesc">굵은 선=실현치, 가는 선=각 시점 전망 경로.</p>
@@ -155,6 +173,21 @@
       " · 시장데이터 최종일 "+data.market_last_obs+" · 전망 "+data.n_total+"건 중 평가 "+data.n_evaluated+"건";
     status.className="";
     $("content").style.display="";
+
+    // ── 픽셀 마스코트: 적중도 XP → 진화 단계 ──
+    (function(){
+      if(!window.Mascot)return;
+      var x=Mascot.computeXP(data);
+      var pr=Mascot.progress(x.xp);
+      $("mascotArt").innerHTML=Mascot.svg(pr.stage.id,6);
+      $("mascotName").textContent=pr.stage.name;
+      $("mascotStage").textContent="Lv."+(pr.stage.id+1)+" / 5";
+      $("mascotXP").textContent=x.xp+" XP · 방향 적중 "+x.hits+"/"+x.evaluated+
+        " ("+(x.hitRate*100).toFixed(0)+"%) · 정밀 예측 "+x.precise+"건";
+      $("mascotBar").style.width=pr.pct+"%";
+      if(pr.next)$("mascotNext").textContent="다음 진화 '"+pr.next.name+"'까지 "+pr.toNext+" XP";
+      else $("mascotNext").textContent="★ 최종 진화 달성 — 오라클의 경지!";
+    })();
 
     var vars=Object.keys(data.summary_by_variable).sort();
     var allVars=[];data.records.forEach(function(r){if(allVars.indexOf(r.variable)<0)allVars.push(r.variable);});
