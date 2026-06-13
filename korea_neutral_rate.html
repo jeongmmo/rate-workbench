@@ -13,7 +13,7 @@
     --line2:#eceef3;
     --accent:#1f3a6e;     /* sovereign blue */
     --accent-soft:#eaf0f9;
-    --paper:#ffffff;
+    --paper:#f4efe4; --card:#ffffff;
     /* decomposition palette (muted, professional) */
     --c-real:#2f6f6b;     /* expected real short rate  - teal */
     --c-infl:#b07d2b;     /* expected inflation - ochre */
@@ -81,7 +81,7 @@
     border-radius:2px;padding:5px 7px;text-align:right;color:var(--ink);}
   select{font-family:inherit;font-size:.92rem;border:1px solid var(--line);border-radius:2px;padding:5px 7px;color:var(--ink);background:#fff;}
   /* ---- tables ---- */
-  table{border-collapse:collapse;width:100%;font-size:.92rem;background:#fff;margin:10px 0 6px;}
+  table{border-collapse:collapse;width:100%;font-size:.92rem;background:var(--card,#fff);margin:10px 0 6px;}
   caption{caption-side:top;text-align:left;font-style:italic;color:var(--muted);font-size:.85rem;padding:4px 0 8px;}
   th,td{padding:7px 11px;border-bottom:1px solid var(--line2);text-align:right;font-variant-numeric:tabular-nums;}
   th:first-child,td:first-child{text-align:left;}
@@ -94,7 +94,7 @@
   /* ---- cards / headline ---- */
   .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1px;background:var(--line);
     border:1px solid var(--line);margin:18px 0 8px;}
-  .card{background:#fff;padding:20px 22px;}
+  .card{background:var(--card,#fff);padding:20px 22px;border:1px solid var(--line2);box-shadow:0 1px 3px rgba(60,50,30,0.05);}
   .card .lab{font-variant:small-caps;letter-spacing:.08em;font-size:.82rem;color:var(--muted);margin:0 0 4px;}
   .card .val{font-size:2.15rem;font-weight:700;line-height:1;color:var(--ink);}
   .card .val .pct{font-size:1.1rem;color:var(--muted);font-weight:400;margin-left:2px;}
@@ -103,7 +103,7 @@
   .card.lead .hint{color:#aab6cf;}
   /* ---- figures ---- */
   figure{margin:18px 0 8px;}
-  figure canvas{width:100%;height:auto;display:block;border:1px solid var(--line2);background:#fff;}
+  figure canvas{width:100%;height:auto;display:block;border:1px solid var(--line2);background:#fff;box-shadow:0 1px 3px rgba(60,50,30,0.05);}
   figcaption{font-size:.84rem;color:var(--muted);font-style:italic;margin-top:8px;max-width:90ch;}
   .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:.85rem;color:var(--ink2);margin:10px 0 0;}
   .legend span{display:inline-flex;align-items:center;}
@@ -133,16 +133,12 @@
 <script src="./common.js"></script>
 </head>
 <body>
-<div style="font-family:'Times New Roman',Times,serif;font-size:.88rem;background:#ffffff;border-bottom:1px solid #d9dde6;padding:7px 28px;">
-  <a href="index.html" style="color:#1f3a6e;text-decoration:none;">&#8592; 포털로 돌아가기</a>
-  <span style="color:#6b7488;font-style:italic;margin-left:14px;">Research Workbench</span>
-</div>
 <div class="wrap">
 
   <header class="mast">
     <p class="eyebrow">Term-Structure Model of the Equilibrium Real Rate</p>
     <h1 class="title">Neutral rate</h1>
-    <p class="subtitle">한국&middot;미국 중립금리 추정 &mdash; DKW (D&rsquo;Amico&ndash;Kim&ndash;Wei) 식 무차익 기간구조 분해, 회귀기반 ACM 엔진</p>
+    <p class="subtitle">한국·미국 중립금리 추정 — DKW 기간구조 분해</p>
     <div class="masthead-meta">
       <span><b>입력</b> 명목 국고채 수익률곡선 (+ 기대인플레이션 / 물가연동국채 선택)</span>
       <span><b>산출</b> 중립금리 r* &nbsp;·&nbsp; 명목·실질 기간프리미엄 &nbsp;·&nbsp; 구성요소 분해</span>
@@ -179,12 +175,11 @@
       </div>
       <div class="controls" style="margin:8px 0 0;flex-wrap:wrap;gap:8px;">
         <span class="inline-set">데이터 파일 <select id="ghFileSel" style="min-width:240px;"><option value="">— 목록을 먼저 불러오세요 —</option></select></span>
-        <span class="inline-set">직접 입력 <input type="text" id="ghPath" value="data_20260611.xlsx" placeholder="파일 경로" style="width:200px;"></span>
+        <span class="inline-set">직접 입력 <input type="text" id="ghPath" value="data/data_bb.xlsx" placeholder="파일 경로" style="width:200px;"></span>
         <button class="btn" id="ghLoadBtn">GitHub에서 불러오기</button>
       </div>
       <p style="margin:8px 0 0;font-size:.8rem;color:var(--muted);" id="ghNote">
-        포털(index.html)에서 토큰을 입력하고 기본 데이터 파일을 지정했다면, 이 페이지를 열 때 <b>해당 파일이 자동으로 불러와집니다</b> — 아래 칸은 다른 파일로 바꿔 볼 때만 사용하세요.
-        토큰은 디스크에 영구 저장되지 않고 브라우저 세션에만 유지됩니다. fine-grained PAT(해당 저장소 하나, Contents: Read-only) 사용을 권장합니다.</p>
+        포털에서 기본 파일을 지정했다면 자동으로 불러와집니다 — 아래 칸은 다른 파일로 바꿀 때만 사용하세요.</p>
     </div>
 
     <h2 class="sec" style="margin-top:0;">데이터 입력</h2>
@@ -210,7 +205,7 @@
         </select></span>
         <button class="btn" id="bbgGoBtn">이 통화로 곡선 구성</button>
       </div>
-      <p style="margin:8px 0 0;font-size:.82rem;color:var(--muted);">포워드 스트립(1y1y…5y5y, 5y10y)을 1·2·3·4·5·10·15년 합성 스팟곡선으로 부트스트랩하고, BEI(손익분기인플레이션)·3M 단기금리를 자동 연결합니다. KRW·USD·JPY·EUR을 동일 표본으로 병행 추정합니다. 스팟 국채커브(한국 최대 15개 만기)가 있으면 자동으로 스팟 기반 추정을 사용하며(곡선 소스에서 변경 가능), 정책금리(FDTR·KORP7D·BOJDPBAL)와 일본 BEI도 자동 연결됩니다.</p>
+      <p style="margin:8px 0 0;font-size:.82rem;color:var(--muted);">포워드 스트립을 합성 스팟곡선으로 부트스트랩하고, BEI·단기금리를 자동 연결합니다. KRW·USD·JPY·EUR 병행 추정.</p>
     </div>
 
     <details style="margin:6px 0 14px;">
@@ -223,7 +218,7 @@
 
     <div id="mapWrap" style="display:none;">
       <h3 class="sub">열 인식 &middot; 매핑 확인</h3>
-      <p class="note">각 열의 역할과 만기(개월)를 확인·수정하세요. 만기는 자동 추정되며, 잘못되면 직접 고칠 수 있습니다.</p>
+      <p class="note">각 열의 역할·만기를 확인하세요.</p>
       <div class="scroll"><table id="mapTable"></table></div>
       <div class="controls">
         <span class="inline-set">수익률 단위
@@ -309,8 +304,7 @@
       <div class="scroll"><table id="rstarTable"></table></div>
 
       <h3 class="sub" style="margin-top:34px;">통계적 유의성 (블록 부트스트랩)</h3>
-      <p style="font-size:.92rem;color:var(--ink2);margin:4px 0 10px;">시점블록(24개월) 순환 부트스트랩으로 VAR·단기금리식·초과수익 회귀를 재추정해
-        중립금리와 기간프리미엄의 추정 불확실성을 계산합니다. 계산 후 위 r* 차트에 90% 신뢰대가 음영으로 표시되고, 03 분해 표에 신뢰구간이 추가됩니다.</p>
+      <p style="font-size:.92rem;color:var(--ink2);margin:4px 0 10px;">시점블록 순환 부트스트랩으로 추정 불확실성을 계산합니다.</p>
       <div class="controls" style="margin-bottom:10px;">
         <button class="btn" id="bootBtn">유의성·신뢰구간 계산 (300회)</button>
         <span id="bootStatus" style="font-size:.88rem;color:var(--muted);"></span>
@@ -323,7 +317,7 @@
       <div class="controls"><button class="btn" id="exportXlsxBtn2">모든 표·그래프 엑셀(.xlsx)로 내려받기</button></div>
 
       <h3 class="sub" style="margin-top:34px;">미국 중립금리 모니터링</h3>
-      <p style="font-size:.92rem;color:var(--ink2);margin:4px 0 12px;">공식·외부 추정치(분기별 갱신)와 본 모형의 미국 추정치를 함께 표시합니다. 공식 값은 아래 출처에서 최신값을 확인하세요.</p>
+      <p style="font-size:.92rem;color:var(--ink2);margin:4px 0 12px;">공식·외부 추정치와 본 모형 추정치를 함께 표시합니다.</p>
       <div class="controls" style="margin-bottom:10px;">
         <label class="filelbl" for="hlwUsFile">NY연준 HLW 공식 시계열 올리기 (선택)</label>
         <input type="file" id="hlwUsFile" accept=".csv,.txt,.xlsx">
@@ -374,8 +368,7 @@
       <div class="scroll" style="margin-top:10px;"><table id="compCompTable"></table></div>
 
       <h3 class="sub" style="margin-top:34px;">구성요인 상관관계</h3>
-      <p style="font-size:.9rem;color:var(--ink2);margin:4px 0 10px;">표본기간 전체에서 계산한 피어슨 상관계수입니다.
-        왼쪽: 조회 국가 내 구성요인 간 상관 · 오른쪽: 동일 구성요인의 국가 간 상관.</p>
+      <p style="font-size:.9rem;color:var(--ink2);margin:4px 0 10px;">피어슨 상관계수. 왼쪽: 구성요인 간 · 오른쪽: 국가 간.</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;" id="corrGrid">
         <div class="scroll"><table id="corrWithin"></table></div>
         <div class="scroll"><table id="corrAcross"></table></div>
@@ -489,8 +482,7 @@
       <div id="tvOut" style="display:none;">
         <figure><canvas id="tvCanvas" width="1100" height="400"></canvas></figure>
         <div class="scroll" style="margin-top:10px;"><table id="tvTable"></table></div>
-        <p style="font-size:.82rem;color:var(--muted);margin-top:8px;">시변 계수 추정 후에는 위 테일러 차트에 "시변계수 권고" 선이 추가되어 고정 파라미터 권고와 비교할 수 있습니다.
-          롤링 추정은 창 내 평균 반응이므로 급격한 레짐 전환은 지연 반영되며, 평활계수 ρ가 큰 표본에서는 장기반응이 다소 과소추정되는 소표본 편의가 있습니다.</p>
+        <p style="font-size:.82rem;color:var(--muted);margin-top:8px;">시변 계수 추정 후에는 위 테일러 차트에 "시변계수 권고" 선이 추가됩니다.</p>
       </div>
       <div class="controls"><button class="btn" id="exportXlsxBtn4">모든 표·그래프 엑셀(.xlsx)로 내려받기</button></div>
   </section>
@@ -530,8 +522,7 @@
         추가하는 Joslin&ndash;Priebsch&ndash;Singleton(2014)류 확장은 기대경로/기간프리미엄 분해를 유의하게 개선한다는 증거가 많습니다.
         곡선을 더 촘촘히 하는 것보다 <b>거시 2변수를 넣는 편이 한계효용이 큽니다</b> — 수익률 3요인이 이미 분산의 99%를 설명하므로(현재 도구 기준 97.6+2.2%),
         곡선 추가는 측정오차 감소용, 거시 추가는 식별 개선용으로 역할이 다릅니다.</p>
-      <p><b>⑤ 기타:</b> 달러/원 스왑베이시스·CDS(이미 보유)는 KRW 곡선의 글로벌 유동성 왜곡 통제에, 외국인 국채 보유 비중은 수급 프리미엄 분석에 유용합니다.
-        일본은 BEI(JGBi 손익분기) 10Y를 추가하면 한·미·일 비교에서 일본도 시장기반 기대인플레이션을 쓸 수 있습니다.</p>
+      <p><b>⑤ 기타</b> — 스왑베이시스·CDS·외국인 보유비중. </p>
 
       <h3 class="sub">1. 무엇을 추정하는가</h3>
       <p>중립금리(자연이자율, r*)는 경기·물가가 안정되고 산출갭이 0인 장기 균형에서 성립하는 실질 단기금리로 정의됩니다.
@@ -541,8 +532,7 @@
       <h3 class="sub">2. DKW 모형의 분해</h3>
       <p>D&rsquo;Amico, Kim &amp; Wei(2018)는 명목국채·물가연동국채(TIPS)·CPI·서베이 예측치를 함께 사용하는
         무차익 기간구조 모형으로, 명목수익률(또는 선도금리)을 네 요소 &mdash; 기대 실질단기금리, 기대 인플레이션,
-        인플레이션위험프리미엄, 실질 기간프리미엄 &mdash; 로 분해합니다. 물가연동국채의 손익분기인플레이션은 다시
-        기대인플레이션·인플레이션위험프리미엄·유동성프리미엄으로 나뉩니다.<sup class="cite">[1,2,3]</sup></p>
+        인플레이션위험프리미엄, 실질 기간프리미엄 &mdash; 로 분해합니다.<sup class="cite">[1,2,3]</sup></p>
 
       <h3 class="sub">3. 본 도구의 구현 (회귀기반 ACM 엔진)</h3>
       <p>완전한 DKW는 칼만필터 기반 최대우도 추정으로, 브라우저에서 안정적으로 돌리기 어렵습니다. 본 도구는 동일한
@@ -560,19 +550,14 @@
       <h3 class="sub">4. 명목 → 실질 분해와 한국 적용</h3>
       <p>한국 물가연동국고채는 유동성이 낮아 신뢰할 만한 실질수익률곡선을 얻기 어렵습니다. 따라서 기본 모드는
         <b>명목금리 + 기대인플레이션</b> 조합입니다: 기대 실질단기금리 = 기대 명목단기금리 &minus; 기대 인플레이션,
-        중립금리 r* = (명목 5y5y 기대단기금리) &minus; (장기 기대인플레이션). 이때 명목 기간프리미엄은 실질
-        기간프리미엄과 인플레이션위험프리미엄의 합입니다. 사용자가 실질(물가연동)수익률 열을 제공하면 두 번째 ACM을
-        실질곡선에 적용해 인플레이션위험프리미엄까지 분리한 완전한 4요소 분해로 자동 확장합니다.<sup class="cite">[2,8]</sup></p>
+        중립금리 r* = (명목 5y5y 기대단기금리) &minus; (장기 기대인플레이션). 실질수익률 열을 제공하면 4요소 분해로 자동 확장합니다.<sup class="cite">[2,8]</sup></p>
 
       <h3 class="sub">5. 테일러 준칙과의 연결</h3>
       <p>Taylor(1993)는 정책금리가 중립금리·인플레이션·산출갭에 체계적으로 반응한다는 단순 준칙을 제시했습니다:
         i&#8348; = r* + &pi;&#8348; + &phi;&#960;(&pi;&#8348; &minus; &pi;*) + &phi;<sub>y</sub>&#183;gap&#8348; (원논문은 &phi;&#960;=&phi;<sub>y</sub>=0.5).
-        준칙의 핵심 입력인 <b>균형실질금리 r*</b>에 본 도구가 추정한 시변 중립금리를 직접 대입함으로써, 기간구조에서 도출한
-        r*가 정책 처방에 어떻게 반영되는지 일관되게 평가할 수 있습니다.<sup class="cite">[9]</sup></p>
+        준칙의 핵심 입력 <b>r*</b>에 본 도구의 시변 중립금리를 대입해 평가합니다.<sup class="cite">[9]</sup></p>
       <p>Clarida, Gal&iacute; &amp; Gertler(2000)가 정식화한 <i>금리평활(관성) 항</i>을 더한 포워드룩킹 형태
-        i&#8348; = &rho;&#183;i&#8348;&#8331;&#8321; + (1&minus;&rho;)&#183;i*&#8348; 도 선택할 수 있습니다. 실제 정책금리와 권고금리의 차이(정책 갭)는
-        준칙 대비 기조의 완화/긴축 정도를 나타내며, 실시간 산출갭·인플레이션 추정의 불확실성에 민감하므로 해석에 주의가
-        필요합니다.<sup class="cite">[10,11]</sup></p>
+        i&#8348; = &rho;&#183;i&#8348;&#8331;&#8321; + (1&minus;&rho;)&#183;i*&#8348; 도 선택할 수 있습니다. 정책 갭은 기조의 완화/긴축 정도를 나타냅니다.<sup class="cite">[10,11]</sup></p>
 
       <h3 class="sub">6. 해석상 유의 &middot; 한계</h3>
       <p>중립금리 추정치는 모형·표본·식별가정에 따라 크게 달라지며 불확실성이 매우 큽니다. 거시기반(LW/HLW) 추정치와
@@ -803,16 +788,13 @@ function buildPreview(){
 function matLbl(m){return m%12===0?(m/12)+'Y':(m+'M');}
 
 /* =================== Charting (canvas, Times New Roman, white bg) =================== */
-function setup(cv){
-  // 화면 DPR과 무관하게 최소 2.5배 해상도로 렌더(고해상도 디스플레이면 그 배율 사용, 상한 3)
-  const dpr=Math.min(3,Math.max(2.5,window.devicePixelRatio||1));
-  const w=cv._w||cv.width,hh=cv._h||cv.height;
+function setup(cv){const dpr=window.devicePixelRatio||1;const w=cv.width,hh=cv.height;
   cv.style.width='100%';const ctx=cv.getContext('2d');
-  // 논리 크기(_w,_h)를 기준으로 백킹 스토어를 dpr배 확대 → 선명도 향상
-  if(cv.dataset.dpr!==String(dpr)){cv._w=w;cv._h=hh;cv.width=Math.round(w*dpr);cv.height=Math.round(hh*dpr);cv.dataset.dpr=String(dpr);}
-  ctx.setTransform(dpr,0,0,dpr,0,0);
+  // use intrinsic resolution; scale by dpr for crispness
+  if(cv.dataset.dpr!=='1'){cv.width=w*dpr;cv.height=hh*dpr;cv.dataset.dpr='1';cv._w=w;cv._h=hh;ctx.scale(dpr,dpr);}
+  else{ctx.setTransform(dpr,0,0,dpr,0,0);}
   ctx.clearRect(0,0,w,hh);ctx.fillStyle='#fff';ctx.fillRect(0,0,w,hh);
-  return {ctx,w:w,h:hh,dpr:dpr};
+  return {ctx,w:cv._w||w,h:cv._h||hh};
 }
 function niceTicks(min,max,n){const span=max-min||1;let step=Math.pow(10,Math.floor(Math.log10(span/n)));
   const err=span/n/step;if(err>=7.5)step*=10;else if(err>=3.5)step*=5;else if(err>=1.5)step*=2;
@@ -837,40 +819,31 @@ function xlabels(ctx,A,labels,m,w,h,max){
 }
 
 /* ----- 차트 호버 툴팁 (각 시점 수치 확인) ----- */
-function attachHover(cv,meta){ // meta:{xlab, items(i)=>[{name,val,color}], px:(i)=>x, plotL,plotR,plotT,plotB, redraw, py?:(i,item)=>y}
+function attachHover(cv,meta){ // meta:{xlab, items(i)=>[{name,val,color}], px:(i)=>x, plotL,plotR, redraw}
   cv.__hover=meta;
   if(cv.__hoverBound)return;cv.__hoverBound=true;
   const tip=document.createElement('div');
   tip.style.cssText='position:fixed;display:none;z-index:99;background:rgba(255,255,255,0.97);border:1px solid #c9ceda;'+
-    'box-shadow:0 2px 8px rgba(22,33,58,0.15);padding:7px 11px;font:12px "Times New Roman",serif;color:#16213a;pointer-events:none;line-height:1.5;white-space:nowrap;';
+    'box-shadow:0 2px 8px rgba(22,33,58,0.15);padding:7px 11px;font:12px "Times New Roman",serif;color:#16213a;pointer-events:none;line-height:1.5;';
   document.body.appendChild(tip);
-  cv.style.cursor='crosshair';
   cv.addEventListener('mousemove',e=>{
     const M=cv.__hover;if(!M)return;
     const r=cv.getBoundingClientRect();
-    // 마우스 X를 '논리 좌표'(_w 기준)로 변환 — 백킹스토어가 dpr배여도 정확
-    const x=(e.clientX-r.left)*((cv._w||cv.width)/r.width);
-    if(x<M.plotL-2||x>M.plotR+2){tip.style.display='none';M.redraw();return;}
+    const x=(e.clientX-r.left)*(cv.width/r.width);
+    if(x<M.plotL||x>M.plotR){tip.style.display='none';M.redraw();return;}
     const n=M.xlab.length;
-    const i=Math.max(0,Math.min(n-1,Math.round((x-M.plotL)/((M.plotR-M.plotL)||1)*(n-1))));
+    const i=Math.max(0,Math.min(n-1,Math.round((x-M.plotL)/(M.plotR-M.plotL)*(n-1))));
     M.redraw();
     const ctx=cv.getContext('2d');
     const gx=M.px(i);
     ctx.save();ctx.strokeStyle='#9aa3b5';ctx.setLineDash([4,3]);ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(gx,M.plotT);ctx.lineTo(gx,M.plotB);ctx.stroke();ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(gx,M.plotT);ctx.lineTo(gx,M.plotB);ctx.stroke();ctx.restore();
     const items=M.items(i).filter(it=>isFinite(it.val));
-    // 각 시리즈 값 위치에 점 마커
-    if(M.py){items.forEach(it=>{const y=M.py(i,it);if(isFinite(y)){ctx.fillStyle=it.color;ctx.beginPath();ctx.arc(gx,y,3.2,0,7);ctx.fill();
-      ctx.strokeStyle='#fff';ctx.lineWidth=1.1;ctx.stroke();}});}
-    ctx.restore();
     tip.innerHTML=`<b>${M.xlab[i]}</b><br>`+items.map(it=>
-      `<span style="color:${it.color}">●</span> ${it.name}: <b>${it.val.toFixed(it.dp!=null?it.dp:2)}</b>`).join('<br>');
+      `<span style="color:${it.color}">●</span> ${it.name}: <b>${it.val.toFixed(2)}</b>`).join('<br>');
     tip.style.display='block';
-    // 커서 오른쪽에 두되, 화면 밖으로 나가면 왼쪽으로
-    const tw=tip.offsetWidth||200,th=tip.offsetHeight||40;
-    let lx=e.clientX+14;if(lx+tw>window.innerWidth-6)lx=e.clientX-tw-14;
-    let ly=e.clientY-10;if(ly+th>window.innerHeight-6)ly=window.innerHeight-th-6;if(ly<6)ly=6;
-    tip.style.left=lx+'px';tip.style.top=ly+'px';
+    tip.style.left=Math.min(window.innerWidth-220,e.clientX+14)+'px';
+    tip.style.top=Math.max(8,e.clientY-10)+'px';
   });
   cv.addEventListener('mouseleave',()=>{tip.style.display='none';if(cv.__hover)cv.__hover.redraw();});
 }
@@ -918,8 +891,8 @@ function drawLineChart(cv,series,xlab,opt){ // series:[{name,data:[],color,dash}
   xlabels(ctx,A,xlab,A.m,w,h,opt.xmax||8);
   inLegend(ctx,w,A,[...series.map(s2=>({name:s2.name,color:s2.color,dash:!!s2.dash})),
     ...(opt.band?[{name:opt.band.label||'90% 신뢰대',color:opt.band.color||'rgba(162,59,59,0.35)',fill:true}]:[])].filter(it=>it.name));
-  attachHover(cv,{xlab,px:A.px,py:(i,it)=>A.py(it._d[i]),plotL:A.m.l,plotR:w-A.m.r,plotT:A.m.t,plotB:h-A.m.b,
-    items:i=>series.map(s2=>({name:s2.name||'',val:s2.data[i],color:s2.color,_d:s2.data})),
+  attachHover(cv,{xlab,px:A.px,plotL:A.m.l,plotR:w-A.m.r,plotT:A.m.t,plotB:h-A.m.b,
+    items:i=>series.map(s2=>({name:s2.name||'',val:s2.data[i],color:s2.color})),
     redraw:()=>drawLineChart(cv,series,xlab,opt)});
 }
 function drawGroupedBars(cv,series,xlab,opt){ // grouped signed bars per series
@@ -1015,15 +988,6 @@ function drawStacked(cv,layers,baseline,xlab,opt){ // layers:[{name,data,color}]
   if(opt.total){ctx.strokeStyle='#16213a';ctx.lineWidth=1.6;ctx.beginPath();let st=false;
     opt.total.forEach((v,i)=>{if(!isFinite(v))return;const x=A.px(i),y=A.py(v);st?ctx.lineTo(x,y):(ctx.moveTo(x,y),st=true);});ctx.stroke();}
   xlabels(ctx,A,xlab,A.m,w,h,opt.xmax||8);
-  // 호버: 각 레이어 기여분 + (있으면) 합계
-  attachHover(cv,{
-    xlab:xlab,
-    px:i=>A.px(i),
-    plotL:A.m.l,plotR:w-A.m.r,plotT:A.m.t,plotB:h-A.m.b,
-    items:i=>{const arr=layers.map(L=>({name:L.name,val:L.data[i],color:L.color}));
-      if(opt.total)arr.push({name:opt.totalName||'합계',val:opt.total[i],color:'#16213a'});return arr;},
-    redraw:()=>drawStacked(cv,layers,baseline,xlab,opt)
-  });
 }
 function drawCurveSet(cv,curves,xs,opt){ // curves:[{name,ys,color,dash,dots}] xs=maturities(months)
   opt=opt||{};const {ctx,w,h}=setup(cv);
@@ -1038,15 +1002,6 @@ function drawCurveSet(cv,curves,xs,opt){ // curves:[{name,ys,color,dash,dots}] x
   // x labels in years
   ctx.fillStyle='#6b7488';ctx.font='11.5px "Times New Roman",serif';ctx.textAlign='center';ctx.textBaseline='top';
   niceTicks(0,xmax/12,6).forEach(yr=>{const mo=yr*12;if(mo>xmax+1)return;ctx.fillText(yr+'Y',A.px(mo),h-A.m.b+7);});
-  // 호버: 만기별 각 곡선 값
-  attachHover(cv,{
-    xlab:xs.map(mo=>mo%12===0?(mo/12)+'Y':mo+'M'),
-    px:i=>A.px(xs[i]),
-    py:(i,it)=>A.py(it._ys[i]),
-    plotL:A.m.l,plotR:w-A.m.r,plotT:A.m.t,plotB:h-A.m.b,
-    items:i=>curves.map(c=>({name:c.name,val:c.ys[i],color:c.color,_ys:c.ys})),
-    redraw:()=>drawCurveSet(cv,curves,xs,opt)
-  });
 }
 function legend(elId,items){const el=document.getElementById(elId);if(el)el.innerHTML='';} // 범례는 차트 내부에 직접 표시
 
@@ -1338,14 +1293,6 @@ function drawLineChartMonths(id,months,vals,ylab){
   ctx.strokeStyle=PAL.ntp;ctx.lineWidth=2;ctx.beginPath();months.forEach((mo,i)=>{const x=A.px(mo),y=A.py(vals[i]);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();
   ctx.fillStyle='#6b7488';ctx.font='11.5px "Times New Roman",serif';ctx.textAlign='center';ctx.textBaseline='top';
   niceTicks(0,Math.max(...months)/12,6).forEach(yr=>{const mo=yr*12;if(mo>Math.max(...months)+1)return;ctx.fillText(yr+'Y',A.px(mo),h-A.m.b+7);});
-  attachHover(cv,{
-    xlab:months.map(mo=>mo%12===0?(mo/12)+'Y':mo+'M'),
-    px:i=>A.px(months[i]),
-    py:i=>A.py(vals[i]),
-    plotL:A.m.l,plotR:w-A.m.r,plotT:A.m.t,plotB:h-A.m.b,
-    items:i=>[{name:ylab.replace(/\s*\(.*\)/,''),val:vals[i],color:PAL.ntp}],
-    redraw:()=>drawLineChartMonths(id,months,vals,ylab)
-  });
 }
 function card(lab,val,pct,hint,lead){return `<div class="card${lead?' lead':''}"><p class="lab">${lab}</p>
   <div class="val">${val}<span class="pct">${pct||''}</span></div>${hint?`<p class="hint">${hint}</p>`:''}</div>`;}
@@ -1779,16 +1726,6 @@ function drawPath(cv,nomPath,realPath,rstar){
     ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();p.forEach((v,i)=>{const x=A.px(i),y=A.py(v);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();});
   ctx.fillStyle='#6b7488';ctx.font='11.5px "Times New Roman",serif';ctx.textAlign='center';ctx.textBaseline='top';
   niceTicks(0,H/12,6).forEach(y=>{const mo=y*12;if(mo>H+1)return;ctx.fillText(y+'Y',A.px(mo),h-A.m.b+7);});
-  attachHover(cv,{
-    xlab:nomPath.map((_,i)=>i%12===0?(i/12)+'Y':i+'M'),
-    px:i=>A.px(i),
-    py:(i,it)=>A.py(it._p[i]),
-    plotL:A.m.l,plotR:w-A.m.r,plotT:A.m.t,plotB:h-A.m.b,
-    items:i=>[{name:'명목',val:nomPath[i],color:PAL.exp,_p:nomPath},
-              {name:'실질',val:realPath[i],color:PAL.real2,_p:realPath},
-              {name:'r*',val:rstar,color:PAL.rstar,_p:nomPath.map(()=>rstar)}],
-    redraw:()=>drawPath(cv,nomPath,realPath,rstar)
-  });
 }
 function tableIdxs(n,k){const out=[];const step=Math.max(1,Math.floor(n/k));for(let i=0;i<n;i+=step)out.push(i);if(out[out.length-1]!==n-1)out.push(n-1);return out;}
 
@@ -2646,14 +2583,6 @@ function drawTaylorBars(cv,comps){
     // x label
     ctx.fillStyle='#6b7488';ctx.font='12px "Times New Roman",serif';ctx.textBaseline='top';
     ctx.fillText(c.t,x,h-m.b+8);});
-  attachHover(cv,{
-    xlab:comps.map(c=>c.t),
-    px:i=>px(i),
-    py:i=>py(comps[i].v),
-    plotL:m.l,plotR:w-m.r,plotT:m.t,plotB:h-m.b,
-    items:i=>[{name:comps[i].t,val:comps[i].v,color:comps[i].c}],
-    redraw:()=>drawTaylorBars(cv,comps)
-  });
 }
 
 function exportXlsx(){

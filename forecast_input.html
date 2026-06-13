@@ -10,7 +10,7 @@
     --ink:#16213a; --ink2:#3a4a6b; --muted:#6b7488;
     --line:#d9dde6; --line2:#eceef3;
     --accent:#1f3a6e; --accent-soft:#eaf0f9;
-    --paper:#ffffff; --good:#2f6f6b; --bad:#a23b3b; --warn:#b07d2b;
+    --paper:#f4efe4; --card:#ffffff; --good:#2f6f6b; --bad:#a23b3b; --warn:#b07d2b;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);
@@ -28,7 +28,7 @@
   h2.sec .num{font-variant:small-caps;font-size:.78rem;color:var(--accent);margin-right:9px;letter-spacing:.1em;}
   p.secdesc{margin:0 0 14px;color:var(--ink2);font-size:.92rem;}
 
-  table.grid{border-collapse:collapse;font-size:.9rem;width:100%;margin:4px 0 6px;}
+  table.grid{border-collapse:collapse;font-size:.9rem;width:100%;margin:4px 0 6px;background:var(--card);}
   table.grid th{font-variant:small-caps;font-size:.76rem;letter-spacing:.05em;color:var(--muted);
     border-top:1.5px solid var(--ink);border-bottom:1px solid var(--line);padding:7px 8px;text-align:center;font-weight:700;}
   table.grid th.lab{text-align:left;}
@@ -44,7 +44,7 @@
   input.cell.unusual{background:#fdf6ec;border-color:var(--warn);}
   .tnote{font-size:.82rem;color:var(--muted);font-style:italic;margin:2px 0 14px;}
 
-  .exportbar{border:1px solid var(--line);padding:16px 20px;margin-top:30px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;}
+  .exportbar{border:1px solid var(--line);background:var(--card);padding:16px 20px;margin-top:30px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;box-shadow:0 1px 3px rgba(60,50,30,0.05);}
   .exportbar label{font-variant:small-caps;font-size:.8rem;color:var(--muted);letter-spacing:.06em;margin-right:6px;}
   input#fdate{font-family:inherit;font-size:.95rem;padding:5px 8px;border:1px solid var(--line);}
   button.primary{font-family:inherit;font-size:.95rem;padding:9px 22px;cursor:pointer;
@@ -62,7 +62,7 @@
   <header class="mast">
     <p class="eyebrow">Forecast Builder · Base Rate + Adjacent Spreads</p>
     <h1 class="title">전망 입력기</h1>
-    <p class="subtitle">기준금리를 전망하고 인접 만기 스프레드를 입력하면 레벨이 자동 산출됩니다 — 참고치는 과거 10년 평균·표준편차.</p>
+    <p class="subtitle">기준금리 + 인접 만기 스프레드 입력 → 레벨 자동 산출.</p>
     <p style="margin:10px 0 0"><a class="back" href="index.html">&#8592; 포털로 돌아가기</a></p>
   </header>
   <div id="status" class="busy">참고 통계(results/spread_stats.json) 불러오는 중 …</div>
@@ -81,8 +81,7 @@
       <li>"전망 반영"을 누르면 기존 전망과 병합해 data/forecasts.xlsx로 <b>직접 커밋</b>됩니다 (쓰기 권한 토큰 필요)</li>
       <li>커밋 즉시 Actions가 자동 실행 → 1~2분 뒤 <a href="forecast_tracker.html">전망 적중도 추적</a>에 새 빈티지 반영 — 아래에서 반영 완료를 자동 확인합니다</li>
     </ol>
-    <p class="tnote">기존 전망은 모두 보존되고, 같은 (기준일·변수·타깃) 조합만 새 값으로 교체됩니다.
-      입력칸이 노란색이면 과거 10년 평균에서 ±1.5σ를 벗어난 값이라는 표시일 뿐, 입력은 자유입니다.</p>
+    <p class="tnote">기존 전망은 보존되고 같은 (기준일·변수·타깃)만 교체됩니다. 노란 칸은 10년 평균에서 ±1.5σ 밖.</p>
   </div>
 </div>
 <script>
@@ -107,7 +106,7 @@
   function buildChainTable(cname, chain){
     var sec=document.createElement("section");
     sec.innerHTML='<h2 class="sec"><span class="num">'+cname+'</span>'+cname+' 금리 전망</h2>'+
-      '<p class="secdesc">레벨(음영) = 윗 행 레벨 + 스프레드. 참고치: 현재 / 10년 평균 ± 표준편차.</p>';
+      '<p class="secdesc">레벨 = 윗 행 + 스프레드.</p>';
     var t=document.createElement("table"); t.className="grid";
     var head='<tr><th class="lab">항목</th><th style="text-align:left">참고치 ('+STATS.window_years+'년)</th>';
     QUARTERS.forEach(function(q){head+='<th>'+q.slice(2)+'</th>';});

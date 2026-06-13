@@ -7,7 +7,7 @@
 <style>
   :root{
     --ink:#1a1a1a; --ink-soft:#3a3a3a; --muted:#6b6b6b; --line:#cfcfcf;
-    --rule:#1a1a1a; --paper:#ffffff; --panel:#ffffff; --panel-edge:#d9d9d9;
+    --rule:#1a1a1a; --paper:#f4efe4; --card:#ffffff; --panel:#ffffff; --panel-edge:#d9d9d9;
     --navy:#1c3d5a; --navy-soft:#2f567a; --accent:#8c2d2d; --accent2:#3d6b4f;
     --hi:#f3f1ea; --series1:#1c3d5a; --series2:#8c2d2d; --series3:#5a5a2d;
     --series4:#3d6b4f; --series5:#5a2d5a; --series6:#2d5a5a;
@@ -42,7 +42,7 @@
   .sec-desc{font-size:15.5px;color:var(--ink-soft);margin:6px 0 20px;max-width:760px;}
 
   /* ---- controls ---- */
-  .panel{border:1px solid var(--panel-edge);background:var(--panel);padding:18px 20px;
+  .panel{border:1px solid var(--panel-edge);background:var(--panel);box-shadow:0 1px 3px rgba(60,50,30,0.05);padding:18px 20px;
     margin:14px 0;}
   .panel + .panel{margin-top:14px;}
   .ctl-row{display:flex;flex-wrap:wrap;gap:18px 26px;align-items:flex-end;}
@@ -94,7 +94,7 @@
   .star{color:var(--accent);}
 
   /* ---- figures ---- */
-  figure{margin:22px 0 6px;background:#fff;}
+  figure{margin:22px 0 6px;background:#fff;box-shadow:0 1px 3px rgba(60,50,30,0.05);}
   figure figcaption{font-size:14px;color:var(--ink);font-weight:700;margin:0 0 8px;}
   figure figcaption .fig-en{font-style:italic;font-weight:400;color:var(--muted);}
   .fig-note{font-size:13px;color:var(--muted);font-style:italic;margin-top:8px;max-width:760px;}
@@ -145,13 +145,8 @@
     section{break-inside:avoid;}
   }
 </style>
-  <script src="./common.js"></script>
 </head>
 <body>
-<div style="font-family:'Times New Roman',Times,serif;font-size:.88rem;background:#ffffff;border-bottom:1px solid #d9dde6;padding:7px 28px;">
-  <a href="index.html" style="color:#1f3a6e;text-decoration:none;">&#8592; 포털로 돌아가기</a>
-  <span style="color:#6b7488;font-style:italic;margin-left:14px;">Research Workbench</span>
-</div>
 <nav id="tocNav" aria-label="목차">
   <div class="toc-title">CONTENTS</div>
   <a href="#sec-data" data-sec="sec-data">0 · 데이터 입력</a>
@@ -170,7 +165,7 @@
   <header class="masthead">
     <p class="kicker">Applied Time-Series Econometrics · Working Toolkit</p>
     <h1>시계열 계량분석 도구<br>Time-Series Econometrics Toolkit</h1>
-    <p class="sub">단위근 검정과 차분 · Newey–West HAC 다중회귀 · 구조적 VAR · 시차상관·그렌저 · 베이지안 예측 · DSGE를 한 화면에서.<br>
+    <p class="sub">단위근·HAC 회귀·VAR·그렌저·베이지안·DSGE.<br>
        <span class="muted" style="font-style:italic">ADF differencing · HAC robust regression · Structural VAR (IRF &amp; FEVD) · ACF/PACF · correlation matrix · Granger causality</span></p>
     <div class="meta">
       <span><b>Methods</b> ADF (MacKinnon CV) · OLS + Newey–West (1987) · Cholesky SVAR · ACF/PACF/CCF · Granger</span>
@@ -185,9 +180,7 @@
       <span class="sec-num">DATA</span>
       <h2 class="sec-title">데이터 입력 <span class="en">/ Data Input</span></h2>
     </div>
-    <p class="sec-desc">엑셀(.xlsx) DB를 업로드하거나, CSV를 올리거나 붙여넣으세요. 엑셀은 시트와 변수(열)를 골라
-       불러올 수 있고, 블룸버그식 내보내기(상단 메타 블록 + Notation 헤더 + 날짜·값)도 자동 인식합니다.
-       모든 계산은 브라우저 안에서만 수행됩니다.</p>
+    <p class="sec-desc">엑셀·CSV를 올리거나 붙여넣으세요.</p>
 
     <div class="panel">
       <div style="border:1px solid var(--line);background:#fafafa;padding:14px 14px 10px;border-radius:3px;margin-bottom:14px">
@@ -198,7 +191,7 @@
         <div class="ctl-row">
           <div class="field"><label>Owner</label><input type="text" id="ghOwner" placeholder="jeongmmo" autocomplete="off"></div>
           <div class="field"><label>Repository</label><input type="text" id="ghRepo" placeholder="research-data" autocomplete="off"></div>
-          <div class="field" style="flex:1.5;min-width:220px"><label>File path</label><input type="text" id="ghPath" placeholder="data/data_bb.xlsx" autocomplete="off"></div>
+          <div class="field" style="flex:1.5;min-width:220px"><label>File path</label><input type="text" id="ghPath" placeholder="data_20260611.xlsx" autocomplete="off"></div>
           <div class="field"><label>Branch / ref <span class="hint">(빈 칸 = 기본 브랜치)</span></label><input type="text" id="ghRef" placeholder="main" autocomplete="off"></div>
         </div>
         <div class="ctl-row">
@@ -346,7 +339,7 @@
         <figcaption>Figure 0.2 변수별 추세 <span class="fig-en">/ Individual trends (level, own scale)</span>
           · <a class="dl" id="dlTrendXlsx">그래프 데이터 Excel</a></figcaption>
         <div id="trendGrid" class="grid2" style="grid-template-columns:repeat(2,1fr)"></div>
-        <p class="fig-note">각 패널은 해당 변수의 수준(level) 시계열을 자체 축척으로 표시. 점선은 표본 평균, 음영은 평균±1 표준편차 대역.</p>
+        <p class="fig-note">점선은 평균, 음영은 ±1σ 대역.</p>
       </figure>
 
       <div class="result-head"><h3>기초통계량 · Descriptive statistics</h3>
@@ -368,10 +361,7 @@
       <span class="sec-num">I</span>
       <h2 class="sec-title">단위근 검정 &amp; 차분 <span class="en">/ ADF Unit-Root Test &amp; Differencing</span></h2>
     </div>
-    <p class="sec-desc">Augmented Dickey–Fuller 검정으로 정상성을 판정합니다. 귀무가설은 “단위근 존재(비정상)”.
-       <b>데이터를 불러오면 모든 변수에 대해 자동으로 일괄 검정이 실행되며</b>, 단위근이 발견된 변수는 차분 계열
-       (<code>d_변수명</code>)이 자동 생성되어 회귀·SVAR·그렌저 모듈에서 바로 사용할 수 있습니다.
-       아래 개별 검정 패널로 특정 변수를 상세히 살필 수도 있습니다.</p>
+    <p class="sec-desc">ADF 검정으로 정상성을 판정합니다. H₀: 단위근 존재.</p>
 
     <div id="adfBatch"></div>
 
@@ -421,8 +411,7 @@
       <span class="sec-num">II</span>
       <h2 class="sec-title">Newey–West 다중회귀 <span class="en">/ HAC Robust Multiple Regression</span></h2>
     </div>
-    <p class="sec-desc">OLS 추정 후 Newey–West(1987) HAC 분산–공분산으로 표준오차를 보정합니다. 자기상관·이분산이
-       존재해도 일치추정되는 t-통계량을 제공합니다. Bartlett 커널을 사용하며 절단 시차 L은 자동(plug-in) 또는 직접 지정.</p>
+    <p class="sec-desc">OLS + Newey–West(1987) HAC 표준오차.</p>
 
     <div class="panel">
       <div class="ctl-row">
@@ -479,9 +468,7 @@
       <span class="sec-num">III</span>
       <h2 class="sec-title">구조적 VAR 분해 <span class="en">/ Structural VAR — IRF &amp; Variance Decomposition</span></h2>
     </div>
-    <p class="sec-desc">축약형 VAR(p)를 추정한 뒤 Cholesky(재귀적) 식별로 구조 충격을 분리합니다.
-       충격반응함수(IRF), 예측오차 분산분해(FEVD), 역사적 분해(historical decomposition)를 제공합니다.
-       식별 순서(ordering)는 위에서 아래로 더 외생적인 변수입니다.</p>
+    <p class="sec-desc">VAR(p) + Cholesky 식별 — IRF·FEVD·역사적 분해.</p>
 
     <div class="panel">
       <div class="ctl-row">
@@ -543,9 +530,7 @@
       <span class="sec-num">IV</span>
       <h2 class="sec-title">시차상관 분석 <span class="en">/ Lag Correlation — ACF · PACF · Cross-Correlation</span></h2>
     </div>
-    <p class="sec-desc">한 계열의 자기상관(ACF)·편자기상관(PACF), 또는 두 계열 간 교차상관(CCF, 시차상관계수)을 계산합니다.
-       CCF는 R의 규약을 따라 r(k)=corr(x<sub>t+k</sub>, y<sub>t</sub>)로 정의되며, <b>k&lt;0이면 x가 y를 선행</b>,
-       <b>k&gt;0이면 y가 x를 선행</b>합니다. 점선은 근사 95% 유의대(±1.96/√n, ACF는 Bartlett).</p>
+    <p class="sec-desc">ACF·PACF·교차상관(CCF).</p>
 
     <div class="panel">
       <div class="ctl-row">
@@ -584,10 +569,7 @@
       <span class="sec-num">V</span>
       <h2 class="sec-title">그렌저 인과검정 <span class="en">/ Granger Causality Test</span></h2>
     </div>
-    <p class="sec-desc">변수 x의 과거가 변수 y의 예측에 유의하게 기여하는지를 F-검정으로 봅니다(Granger 1969).
-       귀무가설 H₀: "x는 y를 그렌저-인과하지 않는다" — 제약모형(y의 자기시차만)과 비제약모형(x의 시차 추가)의
-       잔차제곱합을 비교합니다. <b>양방향(x→y, y→x)을 모두 검정</b>하며, 예측적 선행관계이지 구조적 인과는 아님에 유의하세요.
-       정상(stationary) 계열 사용을 권장합니다(I 모듈에서 차분).</p>
+    <p class="sec-desc">Granger(1969) 인과성 F-검정.</p>
 
     <div class="panel">
       <div class="ctl-row">
@@ -630,9 +612,7 @@
       <span class="sec-num">VI</span>
       <h2 class="sec-title">베이지안 예측 시뮬레이션 <span class="en">/ Bayesian Forecast Simulation (BVAR fan chart)</span></h2>
     </div>
-    <p class="sec-desc">선택한 변수들로 베이지안 VAR(Minnesota 사전분포)을 추정하고, 사후분포에서 모수를 반복 추출해
-       향후 발생 가능한 경로의 <b>예측분포(fan chart)</b>를 시뮬레이션합니다. 사전분포 강도·확률화 여부 등
-       하이퍼파라미터를 조정할 수 있습니다. 비정상 변수는 I 모듈에서 차분한 계열(<code>d_…</code>)을 쓰는 것을 권장합니다.</p>
+    <p class="sec-desc">베이지안 VAR(Minnesota 사전분포) 예측 (fan chart).</p>
 
     <div class="panel">
       <div class="ctl-row">
@@ -699,9 +679,7 @@
       <span class="sec-num">VII</span>
       <h2 class="sec-title">DSGE 분석 <span class="en">/ New-Keynesian DSGE Simulation</span></h2>
     </div>
-    <p class="sec-desc">3-방정식 뉴케인지언 DSGE(IS·필립스곡선·테일러준칙)를 구조 모수로부터 풀어
-       충격반응과 확률적 시뮬레이션을 수행합니다. 구조 충격은 수요(자연이자율)·비용인상(cost-push)·통화정책 충격입니다.
-       φ<sub>π</sub> &gt; 1(테일러 원리)일 때 균형이 유일하게 결정됩니다.</p>
+    <p class="sec-desc">3방정식 뉴케인지언 DSGE 충격반응·시뮬레이션.</p>
 
     <div class="panel">
       <div class="ctl-row">
@@ -765,9 +743,7 @@
       <span class="sec-num">VIII</span>
       <h2 class="sec-title">예측 계산기 <span class="en">/ What-if Estimator (fitted value from estimated coefficients)</span></h2>
     </div>
-    <p class="sec-desc">II 모듈(Newey–West 회귀)에서 <b>추정한 계수</b>를 그대로 사용해, 설명변수 값을 직접 입력(key-in)하면
-       종속변수의 추정치 ŷ = β̂′x 와 95% 신뢰구간(HAC), 변수별 기여도를 즉시 계산합니다.
-       예: 근원물가상승률·성장률 값을 바꿔가며 기준금리 추정치가 어떻게 달라지는지 조회할 수 있습니다.</p>
+    <p class="sec-desc">II 모듈 회귀계수로 설명변수를 입력해 예측합니다.</p>
     <div id="calcPanel">
       <div class="panel"><p class="muted" style="font-style:italic;margin:0">
         먼저 <a href="#sec-reg" style="color:var(--navy)">II 모듈</a>에서 회귀를 실행하세요. 추정이 끝나면 이 칸에 입력 폼이 자동으로 나타납니다.</p></div>
@@ -780,9 +756,7 @@
       <span class="sec-num">IX</span>
       <h2 class="sec-title">국채금리 예측 종합·시나리오 <span class="en">/ Bond-Yield Forecast Synthesis &amp; Scenario</span></h2>
     </div>
-    <p class="sec-desc">앞 모듈들의 추정 결과(일괄 ADF·상관·그렌저·BVAR 예측)를 <b>목표 금리별로 종합</b>해 합리적인 예측 접근을
-       제안하고, 한국·미국의 기준금리·성장률·물가상승률 <b>향후 경로를 직접 키인</b>하면 추정된 동학 방정식
-       (y<sub>t</sub> = c + ρy<sub>t-1</sub> + β′x<sub>t</sub>, HAC)으로 목표 금리의 조건부 예측 경로를 계산합니다.</p>
+    <p class="sec-desc">앞 모듈 결과를 목표 금리별로 종합해 예측 접근을 제안합니다.</p>
 
     <div class="panel">
       <div class="ctl-row">
@@ -2164,7 +2138,7 @@ ${sheets.map((s, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.open
       }
       // Not a zip: could be a directory listing / error JSON / a non-xlsx file.
       const head = new TextDecoder().decode(bytes.slice(0, 2048)).trim();
-      if (head.startsWith("[")) throw new Error("경로가 디렉터리입니다. 파일 경로(예: data/data_bb.xlsx)를 지정하세요.");
+      if (head.startsWith("[")) throw new Error("경로가 디렉터리입니다. 파일 경로(예: data_20260611.xlsx)를 지정하세요.");
       if (head.startsWith("{")) {
         try {
           const j = JSON.parse(new TextDecoder().decode(bytes));
@@ -3110,7 +3084,7 @@ function renderTrends(){
   }
   $("trendGrid").innerHTML=html;
   const note=$("trendGrid").nextElementSibling;
-  if(note)note.innerHTML=`각 패널은 해당 변수의 수준(level) 시계열을 자체 축척으로 표시. 점선은 표본 평균, 음영은 평균±1 표준편차 대역.
+  if(note)note.innerHTML=`점선은 평균, 음영은 ±1σ 대역.
     우상단 박스의 μ·σ는 <b>조회 기간(${esc(ST.labels[a])} ~ ${esc(ST.labels[b])}, N=${b-a+1})</b> 기준 소수점 둘째 자리 값.`+
     (names.length>TREND_MAX_PANELS?` <b>선택 변수가 많아 처음 ${TREND_MAX_PANELS}개만 표시합니다(선택 ${names.length}개).</b>`:"");
 }
@@ -4560,9 +4534,9 @@ $("xlsxLoad").onclick=loadXlsxSelection;
 // and .csv/.tsv/.txt (parsed straight into the workspace).
 // Also exposed as window.loadGithubFile("path/in/repo.xlsx") for power users.
 async function loadGithubFile(path,refOverride){
-  const owner=(window.GHCommon?GHCommon.field("ghOwner"):$("ghOwner").value).trim(), repo=(window.GHCommon?GHCommon.field("ghRepo"):$("ghRepo").value).trim();
+  const owner=$("ghOwner").value.trim(), repo=$("ghRepo").value.trim();
   const ref=(refOverride!==undefined?refOverride:$("ghRef").value.trim())||undefined;
-  const token=(window.GHCommon?GHCommon.field("ghToken"):$("ghToken").value).trim();
+  const token=$("ghToken").value.trim();
   path=(path||"").trim();
   if(!owner||!repo||!path){$("ghStatus").innerHTML=`<span class="err">owner / repo / 파일 경로가 모두 필요합니다.</span>`;return false;}
   if(!token){$("ghStatus").innerHTML=`<span class="err">Personal Access Token이 필요합니다.</span>`;return false;}
@@ -4594,9 +4568,9 @@ async function loadGithubFile(path,refOverride){
 window.loadGithubFile=loadGithubFile;
 
 async function refreshGhFileList(){
-  const owner=(window.GHCommon?GHCommon.field("ghOwner"):$("ghOwner").value).trim(), repo=(window.GHCommon?GHCommon.field("ghRepo"):$("ghRepo").value).trim();
+  const owner=$("ghOwner").value.trim(), repo=$("ghRepo").value.trim();
   const dir=$("ghDir").value.trim(), ref=$("ghRef").value.trim()||undefined;
-  const token=(window.GHCommon?GHCommon.field("ghToken"):$("ghToken").value).trim();
+  const token=$("ghToken").value.trim();
   if(!owner||!repo){$("ghStatus").innerHTML=`<span class="err">owner / repo가 필요합니다.</span>`;return;}
   if(!token){$("ghStatus").innerHTML=`<span class="err">Personal Access Token이 필요합니다.</span>`;return;}
   $("ghStatus").innerHTML=`파일 목록 불러오는 중… <span class="muted">${esc(owner)}/${esc(repo)}${dir?"/"+esc(dir):""}</span>`;

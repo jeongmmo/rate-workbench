@@ -9,7 +9,7 @@
     --ink:#16213a; --ink2:#3a4a6b; --muted:#6b7488;
     --line:#d9dde6; --line2:#eceef3;
     --accent:#1f3a6e; --accent-soft:#eaf0f9;
-    --paper:#ffffff; --good:#2f6f6b; --bad:#a23b3b; --warn:#b07d2b;
+    --paper:#f4efe4; --card:#ffffff; --good:#2f6f6b; --bad:#a23b3b; --warn:#b07d2b;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);
@@ -27,7 +27,7 @@
   .jobmeta{font-size:.85rem;color:var(--muted);font-style:italic;margin:0 0 14px;}
   h3.sub{font-size:1rem;margin:22px 0 8px;font-weight:700;}
 
-  table.reg{border-collapse:collapse;font-size:.92rem;margin:6px 0 4px;min-width:60%;}
+  table.reg{border-collapse:collapse;font-size:.92rem;margin:6px 0 4px;min-width:60%;background:var(--card);box-shadow:0 1px 3px rgba(60,50,30,0.05);}
   table.reg caption{caption-side:top;text-align:left;font-size:.95rem;font-weight:700;padding-bottom:6px;}
   table.reg th{font-variant:small-caps;font-size:.78rem;letter-spacing:.06em;color:var(--muted);
     border-top:1.5px solid var(--ink);border-bottom:1px solid var(--line);padding:7px 14px 7px 0;text-align:right;font-weight:700;}
@@ -46,7 +46,7 @@
   <header class="mast">
     <p class="eyebrow">GitHub Actions · statsmodels precomputation</p>
     <h1 class="title">사전계산 결과</h1>
-    <p class="subtitle">데이터를 푸시할 때마다 GitHub 서버의 파이썬이 재계산한 결과입니다 — 브라우저는 조회만 합니다.</p>
+    <p class="subtitle">GitHub Actions가 재계산한 결과 — 화면은 조회 전용.</p>
     <p style="margin:10px 0 0"><a class="back" href="index.html">← 포털로</a></p>
   </header>
   <div id="status" class="busy">결과 불러오는 중 …</div>

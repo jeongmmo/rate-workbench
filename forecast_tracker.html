@@ -10,7 +10,7 @@
     --ink:#16213a; --ink2:#3a4a6b; --muted:#6b7488;
     --line:#d9dde6; --line2:#eceef3;
     --accent:#1f3a6e; --accent-soft:#eaf0f9;
-    --paper:#ffffff; --good:#2f6f6b; --bad:#a23b3b; --warn:#b07d2b;
+    --paper:#f4efe4; --card:#ffffff; --good:#2f6f6b; --bad:#a23b3b; --warn:#b07d2b;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);
@@ -41,7 +41,7 @@
   .ctrl{display:flex;gap:10px;align-items:center;margin:0 0 12px;flex-wrap:wrap;}
   .ctrl label{font-variant:small-caps;font-size:.8rem;color:var(--muted);letter-spacing:.06em;}
   select{font-family:inherit;font-size:.95rem;padding:5px 8px;border:1px solid var(--line);background:#fff;color:var(--ink);}
-  .chartbox{border:1px solid var(--line);padding:14px;background:#fff;}
+  .chartbox{border:1px solid var(--line);padding:14px;background:var(--card,#fff);box-shadow:0 1px 3px rgba(60,50,30,0.05);}
   canvas{max-height:420px;}
 </style>
   <script src="./common.js"></script>
@@ -51,24 +51,23 @@
   <header class="mast">
     <p class="eyebrow">Forecast Vintages · Accuracy Measurement</p>
     <h1 class="title">전망 적중도 추적</h1>
-    <p class="subtitle">전망 빈티지를 실현치와 자동 대조합니다 — 계산은 GitHub Actions(파이썬), 화면은 조회 전용.</p>
+    <p class="subtitle">전망 빈티지를 실현치와 자동 대조.</p>
     <p style="margin:10px 0 0"><a class="back" href="index.html">← 포털로</a></p>
   </header>
   <div id="status" class="busy">결과 불러오는 중 …</div>
   <div id="content" style="display:none">
 
     <h2 class="sec"><span class="num">§ 1</span>빈티지 차트</h2>
-    <p class="secdesc">굵은 선은 분기말 실현치, 가는 선들은 각 시점의 전망 경로입니다 — 전망이 실현치에 어떻게 수렴(또는 이탈)했는지 보여줍니다.</p>
+    <p class="secdesc">굵은 선=실현치, 가는 선=각 시점 전망 경로.</p>
     <div class="ctrl"><label>변수</label><select id="varSel"></select></div>
     <div class="chartbox"><canvas id="hedgehog"></canvas></div>
 
     <h2 class="sec"><span class="num">§ 2</span>변수별 적중도</h2>
-    <p class="secdesc">오차 = 전망 − 실현. ME가 음수면 실제보다 낮게(금리 하락 쪽으로) 전망한 것입니다.
-      방향적중률은 전망 시점 시장수준 대비 상승/하락 방향을 맞힌 비율입니다.</p>
+    <p class="secdesc">오차 = 전망 − 실현. ME 음수 = 과소전망. 방향적중률은 상승/하락 방향을 맞힌 비율.</p>
     <div id="byVar"></div>
 
     <h2 class="sec"><span class="num">§ 3</span>호라이즌별 적중도</h2>
-    <p class="secdesc">전망 시점에서 목표 분기말까지의 거리별 성적입니다 — 멀리 볼수록 어려운 게 정상입니다.</p>
+    <p class="secdesc">전망 시점~목표 분기말 거리별 성적.</p>
     <div id="byHz"></div>
 
     <h2 class="sec"><span class="num">§ 4</span>개별 기록</h2>

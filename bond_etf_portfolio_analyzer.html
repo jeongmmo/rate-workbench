@@ -16,7 +16,7 @@
   *{box-sizing:border-box; margin:0; padding:0;}
   body{
     font-family:"Times New Roman", "Nanum Myeongjo", Batang, serif;
-    background:#ffffff; color:var(--ink);
+    background:#f4efe4; color:var(--ink);
     max-width:1180px; margin:0 auto; padding:28px 32px 80px 232px;
     font-size:15px; line-height:1.5;
   }
@@ -100,7 +100,7 @@
   .op-card{border-left:3px solid var(--accent); background:#fafbfd; padding:8px 14px; margin:6px 0; font-size:13.5px;}
   .op-card b.win{color:var(--pos);} .op-card b.lose{color:var(--neg);}
   /* split panels */
-  .panel{border:1px solid var(--rule-light); padding:16px 18px; margin-top:14px; background:#fff;}
+  .panel{border:1px solid var(--rule-light); padding:16px 18px; margin-top:14px; background:#fff; box-shadow:0 1px 3px rgba(60,50,30,0.05);}
   .panel-input{background:#fbfcfe; border-left:3px solid var(--accent);}
   .panel-title{font-weight:bold; font-size:14.5px; margin-bottom:12px; letter-spacing:.2px;}
   tr.run-selected td{background:var(--accent-soft);}
@@ -118,13 +118,8 @@
   .dl-bar{display:flex; gap:10px; flex-wrap:wrap; margin-top:18px;}
   footer{margin-top:50px; border-top:1px solid var(--rule-light); padding-top:10px; font-size:12.5px; color:#777;}
 </style>
-  <script src="./common.js"></script>
 </head>
 <body>
-<div style="font-family:'Times New Roman',Times,serif;font-size:.88rem;background:#ffffff;border-bottom:1px solid #d9dde6;padding:7px 28px;">
-  <a href="index.html" style="color:#1f3a6e;text-decoration:none;">&#8592; 포털로 돌아가기</a>
-  <span style="color:#6b7488;font-style:italic;margin-left:14px;">Research Workbench</span>
-</div>
 
 <nav id="sideNav">
   <div class="nav-title">목차</div>
@@ -146,7 +141,7 @@
 
 <header>
   <h1>채권형 ETF 포트폴리오 분석 모듈</h1>
-  <div class="subtitle">Fixed-Income ETF Portfolio Construction &amp; Backtesting — Benchmark: 50% LBUSTRUU + 50% KBPMABIN</div>
+  <div class="subtitle">채권 ETF 포트폴리오 구성·백테스트</div>
 </header>
 
 <!-- ============ STEP 1 : UPLOAD ============ -->
@@ -155,9 +150,7 @@
 
   <div class="panel panel-input" style="margin-bottom:14px">
     <div class="panel-title">GitHub 저장소에서 불러오기</div>
-    <p class="note">개인 액세스 토큰(PAT)으로 저장소의 엑셀 파일 목록을 받아와 선택·로드합니다.
-    <b>토큰은 이 세션의 메모리에서만 사용되며 파일·브라우저 저장소에 저장되지 않습니다.</b> 페이지를 새로고침하면 토큰은 사라집니다.
-    토큰은 <code>repo</code>(또는 fine-grained PAT의 Contents: Read) 권한이 필요합니다.</p>
+    <p class="note">저장소의 엑셀 파일을 선택·로드합니다. 토큰은 세션 메모리에서만 사용됩니다.</p>
     <div class="controls" style="margin-bottom:8px">
       <div class="ctrl"><label>소유자 / 사용자명 (owner)</label>
         <input type="text" id="ghOwner" value="jeongmmo" style="min-width:150px"></div>
@@ -182,7 +175,7 @@
     </div>
     <div class="wt-toolbar" id="ghManualRow">
       <span class="note">또는 파일 경로 직접 입력:</span>
-      <input type="text" id="ghPath" value="data/data_bb.xlsx" style="min-width:240px; font-family:inherit; font-size:13px; padding:4px 6px; border:1px solid var(--rule)">
+      <input type="text" id="ghPath" value="data_20260611.xlsx" style="min-width:240px; font-family:inherit; font-size:13px; padding:4px 6px; border:1px solid var(--rule)">
       <button class="small" id="btnGhLoadManual">경로로 불러오기</button>
     </div>
     <div class="msg" id="ghMsg"></div>
@@ -198,7 +191,7 @@
 
   <div id="tickerPanel" class="panel panel-input hidden" style="margin-top:16px">
     <div class="panel-title">분석 대상 티커 선택</div>
-    <p class="note">투자가능 자산으로 사용할 티커를 입력하세요. 파일에 존재하는 티커(부분일치 가능)를 검색해 데이터를 불러옵니다.
+    <p class="note">자산 티커를 입력하세요(부분일치 검색).
     벤치마크(미국종합·한국종합)와 NSS 팩터용 국채 커브는 자동으로 탐색됩니다.</p>
     <div class="wt-toolbar">
       <textarea id="tickerInput" rows="3" style="width:100%; font-family:inherit; font-size:13.5px; padding:8px; border:1px solid var(--rule)"
@@ -483,9 +476,7 @@
         <tfoot></tfoot>
       </table>
     </div>
-    <p class="note" id="attrNote">주: Brinson–Hood–Beebower 분해. 벤치마크는 자산군 단위로 미국종합·한국종합 2개 노드를 사용하며, 각 ETF는 통화권(미국/한국)에 따라 해당 벤치마크 노드에 매핑됩니다.
-    배분효과 = (w_p − w_b)·(r_b,asset − r_b) · 선택효과 = w_b·(r_asset − r_b,group) · 상호작용 = (w_p − w_b)·(r_asset − r_b,group). 수익률은 기하 연환산. 총기여 합계는 포트폴리오–벤치마크 연환산 초과수익률에 근사합니다(리밸런싱·복리 효과로 잔차 존재).
-    <span id="attrChart-toggle"></span></p>
+    <p class="note" id="attrNote">주: Brinson–Hood–Beebower(BHB) 분해.</p>
     <div class="chart-box">
       <div class="chart-head">
         <span class="title">Figure 2b. 자산별 초과수익 기여도 (연환산, %p)</span>
@@ -534,10 +525,7 @@
         <thead></thead><tbody></tbody>
       </table>
     </div>
-    <p class="note" id="fregNote">주: 팩터는 미국·한국 국채 커브(3M–30Y, 7개 만기)에 Nelson–Siegel–Svensson 모형(τ₁=1.37, τ₂=8.0 고정, 일별 OLS)을 적합하여 얻은
-    Level(β₀), Slope(−β₁, 장단기금리차 방향), Curvature(β₂)의 일간 변화분(%p). 팩터 베타는 해당 팩터 1%p 변화에 대한 일간수익률 반응(%).
-    표준오차는 Newey–West(시차 5) HAC 기준. 종속변수 「초과수익률」 회귀의 α가 유의하면 커브 팩터 노출을 통제한 후에도 벤치마크 대비 알파가 존재함을 의미.
-    유의수준: * p&lt;0.10, ** p&lt;0.05, *** p&lt;0.01 (셀에 마우스를 올리면 t-통계량 표시).</p>
+    <p class="note" id="fregNote">주: Nelson–Siegel–Svensson 모형</p>
 
     <div id="anchor-charts"></div>
     <div class="chart-box">
@@ -792,11 +780,11 @@ async function fetchGithubFile(owner, repo, path, ref, token){
 
 function ghCtx(){
   return {
-    owner: (window.GHCommon?GHCommon.field("ghOwner"):$("ghOwner").value).trim(),
-    repo:  (window.GHCommon?GHCommon.field("ghRepo"):$("ghRepo").value).trim(),
+    owner: $("ghOwner").value.trim(),
+    repo:  $("ghRepo").value.trim(),
     dir:   $("ghDir").value.trim().replace(/^\/+|\/+$/g, ""),
     ref:   $("ghRef").value.trim(),
-    token: (window.GHCommon?GHCommon.field("ghToken"):$("ghToken").value).trim()
+    token: $("ghToken").value.trim()
   };
 }
 

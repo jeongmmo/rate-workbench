@@ -9,7 +9,7 @@
     --ink:#16213a; --ink2:#3a4a6b; --muted:#6b7488;
     --line:#d9dde6; --line2:#eceef3;
     --accent:#1f3a6e; --accent-soft:#eaf0f9;
-    --paper:#ffffff; --good:#2f6f6b; --bad:#a23b3b; --warn:#b07d2b;
+    --paper:#f4efe4; --card:#ffffff; --good:#2f6f6b; --bad:#a23b3b; --warn:#b07d2b;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);
@@ -29,12 +29,12 @@
   p.secdesc{margin:0 0 16px;color:var(--ink2);font-size:.94rem;}
 
   /* ---- 연결 패널 ---- */
-  .connect{border:1px solid var(--line);padding:18px 20px 16px;}
+  .connect{border:1px solid var(--line);background:var(--card);padding:18px 20px 16px;box-shadow:0 1px 3px rgba(60,50,30,0.06);}
   .row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;}
   .field{display:flex;flex-direction:column;gap:4px;}
   .field label{font-size:.78rem;letter-spacing:.06em;color:var(--muted);font-variant:small-caps;}
   .field input{font-family:inherit;font-size:.95rem;padding:6px 8px;border:1px solid var(--line);
-    background:#fff;color:var(--ink);min-width:120px;}
+    background:var(--card);color:var(--ink);min-width:120px;}
   .field input:focus{outline:2px solid var(--accent-soft);border-color:var(--accent);}
   #fOwner{width:140px} #fRepo{width:170px} #fRef{width:90px} #fToken{width:300px}
   button.primary{font-family:inherit;font-size:.95rem;padding:8px 20px;cursor:pointer;
@@ -60,7 +60,7 @@
   .moddesc{font-size:.88rem;color:var(--muted);margin:3px 0 0 50px;font-style:italic;}
 
   /* ---- 데이터 원장 ---- */
-  table.ledger{width:100%;border-collapse:collapse;font-size:.92rem;}
+  table.ledger{width:100%;border-collapse:collapse;font-size:.92rem;background:var(--card);}
   table.ledger th{font-variant:small-caps;letter-spacing:.08em;font-size:.78rem;color:var(--muted);
     text-align:left;border-top:1px solid var(--ink);border-bottom:1px solid var(--line);padding:8px 6px;font-weight:700;}
   table.ledger td{border-bottom:1px solid var(--line2);padding:8px 6px;vertical-align:baseline;}
@@ -84,7 +84,7 @@
   <header class="mast">
     <p class="eyebrow">Research Workbench · Interest-Rate Econometrics</p>
     <h1 class="title">금리 계량분석 포털</h1>
-    <p class="subtitle">하나의 데이터베이스, 세 개의 분석 모듈 — 토큰은 여기서 한 번만 입력합니다.</p>
+    <p class="subtitle">하나의 데이터베이스, 다섯 개의 분석 모듈</p>
     <div class="mastmeta">
       <span>저장소 <b id="metaRepo">jeongmmo/research-data</b></span>
       <span>연결 상태 <b id="metaConn">미연결</b></span>
@@ -93,8 +93,7 @@
   </header>
 
   <h2 class="sec"><span class="num">§ 1</span>저장소 연결</h2>
-  <p class="secdesc">fine-grained PAT(해당 저장소 1개 · Contents: Read-only 권한)를 붙여넣고 연결하세요.
-    입력값은 이 브라우저 세션에서만 유지되며, 아래 분석 모듈을 열면 자동으로 이어받습니다.</p>
+  <p class="secdesc">토큰을 붙여넣고 연결하세요.</p>
   <div class="connect">
     <div class="row">
       <div class="field"><label>Owner</label><input type="text" id="fOwner" value="jeongmmo" autocomplete="off"></div>
@@ -119,37 +118,36 @@
   <div class="grid2">
     <section>
       <h2 class="sec"><span class="num">§ 2</span>분석 모듈</h2>
-      <p class="secdesc">연결 후 모듈을 열면 owner·repo·토큰·기본 데이터 파일이 채워진 상태로 시작합니다.</p>
       <ol class="toc">
+        <li>
+          <a class="mod" href="econometrics_toolkit.html">
+            <span class="modnum"></span><span class="modname">계량분석 툴킷</span>
+          </a>
+          <p class="moddesc">회귀 · 기술통계 · 추세 분해</p>
+        </li>
         <li>
           <a class="mod" href="korea_neutral_rate.html">
             <span class="modnum"></span><span class="modname">한국 중립금리 추정기</span>
           </a>
-          <p class="moddesc">DKW/ACM 기간구조 분해 · 기대 실질단기금리 · 기간프리미엄</p>
+          <p class="moddesc">기간구조 분해 · 기간프리미엄</p>
         </li>
         <li>
           <a class="mod" href="bond_etf_portfolio_analyzer.html">
             <span class="modnum"></span><span class="modname">채권 ETF 포트폴리오 분석기</span>
           </a>
-          <p class="moddesc">성과 귀속 · 누적수익 · 드로다운 · 비중 기록 관리</p>
+          <p class="moddesc">성과 귀속 · 드로다운 · 비중 관리</p>
         </li>
         <li>
           <a class="mod" href="forecast_input.html">
             <span class="modnum"></span><span class="modname">전망 입력기</span>
           </a>
-          <p class="moddesc">기준금리 + 인접 만기 스프레드 입력 · 10년 평균±σ 참고 · forecasts.xlsx 자동 병합</p>
+          <p class="moddesc">기준금리 + 스프레드 입력</p>
         </li>
         <li>
           <a class="mod" href="forecast_tracker.html">
             <span class="modnum"></span><span class="modname">전망 적중도 추적</span>
           </a>
-          <p class="moddesc">전망 빈티지 vs 실현치 · ME/MAE/RMSE · 방향적중률 · 호라이즌별</p>
-        </li>
-        <li>
-          <a class="mod" href="econometrics_toolkit.html">
-            <span class="modnum"></span><span class="modname">계량분석 툴킷</span>
-          </a>
-          <p class="moddesc">변수 선택형 회귀 · 기술통계 · 추세 분해 · CSV/Excel 입출력</p>
+          <p class="moddesc">전망 vs 실현 · 적중도 측정</p>
         </li>
       </ol>
       <p style="margin-top:18px;font-size:.92rem">
@@ -159,8 +157,7 @@
 
     <section>
       <h2 class="sec"><span class="num">§ 3</span>데이터베이스 원장</h2>
-      <p class="secdesc">저장소 안의 데이터 파일(.xlsx/.csv 등) 전체 목록입니다. 파일을 직접 추가·삭제한 뒤
-        다시 연결하면 갱신됩니다. ‘기본 지정’한 파일이 각 모듈의 시작 파일이 됩니다.</p>
+      <p class="secdesc">저장소의 데이터 파일 목록. ‘기본 지정’ 파일이 각 모듈의 시작 파일입니다.</p>
       <div id="ledgerEmpty">아직 연결되지 않았습니다 — § 1에서 토큰을 입력하고 연결하세요.</div>
       <table class="ledger" id="ledger" style="display:none">
         <thead><tr><th>파일 경로</th><th style="text-align:right">크기</th><th></th></tr></thead>
