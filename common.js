@@ -19,32 +19,82 @@
     ghPath:  "gh_path"
   };
 
+  /* 저장 계층: localStorage("이 브라우저에 기억" 모드, 탭과 무관하게 공유)
+     → 없으면 sessionStorage(탭 한정). 읽기는 둘 다, 쓰기는 현재 모드를 따름 */
+  function storeGet(key) {
+    try {
+      var v = localStorage.getItem(key);
+      if (v !== null) return v;
+    } catch (e) {}
+    try { return sessionStorage.getItem(key); } catch (e) {}
+    return null;
+  }
+  function storeSet(key, val) {
+    var remember = false;
+    try { remember = localStorage.getItem("gh_remember") === "1"; } catch (e) {}
+    try {
+      if (remember) { localStorage.setItem(key, val); sessionStorage.removeItem(key); }
+      else { sessionStorage.setItem(key, val); localStorage.removeItem(key); }
+    } catch (e) {}
+  }
+  function storeClearAll() {
+    Object.keys(FIELD_KEYS).forEach(function (id) {
+      var k = FIELD_KEYS[id];
+      try { localStorage.removeItem(k); } catch (e) {}
+      try { sessionStorage.removeItem(k); } catch (e) {}
+    });
+    try { localStorage.removeItem("gh_remember"); } catch (e) {}
+  }
+
+  var _userCleared = {};   // 사용자가 "지우기"로 명시적으로 비운 칸은 자동 복원 안 함
+
   function fillFields() {
+    if (!document.body) return;
     Object.keys(FIELD_KEYS).forEach(function (id) {
       var el = document.getElementById(id);
       if (!el) return;
-      var stored = null;
-      try { stored = sessionStorage.getItem(FIELD_KEYS[id]); } catch (e) { /* file:// 등 */ }
-      // 칸이 비어 있을 때만 채움 (사용자가 타이핑 중인 값은 보존)
-      if (stored && !el.value) {
+      var stored = storeGet(FIELD_KEYS[id]);
+      // 저장값이 있고, 칸이 비었고, 사용자가 일부러 지운 게 아니면 복원
+      if (stored && !el.value && !_userCleared[id]) {
         el.value = stored;
         el.dispatchEvent(new Event("input",  { bubbles: true }));
         el.dispatchEvent(new Event("change", { bubbles: true }));
       }
-      if (!el.dataset.ghBridged) {            // 리스너 중복 부착 방지
+      if (!el.dataset.ghBridged) {
         el.dataset.ghBridged = "1";
         el.addEventListener("change", function () {
-          try { sessionStorage.setItem(FIELD_KEYS[id], el.value); } catch (e) {}
+          if (el.value) { _userCleared[id] = false; storeSet(FIELD_KEYS[id], el.value); }
         });
       }
     });
   }
-  // 모듈 스크립트가 초기화하면서 칸을 비워버리는 경우에 대비해 3차례 적용
+
+  // DOM 준비 시 1차 채움
+  function start() {
+    fillFields();
+    // 모듈 스크립트가 칸을 비우거나 늦게 그려도 즉시 되채우도록 DOM 변화를 감시
+    try {
+      var mo = new MutationObserver(function () { fillFields(); });
+      mo.observe(document.documentElement, { childList: true, subtree: true });
+      // 입력칸이 코드로 비워지는 경우까지 잡기 위해 짧은 폴링을 잠시 가동(5초)
+      var ticks = 0;
+      var iv = setInterval(function () { fillFields(); if (++ticks > 50) clearInterval(iv); }, 100);
+    } catch (e) { setTimeout(fillFields, 300); setTimeout(fillFields, 1000); }
+  }
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", fillFields);
-  } else { fillFields(); }
+    document.addEventListener("DOMContentLoaded", start);
+  } else { start(); }
   window.addEventListener("load", fillFields);
-  setTimeout(fillFields, 600);
+
+  // 모듈의 "토큰 지우기" 버튼이 눌리면, 그 칸은 자동 복원 대상에서 제외
+  document.addEventListener("click", function (ev) {
+    var t = ev.target;
+    if (!t) return;
+    var label = (t.textContent || "") + (t.id || "") + (t.className || "");
+    if (/지우|clear|wipe|forget/i.test(label)) {
+      Object.keys(FIELD_KEYS).forEach(function (id) { _userCleared[id] = true; });
+    }
+  }, true);
 
   /* ---------- 2. GitHub API 헬퍼 ---------- */
   var DATA_EXT = /\.(xlsx|xlsm|csv|tsv|txt)$/i;
@@ -103,7 +153,7 @@
 
   /** sessionStorage에 저장된 현재 설정 읽기 */
   function currentConfig() {
-    function g(k, d) { try { return sessionStorage.getItem(k) || d; } catch (e) { return d; } }
+    function g(k, d) { var v = storeGet(k); return (v !== null && v !== "") ? v : d; }
     return {
       owner: g("gh_owner", "jeongmmo"),
       repo:  g("gh_repo",  "research-data"),
@@ -113,14 +163,15 @@
     };
   }
 
-  function saveConfig(cfg) {
-    try {
-      sessionStorage.setItem("gh_owner", cfg.owner || "");
-      sessionStorage.setItem("gh_repo",  cfg.repo  || "");
-      sessionStorage.setItem("gh_ref",   cfg.ref   || "");
-      sessionStorage.setItem("gh_token", cfg.token || "");
-      if (cfg.path !== undefined) sessionStorage.setItem("gh_path", cfg.path || "");
-    } catch (e) {}
+  function saveConfig(cfg, remember) {
+    if (remember !== undefined) {
+      try { localStorage.setItem("gh_remember", remember ? "1" : "0"); } catch (e) {}
+    }
+    storeSet("gh_owner", cfg.owner || "");
+    storeSet("gh_repo",  cfg.repo  || "");
+    storeSet("gh_ref",   cfg.ref   || "");
+    storeSet("gh_token", cfg.token || "");
+    if (cfg.path !== undefined) storeSet("gh_path", cfg.path || "");
   }
 
   /** Actions가 만든 사전계산 결과 읽기: results/<name>.json
@@ -134,8 +185,50 @@
     return JSON.parse(new TextDecoder("utf-8").decode(bytes));
   }
 
+  /** 저장소에 파일 커밋(생성/갱신): base64 내용 + 커밋 메시지.
+      쓰기 권한(Contents: Read and write) 토큰 필요. 성공 시 commit URL 반환 */
+  async function putFile(cfg, path, base64Content, message) {
+    var base = "https://api.github.com/repos/" +
+      encodeURIComponent(cfg.owner) + "/" + encodeURIComponent(cfg.repo) +
+      "/contents/" + path.split("/").map(encodeURIComponent).join("/");
+    // 기존 파일 sha 조회 (없으면 신규 생성)
+    var sha = null;
+    var meta = await fetch(base + (cfg.ref ? "?ref=" + encodeURIComponent(cfg.ref) : ""),
+      { headers: headers(cfg.token) });
+    if (meta.ok) sha = (await meta.json()).sha;
+    else if (meta.status !== 404) throw new Error(explain(meta.status));
+    var body = { message: message, content: base64Content };
+    if (sha) body.sha = sha;
+    if (cfg.ref) body.branch = cfg.ref;
+    var res = await fetch(base, {
+      method: "PUT",
+      headers: Object.assign(headers(cfg.token), { "Content-Type": "application/json" }),
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      if (res.status === 403 || res.status === 404)
+        throw new Error("쓰기 권한 없음(" + res.status + "): 토큰의 Contents 권한이 Read and write인지, " +
+          "Repository access에 이 저장소가 포함됐는지 확인하세요.");
+      throw new Error(explain(res.status));
+    }
+    var j = await res.json();
+    return j.commit && j.commit.html_url;
+  }
+
+  /** 입력칸 값보다 저장된 값을 우선 반환 (모듈이 토큰 읽을 때 사용) */
+  function field(id) {
+    var key = FIELD_KEYS[id];
+    var v = key ? storeGet(key) : null;
+    if (v) return v;
+    var el = document.getElementById(id);
+    return el ? el.value : "";
+  }
+
   root.GHCommon = {
     loadResults: loadResults,
+    field: field,
+    putFile: putFile,
+    clearStored: storeClearAll,
     repoInfo: repoInfo,
     listDataFiles: listDataFiles,
     fetchFile: fetchFile,

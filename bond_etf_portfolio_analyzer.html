@@ -118,8 +118,13 @@
   .dl-bar{display:flex; gap:10px; flex-wrap:wrap; margin-top:18px;}
   footer{margin-top:50px; border-top:1px solid var(--rule-light); padding-top:10px; font-size:12.5px; color:#777;}
 </style>
+  <script src="./common.js"></script>
 </head>
 <body>
+<div style="font-family:'Times New Roman',Times,serif;font-size:.88rem;background:#ffffff;border-bottom:1px solid #d9dde6;padding:7px 28px;">
+  <a href="index.html" style="color:#1f3a6e;text-decoration:none;">&#8592; 포털로 돌아가기</a>
+  <span style="color:#6b7488;font-style:italic;margin-left:14px;">Research Workbench</span>
+</div>
 
 <nav id="sideNav">
   <div class="nav-title">목차</div>
@@ -129,7 +134,6 @@
   <a data-go="sec-optim">IV. 포트폴리오 최적화</a>
   <a data-go="sec-weights">V. 비중 입력·기록</a>
   <a data-go="sec-backtest">VI. 백테스트</a>
-  <a data-go="sec-irs">VII. IRS 포워드</a>
   <a data-go="anchor-perf" class="sub">— 성과 요약표</a>
   <a data-go="anchor-op" class="sub">— 아웃퍼폼 요약</a>
   <a data-go="anchor-attr" class="sub">— 귀속분석 (Brinson)</a>
@@ -178,7 +182,7 @@
     </div>
     <div class="wt-toolbar" id="ghManualRow">
       <span class="note">또는 파일 경로 직접 입력:</span>
-      <input type="text" id="ghPath" value="data_20260611.xlsx" style="min-width:240px; font-family:inherit; font-size:13px; padding:4px 6px; border:1px solid var(--rule)">
+      <input type="text" id="ghPath" value="data/data_bb.xlsx" style="min-width:240px; font-family:inherit; font-size:13px; padding:4px 6px; border:1px solid var(--rule)">
       <button class="small" id="btnGhLoadManual">경로로 불러오기</button>
     </div>
     <div class="msg" id="ghMsg"></div>
@@ -203,8 +207,6 @@
     <div class="wt-toolbar">
       <button class="small" id="btnDetectAll">파일 내 TOT_RETURN 자산 전체 불러오기</button>
       <button class="small" id="btnUseDefault">기본 18종 ETF 사용</button>
-      <span class="note">최소 표본개수</span>
-      <input type="number" id="minObs" value="250" step="50" min="0" style="width:90px; font-family:inherit; font-size:13px; padding:4px 6px; border:1px solid var(--rule)" title="이 관측치(거래일) 미만 자산은 최적화 Universe에서 자동 제외">
       <span class="note">벤치마크 티커</span>
       <input type="text" id="bmUsTicker" value="LBUSTRUU" style="width:120px; font-family:inherit; font-size:13px; padding:4px 6px; border:1px solid var(--rule)" title="미국종합 벤치마크">
       <input type="text" id="bmKrTicker" value="KBPMABIN" style="width:120px; font-family:inherit; font-size:13px; padding:4px 6px; border:1px solid var(--rule)" title="한국종합 벤치마크">
@@ -213,7 +215,7 @@
     <div class="msg" id="tickerMsg"></div>
     <div class="tbl-wrap hidden" id="tickerPreview" style="margin-top:10px; max-height:260px; overflow-y:auto">
       <table id="tickerPreviewTable">
-        <thead><tr><th>매칭</th><th>입력 티커</th><th>파일 내 티커</th><th>자산명</th><th>카테고리</th><th>데이터 시작</th><th>관측치</th></tr></thead>
+        <thead><tr><th>매칭</th><th>입력 티커</th><th>파일 내 티커</th><th>자산명</th><th>데이터 시작</th><th>관측치</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -281,29 +283,18 @@
       </table>
     </div>
     <p class="note" style="margin-top:6px">「과거 μ」는 선택 기간 일평균수익률의 산술 연환산(자산별 가용 기간 기준, 참고용). 「기대수익률 키인」이 빈칸인 자산은 과거 평균이 그대로 사용됩니다.
-    데이터 시작이 분석 시작일보다 늦은 자산(<span class="late">주황색</span>)을 포함하면 추정 기간이 단축됩니다. 제약: Σ최소 ≤ 100% ≤ Σ최대, 자산별 최소 ≤ 최대.
-    업로드 단계에서 설정한 최소 표본개수 미만인 자산은 <b>최적화에서 자동 제외</b>되며 흐리게 표시됩니다(데이터 재로드 시 기준 반영).</p>
+    데이터 시작이 분석 시작일보다 늦은 자산(<span class="late">주황색</span>)을 포함하면 추정 기간이 단축됩니다. 제약: Σ최소 ≤ 100% ≤ Σ최대, 자산별 최소 ≤ 최대.</p>
     <div class="wt-toolbar">
       <button class="small" id="btnFillHist">키인란에 과거치 채우기</button>
       <button class="small" id="btnClearER">키인 비우기</button>
     </div>
     <div class="controls" style="margin-top:12px">
-      <div class="ctrl"><label>결과 자동입력 대상</label>
-        <select id="optApplyTarget" style="min-width:170px">
-          <option value="0">Portfolio 1 칸에 입력</option>
-          <option value="1">Portfolio 2 칸에 입력</option>
-          <option value="2">Portfolio 3 칸에 입력</option>
-          <option value="-1">자동입력 안 함</option>
-        </select>
-      </div>
-    </div>
-    <div class="controls" style="margin-top:8px">
       <div class="ctrl"><label>키인 블렌딩 비중 (%, 0=과거만 · 100=키인만)</label>
         <input type="number" id="muBlend" value="100" step="5" min="0" max="100" style="width:90px"></div>
       <div class="ctrl"><label>공분산 수축 λ (0=표본 · 1=대각)</label>
         <input type="number" id="covShrink" value="0" step="0.05" min="0" max="1" style="width:90px"></div>
       <div class="ctrl"><label>최대비중 일괄설정 (%)</label>
-        <input type="number" id="optCap" value="15" step="5" min="1" max="100" style="width:80px">
+        <input type="number" id="optCap" value="100" step="5" min="1" max="100" style="width:80px">
         <button class="small" id="btnCapAll" style="margin-left:4px">전체 적용</button>
       </div>
     </div>
@@ -333,6 +324,14 @@
         <input type="number" id="mcB" value="200" step="50" min="50" max="1000" style="width:90px"></div>
       <div class="ctrl"><label>로버스트 비중</label>
         <label style="font-size:13px; font-weight:normal"><input type="checkbox" id="mcRobustW" checked> 리샘플링 평균 비중 사용</label></div>
+      <div class="ctrl"><label>결과 자동입력 대상</label>
+        <select id="optApplyTarget" style="min-width:150px">
+          <option value="0">Portfolio 1 칸에 입력</option>
+          <option value="1">Portfolio 2 칸에 입력</option>
+          <option value="2">Portfolio 3 칸에 입력</option>
+          <option value="-1">자동입력 안 함</option>
+        </select>
+      </div>
       <button class="primary" id="btnOptimize">최적화 실행</button>
     </div>
   </div>
@@ -651,60 +650,12 @@
       </table>
     </div>
     <p class="note">주: 괴리 = (실제 − 적합) × 100bp. 양(+)이면 해당 만기가 NSS 커브 대비 고평가된 금리(저평가된 가격), 음(−)이면 그 반대.
-    적합은 고정 감쇠모수(τ₁=1.37, τ₂=8.0) NSS의 당일 횡단면 OLS — 파일에 존재하는 만기(최대 9개: 3M·6M·1·2·3·5·10·20·30년, 최소 5개 필요)만 사용하며 없는 만기의 적합치는 모형 외삽값입니다.</p>
-    <div class="chart-box">
-      <div class="chart-head">
-        <span class="title">Figure 8. 만기별 실제 금리 vs NSS 적합 커브 — 한국·미국 비교</span>
-        <button class="small" data-dlx="nssDevChart">데이터 (.xlsx)</button>
-        <button class="small" data-dl="nssDevChart">PNG 다운로드</button>
-      </div>
-      <canvas id="nssDevChart" style="max-height:360px"></canvas>
-    </div>
+    적합은 고정 감쇠모수(τ₁=1.37, τ₂=8.0) NSS의 당일 횡단면 OLS.</p>
 
     <div class="dl-bar" id="anchor-dl">
       <button class="primary" id="btnDlExcel">분석 결과 데이터 Excel 다운로드 (.xlsx)</button>
       <button class="primary" id="btnDlCharts">그래프 Excel 다운로드 (.xlsx, 이미지 포함)</button>
     </div>
-  </div>
-</section>
-
-<!-- ============ STEP 7 : IRS FORWARDS ============ -->
-<section id="sec-irs" class="hidden">
-  <h2><span class="stepno">Step VII.</span>시장 내재 금리 경로 — IRS 포워드 분석</h2>
-  <p class="note">데이터 파일의 IRS 포워드(블룸버그 BLC2 포워드 스왑) 행렬을 이용해 시장이 가격에 반영한 향후 금리 경로를 분석합니다.
-  포워드는 스왑 기준이므로 국채 금리와는 스왑 스프레드만큼 차이가 있을 수 있습니다. 모든 값은 마지막 관측치 기준(휴장일 forward-fill).</p>
-
-  <div class="tbl-wrap">
-    <table id="irsTable">
-      <caption id="irsCaption">Table 9. IRS 포워드 금리 매트릭스 (%, 변화는 bp)</caption>
-      <thead></thead>
-      <tbody></tbody>
-    </table>
-  </div>
-  <p class="note">주: 구조 표기 「aYbY」 = a년 후 시작하는 b년 금리, 「aY3M」 = a년 후 시작하는 3개월 금리. Δ1M·Δ3M은 약 21·63거래일 전 대비 변화(bp).
-  기준금리·국채 1y는 참고용 앵커(스왑 아님).</p>
-
-  <div class="chart-box">
-    <div class="chart-head">
-      <span class="title">Figure 9. 시장 내재 1년 금리 경로 — 국가별 비교</span>
-      <button class="small" data-dlx="irsPathChart">데이터 (.xlsx)</button>
-      <button class="small" data-dl="irsPathChart">PNG 다운로드</button>
-    </div>
-    <canvas id="irsPathChart" style="max-height:360px"></canvas>
-    <p class="note">주: t=0은 국채 1년물(앵커), t=n은 n년 후 시작 1년 IRS 포워드(nY1Y). 우상향이면 시장이 인상(또는 기간프리미엄)을, 우하향이면 인하를 반영.</p>
-  </div>
-
-  <div class="chart-box">
-    <div class="chart-head">
-      <span class="title">Figure 10. 주요 포워드 추이 — 1y1y (실선) · 5y5y (점선)</span>
-      <span class="note">시작일</span>
-      <input type="date" id="irsStart" style="font-family:inherit; font-size:12.5px; padding:3px 5px; border:1px solid var(--rule)">
-      <button class="small" data-dlx="irsTsChart">데이터 (.xlsx)</button>
-      <button class="small" data-dl="irsTsChart">PNG 다운로드</button>
-    </div>
-    <div class="wt-toolbar" id="irsCty" style="margin-bottom:6px"></div>
-    <canvas id="irsTsChart"></canvas>
-    <p class="note">주: 1y1y는 단기 정책 기대(향후 1~2년), 5y5y는 장기 중립금리·기간프리미엄 기대의 대용 지표로 흔히 사용됩니다.</p>
   </div>
 </section>
 
@@ -722,12 +673,10 @@ let N_COL = 0;                    // number of investable assets + 2 benchmarks
 let BM_US_IDX = 0, BM_KR_IDX = 0; // benchmark positions within the assembled block (last two)
 const ANN = 252;
 // yield curves for NSS factor model: resolved by Bloomberg ticker (column header row 8)
-const YC_US_TICKERS = ["USGG3M","USGG6M","USGG12M","USGG2YR","USGG3YR","USGG5YR","USGG10YR","USGG20YR","USGG30YR"];
-const YC_KR_TICKERS = ["GVSK3M","GVSK6M","GVSK1Y","GVSK2Y","GVSK3Y","GVSK5Y","GVSK10Y","GVSK20Y","GVSK30Y"];
+const YC_US_TICKERS = ["USGG3M","USGG12M","USGG2YR","USGG3YR","USGG5YR","USGG10YR","USGG30YR"];
+const YC_KR_TICKERS = ["GVSK3M","GVSK1Y","GVSK2Y","GVSK3Y","GVSK5Y","GVSK10Y","GVSK30Y"];
 const IG_OAS_TICKER = "LUACOAS", HY_OAS_TICKER = "LF98OAS";
-const TENORS = [0.25,0.5,1,2,3,5,10,20,30];   // 데이터에 없는 만기는 당일 적합에서 자동 제외 (최소 5개 필요)
-const NT = TENORS.length;
-const TENOR_NAMES = ["3개월","6개월","1년","2년","3년","5년","10년","20년","30년"];
+const TENORS = [0.25,1,2,3,5,10,30];
 const NSS_T1 = 1.37, NSS_T2 = 8.0;      // fixed decay parameters (Diebold–Li style)
 let NSSF = null;                        // {us:{L,S,C,B3}, kr:{...}, ig:[], hy:[], usFirst, krFirst}
 // default investable universe (used by "기본 18종 ETF 사용")
@@ -737,14 +686,6 @@ const DEFAULT_TICKERS = [
   "385550 KS EQUITY","0052T0 KS EQUITY","0016X0 KS EQUITY","0119H0 KS EQUITY","438330 KS EQUITY","272910 KS EQUITY"
 ];
 let SHEET = null;                 // {rows, nameRow, tickerCol map} retained between upload and ticker-resolve
-// IRS forward-curve definitions (resolved by ticker; section hidden if absent from file)
-const IRS_FWDS = ["1Y3M","1Y1Y","2Y1Y","2Y3Y","3Y1Y","4Y1Y","5Y3M","5Y1Y","5Y5Y","5Y10Y","10Y3M","30Y3M"];
-const IRS_DEF = [
-  {key:"us", name:"미국", pre:"G0025", policy:"FDTR",     spot1y:"USGG12M", color:"#1f3a6e"},
-  {key:"kr", name:"한국", pre:"G0173", policy:"KORP7D",   spot1y:"GVSK1Y",  color:"#a03030"},
-  {key:"jp", name:"일본", pre:"G0018", policy:"BOJDPBAL", spot1y:"GTJPY1Y", color:"#2e6e46"},
-  {key:"eu", name:"유럽", pre:"G0016", policy:"EURR002W", spot1y:"GTDEM1Y", color:"#a06a1e"}
-];
 
 let DATA = null;     // {dates:[Date], px:[ [..20 cols filled fwd or null..] per row ], names:[], tickers:[], durations:[], firstValid:[Date]}
 let savedPortfolios = [];   // {id, name, savedAt, weights:{assetIdx:pct}}
@@ -851,11 +792,11 @@ async function fetchGithubFile(owner, repo, path, ref, token){
 
 function ghCtx(){
   return {
-    owner: $("ghOwner").value.trim(),
-    repo:  $("ghRepo").value.trim(),
+    owner: (window.GHCommon?GHCommon.field("ghOwner"):$("ghOwner").value).trim(),
+    repo:  (window.GHCommon?GHCommon.field("ghRepo"):$("ghRepo").value).trim(),
     dir:   $("ghDir").value.trim().replace(/^\/+|\/+$/g, ""),
     ref:   $("ghRef").value.trim(),
-    token: $("ghToken").value.trim()
+    token: (window.GHCommon?GHCommon.field("ghToken"):$("ghToken").value).trim()
   };
 }
 
@@ -928,22 +869,14 @@ function parseWorkbookBytes(bytes, fname){
 }
 
 $("tickerInput").addEventListener("input", ()=>previewTickers());
-$("minObs").addEventListener("input", ()=>previewTickers());
 $("btnDetectAll").addEventListener("click", ()=>{
   if(!SHEET) return;
+  // all TOT_RETURN columns except the benchmark tickers
   const bmU = ($("bmUsTicker").value||"").toUpperCase(), bmK = ($("bmKrTicker").value||"").toUpperCase();
-  // 카테고리 행이 있으면 'ETF' 카테고리 × TOT_RETURN만, 없으면 TOT_RETURN 전체 (벤치마크 제외)
-  const hasETFcat = SHEET.cols.some(c=>c.cat && c.cat.toUpperCase()==="ETF");
-  let pool = SHEET.cols.filter(c=>c.isRet);
-  if(hasETFcat) pool = pool.filter(c=>c.cat && c.cat.toUpperCase()==="ETF");
-  const list = pool
+  const list = SHEET.cols.filter(c=>c.isRet)
     .filter(c=>!c.ticker.toUpperCase().includes(bmU) && !c.ticker.toUpperCase().includes(bmK))
     .map(c=>c.ticker);
   $("tickerInput").value = list.join("\n");
-  $("tickerMsg").className = "msg";
-  $("tickerMsg").textContent = hasETFcat
-    ? "카테고리 「ETF」 × TOT_RETURN 기준 "+list.length+"종을 불러왔습니다 (주식·지수 제외)."
-    : "TOT_RETURN 시계열 "+list.length+"종을 불러왔습니다.";
   previewTickers();
 });
 $("btnUseDefault").addEventListener("click", ()=>{
@@ -980,7 +913,6 @@ function indexSheet(rows, fname, sheetName){
   const tickerRow = rows[nameRow+1] || [];
   const fieldRow = rows[nameRow+2] || [];
   const durRow = rows[nameRow-2] || [];
-  const catRow = nameRow>=1 ? (rows[nameRow-1] || []) : [];
   // build column index: ticker(upper) -> col, and a list of TOT_RETURN columns
   const colByTicker = {};      // exact upper ticker -> col
   const cols = [];             // {c, ticker, name, field, isRet}
@@ -992,19 +924,15 @@ function indexSheet(rows, fname, sheetName){
     const nm = (rows[nameRow] && rows[nameRow][c]!=null) ? String(rows[nameRow][c]) : "";
     const fld = fieldRow[c]!=null ? String(fieldRow[c]) : "";
     const dur = typeof durRow[c]==="number" ? durRow[c] : null;
-    const cat = catRow[c]!=null ? String(catRow[c]).trim() : null;
     colByTicker[tk.toUpperCase()] = c;
-    cols.push({c, ticker:tk, name:nm, field:fld, dur, cat, isRet: /TOT_RETURN/i.test(fld)});
+    cols.push({c, ticker:tk, name:nm, field:fld, dur, isRet: /TOT_RETURN/i.test(fld)});
   }
   SHEET = {rows, nameRow, cols, colByTicker, fname, sheetName};
   // reveal ticker panel; prefill with defaults that exist in the file
   $("tickerPanel").classList.remove("hidden");
   const present = DEFAULT_TICKERS.filter(t=>resolveTickerCol(t)!==null);
   $("tickerInput").value = present.join("\n");
-  const catSet = [...new Set(cols.map(c=>c.cat).filter(Boolean))];
-  $("fileMeta").innerHTML = "✔ <b>"+fname+"</b> · 시트 「"+sheetName+"」 · 인식된 시계열 "+cols.length+"개 (TOT_RETURN "+cols.filter(c=>c.isRet).length+"개)"
-    + (catSet.length ? " · 카테고리: "+catSet.join(", ") : "")
-    + " · 아래에서 분석 티커를 선택하세요.";
+  $("fileMeta").innerHTML = "✔ <b>"+fname+"</b> · 시트 「"+sheetName+"」 · 인식된 시계열 "+cols.length+"개 (TOT_RETURN "+cols.filter(c=>c.isRet).length+"개) · 아래에서 분석 티커를 선택하세요.";
   $("tickerMsg").textContent = "";
   $("tickerPreview").classList.add("hidden");
   previewTickers();
@@ -1043,14 +971,13 @@ function previewTickers(){
     const c = resolveTickerCol(q);
     const tr = document.createElement("tr");
     if(c===null){
-      tr.innerHTML = "<td style='color:var(--neg)'>✗</td><td style='text-align:left'>"+q+"</td><td colspan='5' style='text-align:left; color:var(--neg)'>파일에서 찾지 못함</td>";
+      tr.innerHTML = "<td style='color:var(--neg)'>✗</td><td style='text-align:left'>"+q+"</td><td colspan='4' style='text-align:left; color:var(--neg)'>파일에서 찾지 못함</td>";
     } else {
       const m = colMeta(c);
       const {first, n} = columnStats(c);
       tr.innerHTML = "<td style='color:var(--accent)'>✓</td><td style='text-align:left'>"+q+"</td>"+
         "<td style='text-align:left'>"+m.ticker+"</td><td style='text-align:left'>"+(m.name||"–")+"</td>"+
-        "<td>"+(m.cat||"–")+"</td>"+
-        "<td>"+(first?fmtDate(first):"–")+"</td><td"+(n < (parseInt($("minObs").value,10)||0) ? " style='color:var(--neg); font-weight:bold' title='최소 표본개수 미만 — 최적화에서 제외됨'" : "")+">"+n.toLocaleString()+"</td>";
+        "<td>"+(first?fmtDate(first):"–")+"</td><td>"+n.toLocaleString()+"</td>";
     }
     tb.appendChild(tr);
   });
@@ -1108,38 +1035,16 @@ function buildDataFromTickers(){
     if(seen[names[j]]!==undefined){ names[j] = names[j]+"("+tickers[j].split(" ")[0]+")"; }
     else seen[names[j]] = j;
   }
-  // resolve IRS forward / policy / 1y-anchor columns by ticker (optional block)
-  // NOTE: uses a strict resolver — the generic resolveTickerCol's first-token fallback would
-  // map every "G0025 xYxY" query onto the first G0025 column.
-  const resolveIrsCol = q=>{
-    const qU = q.toUpperCase();
-    if(SHEET.colByTicker[qU] !== undefined) return SHEET.colByTicker[qU];
-    let m = SHEET.cols.find(c=>c.ticker.toUpperCase().startsWith(qU+" "));
-    if(!m) m = SHEET.cols.find(c=>c.ticker.toUpperCase().includes(qU+" "));
-    if(!m) m = SHEET.cols.find(c=>c.ticker.toUpperCase().endsWith(qU));
-    return m ? m.c : null;
-  };
-  const irsMeta = [];
-  IRS_DEF.forEach(cd=>{
-    IRS_FWDS.forEach(fw=>irsMeta.push({cty:cd.key, kind:fw, c:resolveIrsCol(cd.pre+" "+fw)}));
-    irsMeta.push({cty:cd.key, kind:"POLICY", c:resolveIrsCol(cd.policy)});
-    irsMeta.push({cty:cd.key, kind:"SPOT1Y", c:resolveIrsCol(cd.spot1y)});
-  });
-  const irsAvail = IRS_DEF.some(cd=>{
-    const got = irsMeta.filter(m=>m.cty===cd.key && m.c!==null && IRS_FWDS.includes(m.kind)).length;
-    return got >= 4;
-  });
-
   // resolve yield-curve & spread columns by ticker
   const ycResolve = arr => arr.map(t=>{ const c=resolveTickerCol(t); return c; });
   const YC_US_C = ycResolve(YC_US_TICKERS), YC_KR_C = ycResolve(YC_KR_TICKERS);
   const IG_C = resolveTickerCol(IG_OAS_TICKER), HY_C = resolveTickerCol(HY_OAS_TICKER);
   const YC_COLS = [...YC_US_C, ...YC_KR_C, IG_C, HY_C];   // may contain nulls
-  const factorsAvail = YC_US_C.filter(c=>c!==null).length>=5 || YC_KR_C.filter(c=>c!==null).length>=5;
+  const factorsAvail = YC_US_C.every(c=>c!==null) || YC_KR_C.every(c=>c!==null);
 
   // collect data rows
   const rows = SHEET.rows, nameRow = SHEET.nameRow;
-  const dates = [], raw = [], ycRaw = [], irsRaw = [];
+  const dates = [], raw = [], ycRaw = [];
   for(let r=nameRow+1; r<rows.length; r++){
     const d = toDateUTC(rows[r] ? rows[r][0] : null);
     if(!d) continue;
@@ -1152,7 +1057,6 @@ function buildDataFromTickers(){
     if(any){
       dates.push(d); raw.push(v);
       ycRaw.push(YC_COLS.map(c=>{ if(c===null) return null; const x = rows[r][c]; return (typeof x === "number" && isFinite(x)) ? x : null; }));
-      irsRaw.push(irsMeta.map(m=>{ if(m.c===null) return null; const x = rows[r][m.c]; return (typeof x === "number" && isFinite(x)) ? x : null; }));
     }
   }
   if(dates.length < 50){ $("tickerMsg").className="msg err"; $("tickerMsg").textContent="선택한 티커들의 공통 일간 데이터가 부족합니다."; return; }
@@ -1176,21 +1080,7 @@ function buildDataFromTickers(){
       else if(lastv != null) yc[i][j] = lastv;
     }
   }
-  const sIRS = order.map(i=>irsRaw[i]);
-  const irsS = sIRS.map(r=>r.slice());
-  for(let j=0;j<irsMeta.length;j++){
-    let lastv = null;
-    for(let i=0;i<irsS.length;i++){
-      if(irsS[i][j] != null) lastv = irsS[i][j];
-      else if(lastv != null) irsS[i][j] = lastv;
-    }
-  }
-  // raw (pre-fill) observation count per asset, for the minimum-sample exclusion rule
-  const obs = new Array(N_COL).fill(0);
-  for(const v of sRaw) for(let j=0;j<N_COL;j++) if(v[j]!=null) obs[j]++;
-  const minObs = Math.max(0, parseInt($("minObs").value,10)||0);
-  DATA = {dates:sDates, px, yc, names, tickers, durations, firstValid, obs, minObs,
-          irsMeta, irsS, irsAvail,
+  DATA = {dates:sDates, px, yc, names, tickers, durations, firstValid,
           fname:SHEET.fname, sheetName:SHEET.sheetName, nAssets:assetCols.length, factorsAvail};
   computeNSSFactors();
   let meta = "✔ <b>"+SHEET.fname+"</b> · 자산 "+assetCols.length+"종 + 벤치마크 2 · 거래일 "+sDates.length.toLocaleString()+"개 · "
@@ -1207,7 +1097,6 @@ function buildDataFromTickers(){
   $("startDate").value = fmtDate(defStart);
   $("endDate").value = fmtDate(sDates[sDates.length-1]);
   ["sec-settings","sec-stats","sec-optim","sec-weights","sec-backtest"].forEach(id=>$(id).classList.remove("hidden"));
-  if(irsAvail){ $("sec-irs").classList.remove("hidden"); renderIrs(); } else { $("sec-irs").classList.add("hidden"); }
   buildWeightTable();
   buildUniverse();
   computeStats();
@@ -1712,35 +1601,17 @@ function matInv(A0){
 }
 
 /* ---------- NSS (Nelson–Siegel–Svensson) curve factors ---------- */
-function nssLoadingRow(m){
-  const a1 = (1-Math.exp(-m/NSS_T1))/(m/NSS_T1);
-  const a2 = a1 - Math.exp(-m/NSS_T1);
-  const a3 = (1-Math.exp(-m/NSS_T2))/(m/NSS_T2) - Math.exp(-m/NSS_T2);
-  return [1, a1, a2, a3];
-}
-function nssSolveSubset(vals){
-  // OLS b (4x1) on available (tenor, yield) pairs; needs >= 5 points
-  const Xr=[], yr=[];
-  for(let t=0;t<NT;t++){
-    if(vals[t]===null || vals[t]===undefined) continue;
-    Xr.push(nssLoadingRow(TENORS[t])); yr.push(vals[t]);
-  }
-  if(Xr.length < 5) return null;
-  const XtX = Array.from({length:4},()=>new Array(4).fill(0));
-  const Xty = new Array(4).fill(0);
-  for(let r=0;r<Xr.length;r++){
-    const x=Xr[r];
-    for(let a=0;a<4;a++){
-      Xty[a]+=x[a]*yr[r];
-      for(let b2=0;b2<4;b2++) XtX[a][b2]+=x[a]*x[b2];
-    }
-  }
-  const inv = matInv(XtX);
-  if(!inv) return null;
-  return inv.map(row=>{ let s=0; for(let a=0;a<4;a++) s+=row[a]*Xty[a]; return s; });
-}
 function computeNSSFactors(){
-  // fixed-tau NSS, daily cross-sectional OLS on the AVAILABLE tenor subset (>=5 of 9)
+  // fixed-tau NSS: y(m) = b0 + b1·f1(m) + b2·f2(m) + b3·f3(m), daily OLS via precomputed pseudo-inverse
+  const X = TENORS.map(m=>{
+    const a1 = (1-Math.exp(-m/NSS_T1))/(m/NSS_T1);
+    const a2 = a1 - Math.exp(-m/NSS_T1);
+    const a3 = (1-Math.exp(-m/NSS_T2))/(m/NSS_T2) - Math.exp(-m/NSS_T2);
+    return [1, a1, a2, a3];
+  });
+  const Xt = [0,1,2,3].map(i=>X.map(r=>r[i]));               // 4x7
+  const XtX = matMul(Xt, X);
+  const P = matMul(matInv(XtX), Xt);                          // 4x7 pseudo-inverse
   const T = DATA.dates.length;
   const mk = ()=>({L:new Array(T).fill(null), S:new Array(T).fill(null), C:new Array(T).fill(null), B3:new Array(T).fill(null)});
   const us = mk(), kr = mk();
@@ -1748,17 +1619,17 @@ function computeNSSFactors(){
   let usFirst=null, krFirst=null;
   for(let i=0;i<T;i++){
     const row = DATA.yc[i];
-    // US curve = cols 0..NT-1, KR = NT..2NT-1, IG = 2NT, HY = 2NT+1
-    for(const [off, F, isUS] of [[0,us,true],[NT,kr,false]]){
-      const vals = [];
-      for(let t=0;t<NT;t++) vals.push(row[off+t]);
-      const b = nssSolveSubset(vals);
-      if(!b) continue;
+    // US curve = cols 0..6, KR curve = cols 7..13, IG = 14, HY = 15
+    for(const [off, F] of [[0,us],[7,kr]]){
+      let ok = true;
+      for(let j=0;j<7;j++) if(row[off+j]===null){ ok=false; break; }
+      if(!ok) continue;
+      const b = [0,1,2,3].map(k=>{ let s=0; for(let j=0;j<7;j++) s+=P[k][j]*row[off+j]; return s; });
       F.L[i]=b[0]; F.S[i]=-b[1]; F.C[i]=b[2]; F.B3[i]=b[3];
-      if(isUS && usFirst===null) usFirst=DATA.dates[i];
-      if(!isUS && krFirst===null) krFirst=DATA.dates[i];
+      if(off===0 && usFirst===null) usFirst=DATA.dates[i];
+      if(off===7 && krFirst===null) krFirst=DATA.dates[i];
     }
-    ig[i]=row[2*NT]; hy[i]=row[2*NT+1];
+    ig[i]=row[14]; hy[i]=row[15];
   }
   NSSF = {us, kr, ig, hy, usFirst, krFirst};
 }
@@ -1838,18 +1709,16 @@ function buildUniverse(){
     tb.appendChild(hr);
     for(const j of list){
       const late = DATA.firstValid[j] === null || DATA.firstValid[j] > winStart;
-      const excl = (DATA.obs ? DATA.obs[j] : Infinity) < (DATA.minObs||0);
       const tr = document.createElement("tr");
-      if(excl) tr.style.opacity = "0.45";
       tr.innerHTML =
-        "<td style='text-align:center'><input type='checkbox' class='univ-chk' data-j='"+j+"' "+(excl?"disabled":"checked")+"></td>"+
-        "<td"+(late?" class='late'":"")+">"+DATA.names[j]+(excl?" <span class='badge' style='color:var(--neg)'>표본 부족 n="+DATA.obs[j].toLocaleString()+"</span>":"")+"</td>"+
+        "<td style='text-align:center'><input type='checkbox' class='univ-chk' data-j='"+j+"' checked></td>"+
+        "<td"+(late?" class='late'":"")+">"+DATA.names[j]+"</td>"+
         "<td style='text-align:left'>"+DATA.tickers[j]+"</td>"+
         "<td"+(late?" class='late'":"")+">"+fmtDate(DATA.firstValid[j])+"</td>"+
         "<td class='univ-hist' data-j='"+j+"'>–</td>"+
         "<td><input type='number' class='wt-input univ-er' data-j='"+j+"' step='0.1' placeholder='(과거치)' style='width:90px'></td>"+
         "<td><input type='number' class='wt-input univ-min' data-j='"+j+"' value='1' step='0.5' min='0' max='100'></td>"+
-        "<td><input type='number' class='wt-input univ-max' data-j='"+j+"' value='15' step='0.5' min='0' max='100'></td>";
+        "<td><input type='number' class='wt-input univ-max' data-j='"+j+"' value='30' step='0.5' min='0' max='100'></td>";
       tb.appendChild(tr);
     }
     const sr = document.createElement("tr");
@@ -3331,202 +3200,60 @@ function drawAttrChart(ri){
   });
 }
 
+function nssLoadings(){
+  return TENORS.map(m=>{
+    const a1 = (1-Math.exp(-m/NSS_T1))/(m/NSS_T1);
+    const a2 = a1 - Math.exp(-m/NSS_T1);
+    const a3 = (1-Math.exp(-m/NSS_T2))/(m/NSS_T2) - Math.exp(-m/NSS_T2);
+    return [1, a1, a2, a3];
+  });
+}
 function nssFitRow(row, off){
-  // cross-sectional OLS for one day on available tenors; returns {actual[NT], fitted[NT], nAvail} or null
-  const vals=[];
-  for(let t=0;t<NT;t++){
-    const v=row[off+t];
-    vals.push((v===null||v===undefined)?null:v);
-  }
-  const b = nssSolveSubset(vals);
-  if(!b) return null;
-  const fitted = TENORS.map(m=>{ const x=nssLoadingRow(m); return x[0]*b[0]+x[1]*b[1]+x[2]*b[2]+x[3]*b[3]; });
-  return {actual:vals, fitted, nAvail: vals.filter(v=>v!==null).length};
+  // cross-sectional OLS for one day; returns {actual[7], fitted[7]} or null
+  for(let j=0;j<7;j++) if(row[off+j]===null || row[off+j]===undefined) return null;
+  const X = nssLoadings();
+  const Xt = [0,1,2,3].map(i=>X.map(r2=>r2[i]));
+  const P = matMul(matInv(matMul(Xt, X)), Xt);
+  const b = [0,1,2,3].map(k=>{ let s=0; for(let j=0;j<7;j++) s+=P[k][j]*row[off+j]; return s; });
+  const fitted = X.map(x=> x[0]*b[0]+x[1]*b[1]+x[2]*b[2]+x[3]*b[3]);
+  const actual = []; for(let j=0;j<7;j++) actual.push(row[off+j]);
+  return {actual, fitted};
 }
 function renderNssDeviation(){
   if(!NSSF || !DATA.factorsAvail){ return; }
+  // latest day with a complete curve, per country (may differ)
   let iUS=null, iKR=null;
-  for(let i2=DATA.dates.length-1;i2>=0;i2--){
-    const row = DATA.yc[i2];
-    if(iUS===null && nssFitRow(row,0)) iUS=i2;
-    if(iKR===null && nssFitRow(row,NT)) iKR=i2;
+  for(let i=DATA.dates.length-1;i>=0;i--){
+    const row = DATA.yc[i];
+    if(iUS===null && nssFitRow(row,0)) iUS=i;
+    if(iKR===null && nssFitRow(row,7)) iKR=i;
     if(iUS!==null && iKR!==null) break;
   }
   const us = iUS!==null ? nssFitRow(DATA.yc[iUS],0) : null;
-  const kr = iKR!==null ? nssFitRow(DATA.yc[iKR],NT) : null;
+  const kr = iKR!==null ? nssFitRow(DATA.yc[iKR],7) : null;
   $("nssDevCaption").textContent = "Table 8. 만기별 실제 금리 vs NSS 적합치 괴리 — 미국 "
-    +(iUS!==null?fmtDate(DATA.dates[iUS]):"N/A")+" ("+(us?us.nAvail:0)+"개 만기) · 한국 "
-    +(iKR!==null?fmtDate(DATA.dates[iKR]):"N/A")+" ("+(kr?kr.nAvail:0)+"개 만기) 기준";
-  const tnames = TENOR_NAMES;
+    +(iUS!==null?fmtDate(DATA.dates[iUS]):"N/A")+" · 한국 "+(iKR!==null?fmtDate(DATA.dates[iKR]):"N/A")+" 기준";
+  const tnames = ["3개월","1년","2년","3년","5년","10년","30년"];
   const tb = $("nssDevTable").querySelector("tbody");
   tb.innerHTML = "";
-  let sseU=0, nU=0, sseK=0, nK=0;
-  for(let t=0;t<NT;t++){
-    const hasU = us && us.actual[t]!==null, hasK = kr && kr.actual[t]!==null;
-    const du = hasU ? (us.actual[t]-us.fitted[t])*100 : null;
-    const dk = hasK ? (kr.actual[t]-kr.fitted[t])*100 : null;
-    if(du!==null){ sseU+=du*du; nU++; }
-    if(dk!==null){ sseK+=dk*dk; nK++; }
+  let sseU=0, sseK=0;
+  for(let t=0;t<7;t++){
+    const du = us ? (us.actual[t]-us.fitted[t])*100 : null;
+    const dk = kr ? (kr.actual[t]-kr.fitted[t])*100 : null;
+    if(du!==null) sseU+=du*du;
+    if(dk!==null) sseK+=dk*dk;
     const tr = document.createElement("tr");
     tr.innerHTML = "<td>"+tnames[t]+"</td>"
-      +(hasU ? "<td>"+fmt(us.actual[t],3)+"</td><td>"+fmt(us.fitted[t],3)+"</td><td class='"+signClass(du)+"'><b>"+(du>=0?"+":"")+fmt(du,1)+"</b></td>"
-             : "<td>–</td><td>"+(us?fmt(us.fitted[t],3):"–")+"</td><td>–</td>")
-      +(hasK ? "<td>"+fmt(kr.actual[t],3)+"</td><td>"+fmt(kr.fitted[t],3)+"</td><td class='"+signClass(dk)+"'><b>"+(dk>=0?"+":"")+fmt(dk,1)+"</b></td>"
-             : "<td>–</td><td>"+(kr?fmt(kr.fitted[t],3):"–")+"</td><td>–</td>");
+      +(us ? "<td>"+fmt(us.actual[t],3)+"</td><td>"+fmt(us.fitted[t],3)+"</td><td class='"+signClass(du)+"'><b>"+(du>=0?"+":"")+fmt(du,1)+"</b></td>"
+           : "<td colspan='3'>–</td>")
+      +(kr ? "<td>"+fmt(kr.actual[t],3)+"</td><td>"+fmt(kr.fitted[t],3)+"</td><td class='"+signClass(dk)+"'><b>"+(dk>=0?"+":"")+fmt(dk,1)+"</b></td>"
+           : "<td colspan='3'>–</td>");
     tb.appendChild(tr);
   }
   $("nssDevTable").querySelector("tfoot").innerHTML =
-    "<tr style='font-weight:bold'><td>RMSE</td><td colspan='2' style='text-align:right'>적합오차 ("+nU+"개)</td><td>"+(nU?fmt(Math.sqrt(sseU/nU),1):"–")+" bp</td>"
-    +"<td colspan='2' style='text-align:right'>적합오차 ("+nK+"개)</td><td>"+(nK?fmt(Math.sqrt(sseK/nK),1):"–")+" bp</td></tr>";
-  // Figure 8: actual vs fitted curves, US & KR
-  if(charts.nssDev){ charts.nssDev.destroy(); delete charts.nssDev; }
-  const dsets = [];
-  if(us){
-    dsets.push({label:"미국 실제", data:us.actual, borderColor:"#1f3a6e", backgroundColor:"#1f3a6e",
-                borderWidth:2, pointRadius:4, pointStyle:"circle", tension:.3, spanGaps:true});
-    dsets.push({label:"미국 NSS 적합", data:us.fitted, borderColor:"#1f3a6e", backgroundColor:"#1f3a6e",
-                borderWidth:1.4, borderDash:[6,4], pointRadius:0, tension:.3, spanGaps:true});
-  }
-  if(kr){
-    dsets.push({label:"한국 실제", data:kr.actual, borderColor:"#a03030", backgroundColor:"#a03030",
-                borderWidth:2, pointRadius:4, pointStyle:"rect", tension:.3, spanGaps:true});
-    dsets.push({label:"한국 NSS 적합", data:kr.fitted, borderColor:"#a03030", backgroundColor:"#a03030",
-                borderWidth:1.4, borderDash:[6,4], pointRadius:0, tension:.3, spanGaps:true});
-  }
-  charts.nssDev = new Chart($("nssDevChart"), {
-    type:"line", plugins:[whiteBg],
-    data:{labels:tnames, datasets:dsets},
-    options:{
-      responsive:true, maintainAspectRatio:true, aspectRatio:2.2, animation:false,
-      plugins:{
-        legend:{labels:{font:chartFont(12)}},
-        tooltip:{titleFont:chartFont(12), bodyFont:chartFont(12),
-          callbacks:{label:c=>c.dataset.label+": "+fmt(c.raw,3)+"%"}}
-      },
-      scales:{
-        x:{title:{display:true, text:"만기", font:chartFont(12)}, ticks:{font:chartFont(11)}, grid:{color:"#eeeeee"}},
-        y:{title:{display:true, text:"금리 (%)", font:chartFont(12)}, ticks:{font:chartFont(11)}, grid:{color:"#eeeeee"}}
-      }
-    }
-  });
+    "<tr style='font-weight:bold'><td>RMSE</td><td colspan='2' style='text-align:right'>적합오차</td><td>"+(us?fmt(Math.sqrt(sseU/7),1):"–")+" bp</td>"
+    +"<td colspan='2' style='text-align:right'>적합오차</td><td>"+(kr?fmt(Math.sqrt(sseK/7),1):"–")+" bp</td></tr>";
 }
-/* ============ STEP VII : IRS forward analytics ============ */
-function irsSeries(cty, kind){
-  const k = DATA.irsMeta.findIndex(m=>m.cty===cty && m.kind===kind);
-  if(k<0 || DATA.irsMeta[k].c===null) return null;
-  return DATA.irsS.map(r=>r[k]);
-}
-function irsCtyList(){
-  // countries with at least 4 resolved forwards
-  return IRS_DEF.filter(cd=>
-    DATA.irsMeta.filter(m=>m.cty===cd.key && m.c!==null && IRS_FWDS.includes(m.kind)).length >= 4);
-}
-function renderIrs(){
-  if(!DATA || !DATA.irsAvail) return;
-  const L = DATA.dates.length-1;
-  const ctys = irsCtyList();
-  const val = s => (s && s[L]!=null) ? s[L] : null;
-  const chg = (s, lag) => (s && s[L]!=null && L-lag>=0 && s[L-lag]!=null) ? (s[L]-s[L-lag])*100 : null;
-
-  // ---- Table 9: forward matrix ----
-  $("irsCaption").textContent = "Table 9. IRS 포워드 금리 매트릭스 — "+fmtDate(DATA.dates[L])+" 기준 (%, 변화는 bp)";
-  let h = "<tr><th rowspan='2'>구조</th>";
-  ctys.forEach(cd=>{ h += "<th colspan='3'>"+cd.name+"</th>"; });
-  h += "</tr><tr>";
-  ctys.forEach(()=>{ h += "<th>현재(%)</th><th>Δ1M(bp)</th><th>Δ3M(bp)</th>"; });
-  h += "</tr>";
-  $("irsTable").querySelector("thead").innerHTML = h;
-  const tb = $("irsTable").querySelector("tbody");
-  tb.innerHTML = "";
-  const rowsDef = [...IRS_FWDS.map(f=>({kind:f, label:f.toLowerCase()})),
-                   {kind:"POLICY", label:"기준금리 (참고)"},
-                   {kind:"SPOT1Y", label:"국채 1y (참고)"}];
-  rowsDef.forEach(rd=>{
-    const tr = document.createElement("tr");
-    let cells = "<td"+(rd.kind==="POLICY"||rd.kind==="SPOT1Y" ? " style='background:#f7f9fc; font-weight:bold'":"")+">"+rd.label+"</td>";
-    ctys.forEach(cd=>{
-      const s = irsSeries(cd.key, rd.kind);
-      const v = val(s), d1 = chg(s,21), d3 = chg(s,63);
-      cells += "<td>"+(v===null?"–":fmt(v,3))+"</td>"
-        +"<td class='"+(d1===null?"":signClass(d1))+"'>"+(d1===null?"–":(d1>=0?"+":"")+fmt(d1,1))+"</td>"
-        +"<td class='"+(d3===null?"":signClass(d3))+"'>"+(d3===null?"–":(d3>=0?"+":"")+fmt(d3,1))+"</td>";
-    });
-    tr.innerHTML = cells;
-    tb.appendChild(tr);
-  });
-
-  // ---- Figure 9: implied 1y rate path ----
-  if(charts.irsPath){ charts.irsPath.destroy(); delete charts.irsPath; }
-  const pathKinds = ["SPOT1Y","1Y1Y","2Y1Y","3Y1Y","4Y1Y","5Y1Y"];
-  const pathLabels = ["현재 (국채 1y)","1년 후","2년 후","3년 후","4년 후","5년 후"];
-  const dsP = ctys.map(cd=>({
-    label: cd.name,
-    data: pathKinds.map(k=>val(irsSeries(cd.key,k))),
-    borderColor: cd.color, backgroundColor: cd.color,
-    borderWidth:2, pointRadius:4, tension:.25, spanGaps:true
-  }));
-  charts.irsPath = new Chart($("irsPathChart"), {
-    type:"line", plugins:[whiteBg],
-    data:{labels:pathLabels, datasets:dsP},
-    options:{
-      responsive:true, maintainAspectRatio:true, aspectRatio:2.2, animation:false,
-      plugins:{
-        legend:{labels:{font:chartFont(12)}},
-        tooltip:{titleFont:chartFont(12), bodyFont:chartFont(12),
-          callbacks:{label:c=>c.dataset.label+": "+fmt(c.raw,3)+"%"}}
-      },
-      scales:{
-        x:{title:{display:true, text:"포워드 시작 시점", font:chartFont(12)}, ticks:{font:chartFont(11)}, grid:{color:"#eeeeee"}},
-        y:{title:{display:true, text:"1년 금리 (%)", font:chartFont(12)}, ticks:{font:chartFont(11)}, grid:{color:"#eeeeee"}}
-      }
-    }
-  });
-
-  // ---- Figure 10: 1y1y / 5y5y time series with country toggles ----
-  const box = $("irsCty");
-  if(!box.dataset.built){
-    box.dataset.built = "1";
-    ctys.forEach(cd=>{
-      const lb = document.createElement("label");
-      lb.style.cssText = "font-size:13px; margin-right:14px; cursor:pointer";
-      lb.innerHTML = "<input type='checkbox' class='irs-cty' data-cty='"+cd.key+"' "
-        +((cd.key==="us"||cd.key==="kr")?"checked":"")
-        +"> <span style='color:"+cd.color+"; font-weight:bold'>■</span> "+cd.name;
-      box.appendChild(lb);
-    });
-    box.querySelectorAll(".irs-cty").forEach(c=>c.addEventListener("change", drawIrsTs));
-    $("irsStart").addEventListener("change", drawIrsTs);
-  }
-  if(!$("irsStart").value){
-    const sd = $("startDate").value || fmtDate(DATA.dates[0]);
-    $("irsStart").value = sd;
-  }
-  drawIrsTs();
-}
-function drawIrsTs(){
-  if(!DATA || !DATA.irsAvail) return;
-  if(charts.irsTs){ charts.irsTs.destroy(); delete charts.irsTs; }
-  const sd = new Date($("irsStart").value || fmtDate(DATA.dates[0]));
-  const pos = [];
-  for(let i=0;i<DATA.dates.length;i++) if(DATA.dates[i] >= sd) pos.push(i);
-  if(pos.length < 5) return;
-  const labels = pos.map(i=>fmtDate(DATA.dates[i]));
-  const sel = [...document.querySelectorAll(".irs-cty:checked")].map(c=>c.dataset.cty);
-  const ds = [];
-  irsCtyList().filter(cd=>sel.includes(cd.key)).forEach(cd=>{
-    const s11 = irsSeries(cd.key,"1Y1Y"), s55 = irsSeries(cd.key,"5Y5Y");
-    if(s11) ds.push({label:cd.name+" 1y1y", data:pos.map(i=>s11[i]), borderColor:cd.color, backgroundColor:cd.color,
-                     borderWidth:1.7, pointRadius:0, tension:0, spanGaps:false});
-    if(s55) ds.push({label:cd.name+" 5y5y", data:pos.map(i=>s55[i]), borderColor:cd.color, backgroundColor:cd.color,
-                     borderWidth:1.4, borderDash:[5,4], pointRadius:0, tension:0, spanGaps:false});
-  });
-  charts.irsTs = new Chart($("irsTsChart"), {
-    type:"line", plugins:[whiteBg],
-    data:{labels, datasets:ds},
-    options: baseOpts("포워드 금리 (%)")
-  });
-}
-
 function drawFactChart(){
   // NSS factor series rebased to 100pt at the chosen start date: index = 100 + (f_t − f_0), 1pt = 1%p
   const B = lastBacktest;
@@ -3713,7 +3440,7 @@ function drawCharts(){  const B = lastBacktest;
 /* PNG download buttons */
 document.querySelectorAll("[data-dl]").forEach(b=>b.addEventListener("click", e=>{
   const id = e.target.dataset.dl;
-  const map = {compChart:"comp", cumChart:"cum", relChart:"rel", ddChart:"dd", rrChart:"rr", factChart:"fact", attrChart:"attr", ddcChart:"ddc", attrYChart:"attrY", nssDevChart:"nssDev", irsPathChart:"irsPath", irsTsChart:"irsTs"};
+  const map = {compChart:"comp", cumChart:"cum", relChart:"rel", ddChart:"dd", rrChart:"rr", factChart:"fact", attrChart:"attr", ddcChart:"ddc", attrYChart:"attrY"};
   const ch = charts[map[id]];
   if(!ch) return;
   const a = document.createElement("a");
@@ -3724,7 +3451,7 @@ document.querySelectorAll("[data-dl]").forEach(b=>b.addEventListener("click", e=
 
 /* per-table Excel export: a small button injected above each result table */
 const EXPORT_TABLES = ["statsTable","corrTable","univTable","optCompare","optTable","cmpTable","wtTable","savedTable",
-                       "perfTable","sigTable","yearTable","attrTable","attrYTable","ddTable","valTable","fregTable","nssDevTable","irsTable","tickerPreviewTable"];
+                       "perfTable","sigTable","yearTable","attrTable","attrYTable","ddTable","valTable","fregTable","nssDevTable","tickerPreviewTable"];
 EXPORT_TABLES.forEach(id=>{
   const tbl = $(id);
   if(!tbl) return;
@@ -3765,7 +3492,7 @@ function exportTableXlsx(id){
 /* per-chart data download (.xlsx): exports the exact series shown in the figure */
 document.querySelectorAll("[data-dlx]").forEach(b=>b.addEventListener("click", e=>{
   const id = e.target.dataset.dlx;
-  const map = {compChart:"comp", cumChart:"cum", relChart:"rel", ddChart:"dd", rrChart:"rr", factChart:"fact", attrChart:"attr", ddcChart:"ddc", attrYChart:"attrY", nssDevChart:"nssDev", irsPathChart:"irsPath", irsTsChart:"irsTs"};
+  const map = {compChart:"comp", cumChart:"cum", relChart:"rel", ddChart:"dd", rrChart:"rr", factChart:"fact", attrChart:"attr", ddcChart:"ddc", attrYChart:"attrY"};
   const ch = charts[map[id]];
   if(!ch) return;
   const dsets = ch.data.datasets.filter(d=>!String(d.label||"").startsWith("_"));
@@ -3900,44 +3627,22 @@ $("btnDlExcel").addEventListener("click", ()=>{
   });
   addSheet(wb, ay, "Attribution_Yearly", [10,12,12,12,12]);
 
-  // IRS forward matrix (latest business day)
-  if(DATA.irsAvail){
-    const L2 = DATA.dates.length-1;
-    const ctys = irsCtyList();
-    const ir = [["Table 9. IRS 포워드 금리 매트릭스 — "+fmtDate(DATA.dates[L2])+" 기준 (단위 %, Δ는 bp · 약 21/63거래일 전 대비)"],[]];
-    const hdr = ["구조"];
-    ctys.forEach(cd=>hdr.push(cd.name+" 현재(%)", cd.name+" Δ1M(bp)", cd.name+" Δ3M(bp)"));
-    ir.push(hdr);
-    [...IRS_FWDS.map(f=>({kind:f, label:f.toLowerCase()})), {kind:"POLICY",label:"기준금리(참고)"}, {kind:"SPOT1Y",label:"국채 1y(참고)"}].forEach(rd=>{
-      const row=[rd.label];
-      ctys.forEach(cd=>{
-        const s = irsSeries(cd.key, rd.kind);
-        const v = (s && s[L2]!=null)? s[L2] : null;
-        const d1 = (s && s[L2]!=null && s[L2-21]!=null)? (s[L2]-s[L2-21])*100 : null;
-        const d3 = (s && s[L2]!=null && s[L2-63]!=null)? (s[L2]-s[L2-63])*100 : null;
-        row.push(v===null?null:rnd(v,3), d1===null?null:rnd(d1,1), d3===null?null:rnd(d3,1));
-      });
-      ir.push(row);
-    });
-    addSheet(wb, ir, "IRS_Forwards", [16, ...new Array(ctys.length*3).fill(12)]);
-  }
-
   // NSS fit deviation (latest business day)
   if(DATA.factorsAvail){
     let iUS=null, iKR=null;
     for(let i2=DATA.dates.length-1;i2>=0;i2--){
       if(iUS===null && nssFitRow(DATA.yc[i2],0)) iUS=i2;
-      if(iKR===null && nssFitRow(DATA.yc[i2],NT)) iKR=i2;
+      if(iKR===null && nssFitRow(DATA.yc[i2],7)) iKR=i2;
       if(iUS!==null && iKR!==null) break;
     }
-    const usf = iUS!==null?nssFitRow(DATA.yc[iUS],0):null, krf = iKR!==null?nssFitRow(DATA.yc[iKR],NT):null;
+    const usf = iUS!==null?nssFitRow(DATA.yc[iUS],0):null, krf = iKR!==null?nssFitRow(DATA.yc[iKR],7):null;
     const nd = [["Table 8. 만기별 실제 금리 vs NSS 적합치 괴리 (bp) — 미국 "+(iUS!==null?fmtDate(DATA.dates[iUS]):"N/A")+" · 한국 "+(iKR!==null?fmtDate(DATA.dates[iKR]):"N/A")],[],
                 ["만기","US 실제(%)","US 적합(%)","US 괴리(bp)","KR 실제(%)","KR 적합(%)","KR 괴리(bp)"]];
-    for(let t=0;t<NT;t++){
-      const hu = usf && usf.actual[t]!==null, hk = krf && krf.actual[t]!==null;
-      nd.push([TENOR_NAMES[t],
-        hu?rnd(usf.actual[t],3):null, usf?rnd(usf.fitted[t],3):null, hu?rnd((usf.actual[t]-usf.fitted[t])*100,1):null,
-        hk?rnd(krf.actual[t],3):null, krf?rnd(krf.fitted[t],3):null, hk?rnd((krf.actual[t]-krf.fitted[t])*100,1):null]);
+    const tn = ["3개월","1년","2년","3년","5년","10년","30년"];
+    for(let t=0;t<7;t++){
+      nd.push([tn[t],
+        usf?rnd(usf.actual[t],3):null, usf?rnd(usf.fitted[t],3):null, usf?rnd((usf.actual[t]-usf.fitted[t])*100,1):null,
+        krf?rnd(krf.actual[t],3):null, krf?rnd(krf.fitted[t],3):null, krf?rnd((krf.actual[t]-krf.fitted[t])*100,1):null]);
     }
     addSheet(wb, nd, "NSS_Deviation", [9,11,11,11,11,11,11]);
   }
@@ -4088,10 +3793,7 @@ $("btnDlCharts").addEventListener("click", async ()=>{
     ["rr","Figure 6. 위험-수익 산점도 + 효율적 투자선"],
     ["ddc","Figure 5b. MDD 자산별 손실 기여도"],
     ["attrY","Figure 2c. 연도별 Brinson 효과 추이"],
-    ["fact","Figure 7. NSS 커브 팩터 추이"],
-    ["nssDev","Figure 8. 만기별 실제 vs NSS 적합 커브 (한국·미국)"],
-    ["irsPath","Figure 9. 시장 내재 1년 금리 경로"],
-    ["irsTs","Figure 10. 주요 포워드 추이 (1y1y·5y5y)"]
+    ["fact","Figure 7. NSS 커브 팩터 추이"]
   ].filter(s=>charts[s[0]]);
   if(specs.length===0){ alert("내보낼 그래프가 없습니다. 먼저 백테스트를 실행하세요."); return; }
   const wb = new ExcelJS.Workbook();

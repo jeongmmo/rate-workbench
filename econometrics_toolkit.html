@@ -145,8 +145,13 @@
     section{break-inside:avoid;}
   }
 </style>
+  <script src="./common.js"></script>
 </head>
 <body>
+<div style="font-family:'Times New Roman',Times,serif;font-size:.88rem;background:#ffffff;border-bottom:1px solid #d9dde6;padding:7px 28px;">
+  <a href="index.html" style="color:#1f3a6e;text-decoration:none;">&#8592; 포털로 돌아가기</a>
+  <span style="color:#6b7488;font-style:italic;margin-left:14px;">Research Workbench</span>
+</div>
 <nav id="tocNav" aria-label="목차">
   <div class="toc-title">CONTENTS</div>
   <a href="#sec-data" data-sec="sec-data">0 · 데이터 입력</a>
@@ -159,7 +164,6 @@
   <a href="#sec-dsge" data-sec="sec-dsge">VII · DSGE</a>
   <a href="#sec-calc" data-sec="sec-calc">VIII · 예측 계산기</a>
   <a href="#sec-bond" data-sec="sec-bond">IX · 금리예측 종합</a>
-  <a href="#sec-attn" data-sec="sec-attn">X · 어텐션 예측</a>
 </nav>
 <div class="wrap">
 
@@ -194,7 +198,7 @@
         <div class="ctl-row">
           <div class="field"><label>Owner</label><input type="text" id="ghOwner" placeholder="jeongmmo" autocomplete="off"></div>
           <div class="field"><label>Repository</label><input type="text" id="ghRepo" placeholder="research-data" autocomplete="off"></div>
-          <div class="field" style="flex:1.5;min-width:220px"><label>File path</label><input type="text" id="ghPath" placeholder="data_20260611.xlsx" autocomplete="off"></div>
+          <div class="field" style="flex:1.5;min-width:220px"><label>File path</label><input type="text" id="ghPath" placeholder="data/data_bb.xlsx" autocomplete="off"></div>
           <div class="field"><label>Branch / ref <span class="hint">(빈 칸 = 기본 브랜치)</span></label><input type="text" id="ghRef" placeholder="main" autocomplete="off"></div>
         </div>
         <div class="ctl-row">
@@ -816,73 +820,6 @@
     </div>
   </section>
 
-  <section id="sec-attn">
-    <div class="sec-head">
-      <span class="sec-num">X</span>
-      <h2 class="sec-title">어텐션 예측 <span class="en">/ BISTRO-style Attention Forecasting</span></h2>
-    </div>
-    <p class="sec-desc">BIS의 <i>BISTRO</i>(BIS Quarterly Review, 2026년 3월호: Koyuncu, Kwon, Lombardi, Perez-Cruz &amp; Shin)가
-       제안한 접근을 따라, <b>어텐션 = 문맥 의존 softmax 가중</b>(온라인 부록: "커널 회귀와 유사하되 입력마다 가중치를 재계산")
-       원리를 브라우저에서 직접 구현한 예측기입니다. 예측 원점의 표준화된 맥락 창(query)을 과거의 모든 맥락 창(keys)과
-       비교해 softmax 가중치를 만들고, 각 과거 창의 H기 후속 경로(values)를 가중 결합합니다. 고정 계수의 AR과 달리
-       <b>국면(regime)이 닮은 과거에 자동으로 더 큰 가중</b>을 주며, 공변량의 가정 경로를 query에 포함하면 BISTRO식
-       <b>조건부 시나리오</b>가 됩니다. BISTRO 본체(사전학습 트랜스포머, MOIRAI 기반: Woo et al 2024; Vaswani et al 2017)는
-       <a href="https://github.com/bis-med-it/bistro" target="_blank" style="color:var(--navy)">github.com/bis-med-it/bistro</a>의
-       Colab에서 실행할 수 있고, 본 모듈은 그 원리의 경량 등가물로서 동일한 워크플로(CTX·PDT, 무조건부/조건부,
-       AR(1) 대비 롤링 백테스트)를 제공합니다.</p>
-
-    <div class="panel">
-      <div class="ctl-row">
-        <div class="field">
-          <label>목표 변수 · target</label>
-          <select id="atTarget"></select>
-        </div>
-        <div class="field" style="flex:1;min-width:230px">
-          <label>공변량 · covariates <span class="hint">선택 시 맥락 비교에 포함</span></label>
-          <select id="atCovs" multiple size="4" style="width:100%"></select>
-        </div>
-        <div class="field">
-          <label>맥락 길이 CTX <span class="hint">비교 창 관측치 수</span></label>
-          <input type="number" id="atCtx" value="24" min="6" max="120" step="2">
-        </div>
-        <div class="field">
-          <label>예측 시계 PDT · H</label>
-          <input type="number" id="atH" value="8" min="2" max="24" step="1">
-        </div>
-      </div>
-      <div class="ctl-row">
-        <div class="field">
-          <label>온도 τ <span class="hint">작을수록 소수 유사국면에 집중</span></label>
-          <input type="number" id="atTau" value="0.30" min="0.05" max="3" step="0.05">
-        </div>
-        <div class="field">
-          <label>공변량 가중 λ <span class="hint">맥락 비교에서 공변량 비중</span></label>
-          <input type="number" id="atLam" value="1.0" min="0" max="3" step="0.1">
-        </div>
-        <div class="field">
-          <label>백테스트 원점 수 <span class="hint">0 = 백테스트 생략</span></label>
-          <input type="number" id="atBtN" value="8" min="0" max="40" step="1">
-        </div>
-        <div class="field">
-          <label>원점 간격 · spacing</label>
-          <input type="number" id="atBtS" value="2" min="1" max="12" step="1">
-        </div>
-        <div class="field" style="align-self:flex-end">
-          <div class="checkrow" style="margin:0"><input type="checkbox" id="atCond">
-            <label for="atCond">조건부 시나리오 · conditional</label></div>
-        </div>
-      </div>
-      <div id="atScenWrap" class="hidden" style="margin-top:6px">
-        <div class="tablewrap scroll-x"><table class="bt" id="atScenGrid"></table></div>
-      </div>
-      <div class="btnrow">
-        <button id="btnAttn" type="button">어텐션 예측 실행 · Run</button>
-        <span id="atStatus" class="muted" style="font-style:italic"></span>
-      </div>
-    </div>
-    <div id="atResult"></div>
-  </section>
-
   <div class="footer wrap" style="padding-left:0;padding-right:0">
     <p><b>방법론 주석.</b> ADF 임계값은 MacKinnon(2010) 점근값. HAC 추정량은 Newey &amp; West(1987,
        <i>Econometrica</i> 55:703–708)의 Bartlett 커널, 자동 대역폭은 Newey &amp; West(1994,
@@ -896,11 +833,7 @@
        Giannone &amp; Reichlin 2010, <i>J. Applied Econometrics</i> 25:71–92)의 켤레
        Normal–Inverse-Wishart 사후분포에서 추출한 예측분포. DSGE는 Galí(2015,
        <i>Monetary Policy, Inflation, and the Business Cycle</i>)의 3-방정식
-       뉴케인지언 모형을 미정계수법으로 해를 구한 것. 어텐션 예측(X)은 Koyuncu, Kwon,
-       Lombardi, Perez-Cruz &amp; Shin, "BISTRO: a general purpose oracle for macroeconomic
-       time series", <i>BIS Quarterly Review</i>, March 2026 및 온라인 부록(어텐션 메커니즘),
-       Vaswani et al (2017), Woo et al (2024, MOIRAI)의 원리를 따른 softmax-커널 유사국면
-       구현(사전학습 모델 아님).</p>
+       뉴케인지언 모형을 미정계수법으로 해를 구한 것.</p>
     <p><b>주의.</b> 본 도구의 결과는 교육·탐색 목적이며, 발표용 추정에는 표본 크기·식별 가정·구조 변화 검정을
        별도로 점검하기를 권한다. 모든 연산은 사용자 브라우저에서 수행되며 데이터는 외부로 전송되지 않는다.</p>
   </div>
@@ -2095,14 +2028,12 @@ ${sheets.map((s, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.open
     // IMPORTANT: scan the FULL data range, not just the first rows — series that
     // begin later (e.g. a tenor introduced in 2014) must not be dropped.
     const names = [], colIdx = [], used = {};
-    let naCells = 0; // Bloomberg/Excel error or NA strings ignored during import
     for (let c = 0; c < ncols; c++) {
       if (c === labelCol) continue;
       let num = 0, tot = 0;
       for (let i = firstData; i < n; i++) {
         const v = rows[i] && rows[i][c];
-        if (isNA(v)) { naCells++; continue; }
-        if (v != null && v !== "") { tot++; if (isNum(v)) num++; }
+        if (v != null && v !== "" && !isNA(v)) { tot++; if (isNum(v)) num++; }
       }
       // need enough numeric observations and a mostly-numeric column
       if (num < 8 || num / Math.max(1, tot) < 0.6) continue;
@@ -2123,7 +2054,6 @@ ${sheets.map((s, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.open
       ? colIdx.map((c) => { const v = rows[catRow][c]; return v == null ? "" : String(v).trim(); })
       : null;
 
-    let skippedRows = 0;
     const labels = [], series = {};
     names.forEach((nm) => series[nm] = []);
     for (let i = firstData; i < n; i++) {
@@ -2131,14 +2061,7 @@ ${sheets.map((s, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.open
       const lv = r[labelCol];
       // when the index is a date, a row only counts if its label is a valid date
       if (labelLooksDate) {
-        if (!(looksLikeDateSerial(lv) || isDateString(lv))) {
-          // count only rows that actually contained something (a label or values);
-          // trailing blank/styling rows are not "skipped data"
-          const hadContent = (lv != null && lv !== "") ||
-            colIdx.some((c) => { const v = r[c]; return v != null && v !== ""; });
-          if (hadContent) skippedRows++;
-          continue;
-        }
+        if (!(looksLikeDateSerial(lv) || isDateString(lv))) continue;
       } else {
         const empty = (lv == null || lv === "") && colIdx.every((c) => r[c] == null || r[c] === "");
         if (empty) continue;
@@ -2151,7 +2074,7 @@ ${sheets.map((s, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.open
       labels.push(lab);
       colIdx.forEach((c, k) => { const v = r[c]; series[names[k]].push(isNum(v) ? v : null); });
     }
-    return { labels, names, series, meta: { headerRow, firstData, ncols, count: labels.length, categories, naCells, skippedRows } };
+    return { labels, names, series, meta: { headerRow, firstData, ncols, count: labels.length, categories } };
   }
 
   const api = { read, smartImport, excelSerialToDate, inflateRaw };
@@ -2241,7 +2164,7 @@ ${sheets.map((s, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.open
       }
       // Not a zip: could be a directory listing / error JSON / a non-xlsx file.
       const head = new TextDecoder().decode(bytes.slice(0, 2048)).trim();
-      if (head.startsWith("[")) throw new Error("경로가 디렉터리입니다. 파일 경로(예: data_20260611.xlsx)를 지정하세요.");
+      if (head.startsWith("[")) throw new Error("경로가 디렉터리입니다. 파일 경로(예: data/data_bb.xlsx)를 지정하세요.");
       if (head.startsWith("{")) {
         try {
           const j = JSON.parse(new TextDecoder().decode(bytes));
@@ -2640,200 +2563,6 @@ ${sheets.map((s, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.open
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   root.FCAST = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);
-/* ============================================================================
-   attention_fcast.js — BISTRO-inspired attention forecaster (client-side).
-
-   Background. BIS QR (March 2026) introduces BISTRO, a transformer
-   foundational model for macro time series. Its online annex notes that the
-   attention mechanism is "akin to a kernel regression or a time-varying
-   parameter model", except that the softmax weights are recomputed for every
-   new input. The full pretrained transformer cannot run inside a single HTML
-   file; this module implements the same *principle* directly:
-
-     query  = the standardized context window at the forecast origin
-              (+ assumed covariate paths, for conditional scenarios)
-     keys   = standardized historical context windows
-     values = the realized H-step continuation after each historical window
-     a_j    = softmax( cos(q,k_j) / tau )       (temperature tau)
-     ŷ(h)   = μ0 + σ0 · Σ_j a_j · z_j(h)        (de-standardized weighted sum)
-
-   This is single-head attention over patches = classic analog forecasting
-   with a softmax kernel. It is honest about what it is: a nonparametric,
-   context-weighted method, not a pretrained foundational model.
-
-   API (root.ATTN):
-     forecast(opts)  → {point, q05,q16,q50,q84,q95, weights, ess, cand}
-     backtest(opts)  → {byH: [{h, rmsfeAttn, rmsfeAR, rmsfeRW, rel, relRW}], n}
-     ar1Forecast(y, H) → iterated AR(1)+intercept forecast path (benchmark)
-   ============================================================================ */
-(function (root) {
-  "use strict";
-
-  function meanSd(a) {
-    let m = 0, n = a.length;
-    for (let i = 0; i < n; i++) m += a[i];
-    m /= n;
-    let v = 0;
-    for (let i = 0; i < n; i++) v += (a[i] - m) * (a[i] - m);
-    return { m, s: Math.sqrt(v / Math.max(1, n - 1)) || 1e-9 };
-  }
-  function zWin(a, st) { return a.map((v) => (v - st.m) / (st.s || 1e-9)); }
-
-  // Build the feature vector for a window ending at index t (inclusive):
-  //   [ z(y[t-C+1..t]) , lamCov * z(x_k[t-C+1..t]) for each covariate ,
-  //     (conditional) lamCov * z(x_k[t+1..t+H]) future segment ]
-  // Standardization is per-window per-series (scale invariance, like patch
-  // normalization in MOIRAI). Returns {f, stY} (stY needed to de-standardize).
-  function makeFeat(y, X, t, C, H, lamCov, condIdx, futureForKeys, queryPaths) {
-    const win = y.slice(t - C + 1, t + 1);
-    const stY = meanSd(win);
-    let f = zWin(win, stY);
-    const K = X ? X.length : 0;
-    const stXs = [];
-    for (let k = 0; k < K; k++) {
-      const xw = X[k].slice(t - C + 1, t + 1);
-      const st = meanSd(xw);
-      stXs.push(st);
-      f = f.concat(zWin(xw, st).map((v) => v * lamCov));
-    }
-    if (condIdx && condIdx.length) {
-      for (const k of condIdx) {
-        let seg;
-        if (queryPaths) seg = queryPaths[k];                  // assumed future path (query)
-        else if (futureForKeys) seg = X[k].slice(t + 1, t + 1 + H); // realized (keys)
-        else seg = null;
-        if (seg && seg.length === H) {
-          const st = stXs[k];
-          f = f.concat(zWin(seg, st).map((v) => v * lamCov));
-        } else {
-          f = f.concat(new Array(H).fill(0));
-        }
-      }
-    }
-    return { f, stY };
-  }
-  function cosSim(a, b) {
-    let d = 0, na = 0, nb = 0;
-    for (let i = 0; i < a.length; i++) { d += a[i] * b[i]; na += a[i] * a[i]; nb += b[i] * b[i]; }
-    return d / (Math.sqrt(na * nb) || 1e-12);
-  }
-  function weightedQuantile(vals, w, p) {
-    const idx = vals.map((v, i) => i).sort((a, b) => vals[a] - vals[b]);
-    let c = 0;
-    for (const i of idx) { c += w[i]; if (c >= p) return vals[i]; }
-    return vals[idx[idx.length - 1]];
-  }
-
-  /* opts: { y (array), X (array of arrays | null), C, H, tau, lamCov,
-             condIdx (covariate indices to condition on | null),
-             queryPaths ({k: array(H)} assumed paths | null),
-             origin (index of forecast origin, default last index) } */
-  function forecast(opts) {
-    const y = opts.y, X = opts.X || null;
-    const C = Math.max(4, opts.C | 0), H = Math.max(1, opts.H | 0);
-    const tau = opts.tau > 0 ? opts.tau : 0.3;
-    const lamCov = opts.lamCov == null ? 1 : opts.lamCov;
-    const condIdx = opts.condIdx && opts.condIdx.length ? opts.condIdx : null;
-    const T = y.length;
-    const origin = opts.origin == null ? T - 1 : opts.origin;
-    if (origin - C + 1 < 0) throw new Error("CTX가 표본보다 깁니다.");
-    // query
-    const q = makeFeat(y, X, origin, C, H, lamCov, condIdx, false, condIdx ? opts.queryPaths : null);
-    // candidate keys: windows fully inside history with a full H-step continuation,
-    // ending before the origin window starts to avoid trivial self-match overlap.
-    const cand = [];
-    for (let t = C - 1; t + H <= (origin === T - 1 ? T - 1 : origin); t++) {
-      if (t >= origin - Math.floor(C / 4) && t <= origin) continue; // skip near-self
-      cand.push(t);
-    }
-    if (cand.length < 8) throw new Error("유효 비교 구간이 부족합니다 (CTX·H를 줄이세요).");
-    const scores = new Array(cand.length);
-    const zpaths = new Array(cand.length);
-    for (let j = 0; j < cand.length; j++) {
-      const t = cand[j];
-      const kf = makeFeat(y, X, t, C, H, lamCov, condIdx, true, null);
-      scores[j] = cosSim(q.f, kf.f) / tau;
-      // value: continuation standardized by the KEY window stats
-      zpaths[j] = y.slice(t + 1, t + 1 + H).map((v) => (v - kf.stY.m) / (kf.stY.s || 1e-9));
-    }
-    const mx = Math.max(...scores);
-    let Z = 0;
-    const w = scores.map((s) => { const e = Math.exp(s - mx); Z += e; return e; });
-    for (let j = 0; j < w.length; j++) w[j] /= Z;
-    const ess = 1 / w.reduce((a, b) => a + b * b, 0);
-    // combine
-    const point = [], q05 = [], q16 = [], q50 = [], q84 = [], q95 = [];
-    for (let h = 0; h < H; h++) {
-      const vals = zpaths.map((p) => p[h]);
-      let m = 0; for (let j = 0; j < vals.length; j++) m += w[j] * vals[j];
-      const de = (z) => q.stY.m + q.stY.s * z;
-      point.push(de(m));
-      q05.push(de(weightedQuantile(vals, w, 0.05)));
-      q16.push(de(weightedQuantile(vals, w, 0.16)));
-      q50.push(de(weightedQuantile(vals, w, 0.50)));
-      q84.push(de(weightedQuantile(vals, w, 0.84)));
-      q95.push(de(weightedQuantile(vals, w, 0.95)));
-    }
-    return { point, q05, q16, q50, q84, q95,
-             weights: cand.map((t, j) => ({ t, w: w[j] })), ess, nCand: cand.length };
-  }
-
-  /* AR(1) with intercept, OLS on y[0..origin], iterated H steps (benchmark). */
-  function ar1Forecast(y, H) {
-    const T = y.length;
-    let sx = 0, sy = 0, sxx = 0, sxy = 0, n = 0;
-    for (let t = 1; t < T; t++) { const a = y[t - 1], b = y[t]; sx += a; sy += b; sxx += a * a; sxy += a * b; n++; }
-    const mx = sx / n, my = sy / n;
-    const beta = (sxy - n * mx * my) / Math.max(1e-12, sxx - n * mx * mx);
-    const c = my - beta * mx;
-    const out = []; let prev = y[T - 1];
-    for (let h = 0; h < H; h++) { prev = c + beta * prev; out.push(prev); }
-    return out;
-  }
-
-  /* Rolling-origin backtest, BISTRO-style: at each origin, ATTN vs AR(1) vs RW.
-     opts: {y, X, C, H, tau, lamCov, nOrigins, spacing} */
-  function backtest(opts) {
-    const { y } = opts;
-    const H = Math.max(1, opts.H | 0), C = Math.max(4, opts.C | 0);
-    const R = Math.max(2, opts.nOrigins | 0), sp = Math.max(1, opts.spacing | 0);
-    const T = y.length;
-    const lastOrigin = T - 1 - H;
-    const firstNeeded = C + H + 8;
-    const origins = [];
-    for (let r = 0; r < R; r++) {
-      const o = lastOrigin - r * sp;
-      if (o < firstNeeded) break;
-      origins.push(o);
-    }
-    if (origins.length < 2) throw new Error("백테스트 가능한 원점이 부족합니다.");
-    const se = { attn: {}, ar: {}, rw: {} }; // h -> sum of squared errors
-    const add = (obj, h, e) => { obj[h] = (obj[h] || 0) + e * e; };
-    for (const o of origins) {
-      const fc = forecast(Object.assign({}, opts, { origin: o }));
-      const ar = ar1Forecast(y.slice(0, o + 1), H);
-      for (let h = 1; h <= H; h++) {
-        const actual = y[o + h];
-        add(se.attn, h, fc.point[h - 1] - actual);
-        add(se.ar, h, ar[h - 1] - actual);
-        add(se.rw, h, y[o] - actual);
-      }
-    }
-    const hs = [1, Math.max(2, Math.round(H / 4)), Math.max(3, Math.round(H / 2)), H]
-      .filter((v, i, a) => v <= H && a.indexOf(v) === i);
-    const byH = hs.map((h) => {
-      const n = origins.length;
-      const rA = Math.sqrt(se.attn[h] / n), rB = Math.sqrt(se.ar[h] / n), rC = Math.sqrt(se.rw[h] / n);
-      return { h, rmsfeAttn: rA, rmsfeAR: rB, rmsfeRW: rC,
-               rel: rA / (rB || 1e-12), relRW: rA / (rC || 1e-12) };
-    });
-    return { byH, nOrigins: origins.length, origins };
-  }
-
-  const api = { forecast, backtest, ar1Forecast };
-  if (typeof module !== "undefined" && module.exports) module.exports = api;
-  root.ATTN = api;
-})(typeof globalThis !== "undefined" ? globalThis : this);
 /* ============================ SVG CHART ENGINE ============================ */
 const COLORS = ["#1c3d5a","#8c2d2d","#5a5a2d","#3d6b4f","#5a2d5a","#2d5a5a","#7a4a1a","#444"];
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
@@ -3100,10 +2829,6 @@ function loadData(parsed){
   if($("scenBlock"))$("scenBlock").classList.add("hidden");
   if($("fcRecs"))$("fcRecs").innerHTML="";
   if($("fcResult"))$("fcResult").innerHTML="";
-  lastAttn=null;
-  if($("atResult"))$("atResult").innerHTML="";
-  if($("atScenWrap"))$("atScenWrap").classList.add("hidden");
-  if($("atCond"))$("atCond").checked=false;
   refreshAll();fillViewVars();fillRangeSelects();fillAnaSelects();
   const f=detectFreq(ST.labels);
   $("dataStatus").textContent=`✓ ${ST.names.length}개 변수 · ${ST.nobs}개 관측치 로드됨`+(f?` · ${f}`:"");
@@ -3153,9 +2878,7 @@ function parseXlsxSheet(name){
       XBOOK.sheetName=name;XBOOK.imp=imp;
       renderXlsxCols("");
       const f=detectFreq(imp.labels);
-      const skipNote=(imp.meta.naCells||imp.meta.skippedRows)
-        ?` · <span class="muted" style="font-style:italic">오류/결측 표기 셀 ${(imp.meta.naCells||0).toLocaleString()}개${imp.meta.skippedRows?`, 무효 날짜 행 ${imp.meta.skippedRows}개`:""} 자동 무시</span>`:"";
-      $("xlsxStatus").innerHTML=`✓ ${imp.names.length}개 변수 · ${imp.meta.count}개 관측치${f?` · <b>${f}</b>`:""} (헤더행 ${imp.meta.headerRow+1}, 데이터 시작행 ${imp.meta.firstData+1})${skipNote}. 불러올 변수를 선택하세요.`;
+      $("xlsxStatus").innerHTML=`✓ ${imp.names.length}개 변수 · ${imp.meta.count}개 관측치${f?` · <b>${f}</b>`:""} (헤더행 ${imp.meta.headerRow+1}, 데이터 시작행 ${imp.meta.firstData+1}). 불러올 변수를 선택하세요.`;
     }catch(e){$("xlsxStatus").innerHTML=`<span class="err">${esc(e.message)}</span>`;}
   },40);
 }
@@ -3449,7 +3172,6 @@ function refreshAll(){
   fillCheckSplit($("regX"),"regXLevel","regXDiff",0);
   fillCheckSplit($("svarVars"),"svarVarsLevel","svarVarsDiff",3);
   fillBondSelects();
-  fillAttnSelects();
   fillSelect($("corrX"));fillSelect($("corrY"));
   fillSelect($("grX"));fillSelect($("grY"));
   if($("corrY").options.length>1&&$("corrY").value===$("corrX").value)$("corrY").selectedIndex=1;
@@ -4755,139 +4477,6 @@ function recommendFcConfigs(){
   });
 }
 
-/* ============== ATTENTION FORECASTING (X, BISTRO-style) ============== */
-function fillAttnSelects(){
-  if(!$("atTarget"))return;
-  fillSelectGrouped($("atTarget"));
-  const sel=$("atCovs");const keep=new Set([...sel.selectedOptions].map(o=>o.value));
-  sel.innerHTML="";ST.names.forEach(n=>{const o=document.createElement("option");
-    o.value=n;o.textContent=n;o.selected=keep.has(n);sel.appendChild(o);});
-}
-function atBuildScenGrid(){
-  const covs=[...$("atCovs").selectedOptions].map(o=>o.value).filter(n=>ST.names.includes(n));
-  const H=Math.max(2,Math.min(24,parseInt($("atH").value)||8));
-  if(!covs.length){$("atScenGrid").innerHTML=`<caption>조건부 모드에는 공변량을 1개 이상 선택하세요.</caption>`;return;}
-  let h=`<caption>Table X.0. 공변량 가정 경로 <span class="cap-en">/ Assumed covariate paths for the conditional scenario (defaults = last observation held flat)</span></caption>
-    <thead><tr><th>공변량</th>`;
-  for(let q=1;q<=H;q++)h+=`<th>+${q}</th>`;h+=`</tr></thead><tbody>`;
-  covs.forEach((cn,ci)=>{
-    const v=lastObsOf(cn);
-    h+=`<tr><td>${esc(cn)} <span class="hint">최근 ${fmtNum(v,2)}</span></td>`;
-    for(let q=0;q<H;q++)h+=`<td><input type="number" class="atScenIn" data-c="${ci}" data-q="${q}"
-      value="${(+v).toFixed(2)}" step="0.25" style="width:72px;padding:4px 6px"></td>`;
-    h+="</tr>";});
-  h+="</tbody>";
-  $("atScenGrid").innerHTML=h;
-}
-let lastAttn=null;
-function runAttn(){
-  const tn=$("atTarget").value;
-  if(!tn||!ST.names.includes(tn)){$("atResult").innerHTML=`<p class="err">목표 변수를 선택하세요.</p>`;return;}
-  const covs=[...$("atCovs").selectedOptions].map(o=>o.value).filter(n=>n!==tn&&ST.names.includes(n));
-  const C=Math.max(6,Math.min(120,parseInt($("atCtx").value)||24));
-  const H=Math.max(2,Math.min(24,parseInt($("atH").value)||8));
-  const tau=Math.max(0.05,parseFloat($("atTau").value)||0.3);
-  const lam=Math.max(0,parseFloat($("atLam").value)||1);
-  const cond=$("atCond").checked&&covs.length>0;
-  const btN=Math.max(0,parseInt($("atBtN").value)||0);
-  const btS=Math.max(1,parseInt($("atBtS").value)||2);
-  // balanced arrays over the analysis range
-  const yA=aSer(tn),labA=aLab();
-  const cA=covs.map(cn=>aSer(cn));
-  const y=[],X=covs.map(()=>[]),lab=[];
-  for(let i=0;i<yA.length;i++){
-    if(yA[i]==null)continue;
-    let ok=true;for(const arr of cA)if(arr[i]==null){ok=false;break;}
-    if(!ok)continue;
-    y.push(yA[i]);covs.forEach((_,k)=>X[k].push(cA[k][i]));lab.push(labA[i]);
-  }
-  if(y.length<C+H+12){$("atResult").innerHTML=`<p class="err">유효 관측치 ${y.length}개 — CTX(${C})+H(${H})에 비해 부족합니다.</p>`;return;}
-  // conditional paths from grid
-  let queryPaths=null,condIdx=null;
-  if(cond){
-    condIdx=covs.map((_,k)=>k);
-    queryPaths={};covs.forEach((_,k)=>queryPaths[k]=new Array(H).fill(lastObsOf(covs[k])));
-    document.querySelectorAll(".atScenIn").forEach(el=>{
-      const c=+el.dataset.c,q=+el.dataset.q;
-      if(queryPaths[c]&&q<H)queryPaths[c][q]=parseFloat(el.value)||0;});
-  }
-  $("atStatus").textContent="어텐션 계산 중…";
-  setTimeout(()=>{
-    let fc,bt=null,fcU=null;
-    try{
-      fc=ATTN.forecast({y,X:covs.length?X:null,C,H,tau,lamCov:lam,condIdx,queryPaths});
-      if(cond)fcU=ATTN.forecast({y,X,C,H,tau,lamCov:lam}); // baseline for comparison
-      if(btN>=2)bt=ATTN.backtest({y,X:covs.length?X:null,C,H,tau,lamCov:lam,nOrigins:btN,spacing:btS});
-    }catch(e){$("atResult").innerHTML=`<p class="err">오류: ${esc(e.message)}</p>`;$("atStatus").textContent="";return;}
-    lastAttn={tn,covs,fc,fcU,bt,y,lab,C,H,tau,lam,cond,queryPaths};
-    // ---- fan chart ----
-    const tail=Math.min(40,y.length);
-    const hist=y.slice(y.length-tail),labH=lab.slice(lab.length-tail);
-    const labF=[];for(let q=1;q<=H;q++)labF.push("+"+q);
-    const all=labH.concat(labF),x=all.map((_,i)=>i);
-    const nan=new Array(tail).fill(null);
-    const sMed=nan.concat(fc.q50);sMed[tail-1]=hist[hist.length-1];
-    const series=[{name:tn+" (관측)",color:COLORS[0],y:hist.concat(new Array(H).fill(null)),width:1.8},
-      {name:cond?"조건부 중앙값":"예측 중앙값",color:"#1a1a1a",y:sMed,dash:"5 3",width:1.7}];
-    if(cond&&fcU){const sU=nan.concat(fcU.q50);sU[tail-1]=hist[hist.length-1];
-      series.push({name:"무조건부(비교)",color:COLORS[3],y:sU,dash:"2 3",width:1.4});}
-    let html=`<div class="result-head"><h3>어텐션 예측 · ${esc(tn)} ${cond?'<span class="muted" style="font-style:italic">조건부 시나리오</span>':""}</h3>
-      <span><a class="dl" id="dlAtCsv">CSV</a> <a class="dl" id="dlAtXlsx">Excel</a></span></div>
-      <figure><figcaption>Figure X.1. 예측분포 <span class="fig-en">/ attention-weighted predictive distribution (median, 68% &amp; 90%)</span></figcaption>
-      ${svgChart({w:880,h:300,x,xTickLabels:all,yZero:false,series,
-        bands:[{lo:nan.concat(fc.q05),hi:nan.concat(fc.q95),color:COLORS[0]},
-               {lo:nan.concat(fc.q16),hi:nan.concat(fc.q84),color:COLORS[0]}]})}
-      <div class="legend">${legendHTML(series.map(s2=>({name:s2.name,color:s2.color})))}</div>
-      <p class="fig-note">CTX=${C}, H=${H}, τ=${tau}${covs.length?`, 공변량 ${covs.map(esc).join("·")} (λ=${lam})`:""}.
-      유효 비교 창 ${fc.nCand.toLocaleString()}개, 유효 표본 크기(ESS) ${fc.ess.toFixed(1)} — softmax 가중이 사실상 ${Math.round(fc.ess)}개 유사국면에 분산되어 있음을 뜻합니다.${cond?`
-      <b>해석 주의(BISTRO 논문과 동일):</b> 조건부와 무조건부의 차이는 자료의 <b>역사적 동행관계</b>를 반영할 뿐 인과 효과가 아닙니다.
-      예컨대 고물가 가정이 금리 예측을 낮추는 결과는, 과거 고물가 국면의 다수가 금리 정점 이후 인하기와 겹쳤음을 의미할 수 있습니다.`:""}</p></figure>`;
-    // ---- attention weights over history ----
-    const wSeries=new Array(y.length).fill(null);
-    fc.weights.forEach(o=>{wSeries[o.t]=o.w*100;});
-    const top=fc.weights.slice().sort((a,b)=>b.w-a.w).slice(0,10);
-    html+=`<figure><figcaption>Figure X.2. 어텐션 가중치 분포 <span class="fig-en">/ attention weights across historical context windows (% of total)</span>
-      · <a class="dl" id="dlAtWXlsx">가중치 Excel</a></figcaption>
-      ${svgChart({w:880,h:200,x:y.map((_,i)=>i),xTickLabels:lab,yZero:true,
-        series:[{name:"weight %",color:COLORS[2],y:wSeries,width:1.2}]})}
-      <p class="fig-note">각 점 = 해당 시점에 끝나는 길이 ${C} 맥락 창의 softmax 가중치. 봉우리가 예측 원점과 닮은 국면입니다.</p></figure>`;
-    html+=`<div class="tablewrap"><table class="bt"><caption>Table X.1. 상위 유사국면 <span class="cap-en">/ Top-10 analog windows by attention weight</span></caption>
-      <thead><tr><th>#</th><th>맥락 창 종료 시점</th><th>가중치</th><th>당시 ${esc(tn)}</th><th>이후 ${H}기 실현 평균</th></tr></thead><tbody>`;
-    top.forEach((o,i)=>{
-      const fut=y.slice(o.t+1,o.t+1+H);const fm=fut.reduce((a,b)=>a+b,0)/fut.length;
-      html+=`<tr><td>${i+1}</td><td>${esc(lab[o.t])}</td><td>${(o.w*100).toFixed(2)}%</td>
-        <td>${fmtNum(y[o.t],2)}</td><td>${fmtNum(fm,2)}</td></tr>`;});
-    html+=`</tbody></table><p class="tbl-note">BISTRO 논문의 "블랙박스 열기"에 해당 — 예측이 과거의 어떤 국면에서 왔는지 직접 확인할 수 있습니다.</p></div>`;
-    // ---- backtest table ----
-    if(bt){
-      html+=`<div class="tablewrap"><table class="bt"><caption>Table X.2. 롤링 백테스트 <span class="cap-en">/ Rolling-origin R-RMSFE vs AR(1) and random walk (${bt.nOrigins} origins)</span></caption>
-        <thead><tr><th>시계 h</th><th>RMSFE (어텐션)</th><th>RMSFE (AR1)</th><th>RMSFE (RW)</th><th>R-RMSFE vs AR1</th><th>vs RW</th></tr></thead><tbody>`;
-      bt.byH.forEach(o=>{
-        html+=`<tr><td>${o.h}</td><td>${fmtNum(o.rmsfeAttn,4)}</td><td>${fmtNum(o.rmsfeAR,4)}</td><td>${fmtNum(o.rmsfeRW,4)}</td>
-          <td${o.rel<1?' style="font-weight:700"':""}>${fmtNum(o.rel,3)}</td>
-          <td${o.relRW<1?' style="font-weight:700"':""}>${fmtNum(o.relRW,3)}</td></tr>`;});
-      html+=`</tbody></table><p class="tbl-note">BISTRO 논문 Table 1과 동일한 양식 — 1보다 작으면(굵게) 벤치마크 대비 우수. AR(1)은 각 원점까지의 표본으로 재추정한 절편 포함 모형.</p></div>`;
-    }
-    $("atResult").innerHTML=html;
-    // exports
-    const head=["h","point","q05","q16","median","q84","q95"];
-    const body=[];for(let h2=0;h2<H;h2++)body.push([h2+1,fc.point[h2],fc.q05[h2],fc.q16[h2],fc.q50[h2],fc.q84[h2],fc.q95[h2]]);
-    $("dlAtCsv").onclick=()=>download(head.join(",")+"\n"+body.map(r=>r.join(",")).join("\n"),"attention_forecast.csv");
-    $("dlAtXlsx").onclick=()=>{
-      const sheets=[{name:"Forecast",rows:[head.map(HC),...body]}];
-      if(bt)sheets.push({name:"Backtest",rows:[["h","rmsfe_attn","rmsfe_ar1","rmsfe_rw","rel_ar1","rel_rw"].map(HC),
-        ...bt.byH.map(o=>[o.h,o.rmsfeAttn,o.rmsfeAR,o.rmsfeRW,o.rel,o.relRW])]});
-      if(cond)sheets.push({name:"Assumed paths",rows:[["covariate",...Array.from({length:H},(_,q)=>"+"+(q+1))].map(HC),
-        ...covs.map((cn,k)=>[cn,...queryPaths[k]])]});
-      xlsxDL(sheets,"attention_forecast");};
-    $("dlAtWXlsx").onclick=()=>{
-      const rows=[["window_end","label","weight"].map(HC)];
-      fc.weights.forEach(o=>rows.push([o.t,lab[o.t],o.w]));
-      xlsxDL([{name:"Attention weights",rows}],"attention_weights");};
-    $("atStatus").textContent="✓ 완료";
-  },40);
-}
-
 /* ========================= WHAT-IF CALCULATOR ========================= */
 function renderCalc(){
   if(!lastReg||!$("calcPanel"))return;
@@ -4971,9 +4560,9 @@ $("xlsxLoad").onclick=loadXlsxSelection;
 // and .csv/.tsv/.txt (parsed straight into the workspace).
 // Also exposed as window.loadGithubFile("path/in/repo.xlsx") for power users.
 async function loadGithubFile(path,refOverride){
-  const owner=$("ghOwner").value.trim(), repo=$("ghRepo").value.trim();
+  const owner=(window.GHCommon?GHCommon.field("ghOwner"):$("ghOwner").value).trim(), repo=(window.GHCommon?GHCommon.field("ghRepo"):$("ghRepo").value).trim();
   const ref=(refOverride!==undefined?refOverride:$("ghRef").value.trim())||undefined;
-  const token=$("ghToken").value.trim();
+  const token=(window.GHCommon?GHCommon.field("ghToken"):$("ghToken").value).trim();
   path=(path||"").trim();
   if(!owner||!repo||!path){$("ghStatus").innerHTML=`<span class="err">owner / repo / 파일 경로가 모두 필요합니다.</span>`;return false;}
   if(!token){$("ghStatus").innerHTML=`<span class="err">Personal Access Token이 필요합니다.</span>`;return false;}
@@ -5005,9 +4594,9 @@ async function loadGithubFile(path,refOverride){
 window.loadGithubFile=loadGithubFile;
 
 async function refreshGhFileList(){
-  const owner=$("ghOwner").value.trim(), repo=$("ghRepo").value.trim();
+  const owner=(window.GHCommon?GHCommon.field("ghOwner"):$("ghOwner").value).trim(), repo=(window.GHCommon?GHCommon.field("ghRepo"):$("ghRepo").value).trim();
   const dir=$("ghDir").value.trim(), ref=$("ghRef").value.trim()||undefined;
-  const token=$("ghToken").value.trim();
+  const token=(window.GHCommon?GHCommon.field("ghToken"):$("ghToken").value).trim();
   if(!owner||!repo){$("ghStatus").innerHTML=`<span class="err">owner / repo가 필요합니다.</span>`;return;}
   if(!token){$("ghStatus").innerHTML=`<span class="err">Personal Access Token이 필요합니다.</span>`;return;}
   $("ghStatus").innerHTML=`파일 목록 불러오는 중… <span class="muted">${esc(owner)}/${esc(repo)}${dir?"/"+esc(dir):""}</span>`;
@@ -5056,10 +4645,6 @@ $("anaReset").onclick=()=>{ANR=null;$("anaBadge").textContent=anaBadgeText();bat
 $("btnForecast").onclick=runForecast;
 $("btnFcRecommend").onclick=recommendFcConfigs;
 $("btnSynth").onclick=runSynthesis;
-$("btnAttn").onclick=runAttn;
-$("atCond").onchange=e=>{$("atScenWrap").classList.toggle("hidden",!e.target.checked);if(e.target.checked)atBuildScenGrid();};
-$("atCovs").onchange=()=>{if($("atCond").checked)atBuildScenGrid();};
-$("atH").onchange=()=>{if($("atCond").checked)atBuildScenGrid();};
 $("btnScenario").onclick=runScenario;
 $("btnScenFlat").onclick=()=>{if(lastSynth)buildScenGrid(lastSynth.drivers);};
 $("bondH").onchange=()=>{if(lastSynth)buildScenGrid(lastSynth.drivers);};

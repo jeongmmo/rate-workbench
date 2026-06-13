@@ -130,8 +130,13 @@
   .pill.off{border-color:var(--line);color:var(--muted);}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="./common.js"></script>
 </head>
 <body>
+<div style="font-family:'Times New Roman',Times,serif;font-size:.88rem;background:#ffffff;border-bottom:1px solid #d9dde6;padding:7px 28px;">
+  <a href="index.html" style="color:#1f3a6e;text-decoration:none;">&#8592; 포털로 돌아가기</a>
+  <span style="color:#6b7488;font-style:italic;margin-left:14px;">Research Workbench</span>
+</div>
 <div class="wrap">
 
   <header class="mast">
@@ -155,7 +160,7 @@
     <button data-tab="decomp">03 DKW 구성요인·상관</button>
     <button data-tab="hlw">04 HLW 준구조</button>
     <button data-tab="taylor">05 테일러 준칙</button>
-    <button data-tab="compare">06 주요국 비교</button>
+    <button data-tab="compare">06 한·미·일 비교</button>
     <button data-tab="method">07 방법론·참고문헌</button>
   </aside>
   <div class="maincol">
@@ -174,7 +179,7 @@
       </div>
       <div class="controls" style="margin:8px 0 0;flex-wrap:wrap;gap:8px;">
         <span class="inline-set">데이터 파일 <select id="ghFileSel" style="min-width:240px;"><option value="">— 목록을 먼저 불러오세요 —</option></select></span>
-        <span class="inline-set">직접 입력 <input type="text" id="ghPath" value="data_20260611.xlsx" placeholder="파일 경로" style="width:200px;"></span>
+        <span class="inline-set">직접 입력 <input type="text" id="ghPath" value="data/data_bb.xlsx" placeholder="파일 경로" style="width:200px;"></span>
         <button class="btn" id="ghLoadBtn">GitHub에서 불러오기</button>
       </div>
       <p style="margin:8px 0 0;font-size:.8rem;color:var(--muted);" id="ghNote">
@@ -495,8 +500,8 @@
   </section>
   <!-- ============ 05 COMPARE ============ -->
   <section class="panel" id="panel-compare">
-    <h2 class="sec">06 주요국 중립금리 비교</h2>
-    <p class="lede">업로드 데이터의 모든 가용 통화(KRW&middot;USD&middot;JPY&middot;EUR&middot;GBP&middot;AUD&middot;CAD)를 동일 표본기간&middot;동일 모형으로 추정해 비교합니다.
+    <h2 class="sec">06 한&middot;미&middot;일 중립금리 비교</h2>
+    <p class="lede">업로드 데이터의 KRW&middot;USD&middot;JPY 포워드를 동일 표본기간&middot;동일 모형으로 추정해 3개국 중립금리를 비교합니다.
       한국&middot;미국의 기대인플레이션은 BEI 10y, 일본은 BEI가 없어 02 섹션의 가정값을 사용합니다.</p>
     <div id="cmpStatus" class="empty">Bloomberg 포워드 엑셀(KRW&middot;USD&middot;JPY 포함)을 올리고 곡선을 구성하면 이 섹션이 자동으로 채워집니다.</div>
     <div id="cmpOut" style="display:none;">
@@ -504,7 +509,7 @@
       <h3 class="sub">실질 중립금리 r* 추이 (시장 5y5y &minus; 기대인플레이션)</h3>
       <figure><canvas id="cmpCanvas" width="1100" height="430"></canvas></figure>
       <div class="legend" id="cmpLegend"></div>
-      <figcaption>실선은 시장기반(기간프리미엄 포함) 실질 r*, 점선(한·미·일만 표시)은 TP조정 기준입니다. 전체 국가의 TP조정 값은 아래 표를 참조하세요.</figcaption>
+      <figcaption>기간프리미엄이 포함된 시장기반 측정치입니다. 점선은 기간프리미엄을 제거한 TP조정 기준입니다.</figcaption>
       <h3 class="sub">최근 시점 비교 표</h3>
       <div class="scroll"><table id="cmpTable"></table></div>
       <div class="controls"><button class="btn" id="exportXlsxBtn5">모든 표&middot;그래프 엑셀(.xlsx)로 내려받기</button></div>
@@ -1231,7 +1236,7 @@ function runEstimation(){
     });
     // coEst & usMon from full models
     S.coEst={};
-    curs.filter(cc=>COMP_CURS.includes(cc)).forEach(cc=>{
+    curs.filter(cc=>['KRW','USD','JPY','EUR'].includes(cc)).forEach(cc=>{
       const e=S.book[cc],mm=S.models[cc].model,FF=mkYieldFns(mm);
       const rn55S=e.Yann.map((_,t)=>(Math.min(120,mm.N)*FF.rnY(Math.min(120,mm.N),mm.X[t])-60*FF.rnY(60,mm.X[t]))/(Math.min(120,mm.N)-60));
       S.coEst[cc]={dates:e.dates,mkt55S:e.mkt55,rn55S,
@@ -1438,11 +1443,11 @@ function renderCorr(all,ccs,bd,n){
   });
   h3+='</tbody>';document.getElementById('corrAcross').innerHTML=h3;
 }
-const CMP_META={KRW:{name:'한국',color:'#1f3a6e'},USD:{name:'미국',color:'#7a4f9e'},JPY:{name:'일본',color:'#a23b3b'},EUR:{name:'유로존',color:'#b07d2b'},GBP:{name:'영국',color:'#2f6f6b'},AUD:{name:'호주',color:'#8a5a78'},CAD:{name:'캐나다',color:'#6b7488'},DATA:{name:'입력자료',color:'#16213a'}};
+const CMP_META={KRW:{name:'한국',color:'#1f3a6e'},USD:{name:'미국',color:'#7a4f9e'},JPY:{name:'일본',color:'#a23b3b'},EUR:{name:'유로존',color:'#b07d2b'},DATA:{name:'입력자료',color:'#16213a'}};
 function renderCompare(){
   const stEl=document.getElementById('cmpStatus'),out=document.getElementById('cmpOut');
   if(!stEl)return;
-  const cs=S.coEst||{};const have=COMP_CURS.filter(c=>cs[c]);
+  const cs=S.coEst||{};const have=['KRW','USD','JPY'].filter(c=>cs[c]);
   if(have.length<2){stEl.style.display='block';out.style.display='none';return;}
   stEl.style.display='none';out.style.display='block';
   const piFix=parseFloat(document.getElementById('piLR').value)||2.0;
@@ -1454,11 +1459,10 @@ function renderCompare(){
   const series=[],legendItems=[];
   have.forEach(c=>{
     const sol=dates.map(d=>{const i=maps[c].get(d);return i==null?NaN:cs[c].mkt55S[i]-piAt(c,i);});
+    const dot=dates.map(d=>{const i=maps[c].get(d);return i==null?NaN:cs[c].rn55S[i]-piAt(c,i);});
     series.push({name:CMP_META[c].name+' 실질(시장)',data:sol,color:CMP_META[c].color,lw:2.1});
-    if(['KRW','USD','JPY'].includes(c)){ // 과밀 방지: TP조정 점선은 핵심 3국만 (전체는 아래 표)
-      const dot=dates.map(d=>{const i=maps[c].get(d);return i==null?NaN:cs[c].rn55S[i]-piAt(c,i);});
-      series.push({name:CMP_META[c].name+' (TP조정)',data:dot,color:CMP_META[c].color,lw:1.1,dash:[5,3]});
-    }
+    series.push({name:CMP_META[c].name+' 실질(TP조정)',data:dot,color:CMP_META[c].color,lw:1.2,dash:[5,3]});
+    legendItems.push({t:CMP_META[c].name+' (시장)',c:CMP_META[c].color},{t:CMP_META[c].name+' (TP조정)',c:CMP_META[c].color,dash:1});
   });
   drawLineChart(document.getElementById('cmpCanvas'),series,dates,{ylab:'실질 r* (%)',xmax:10,zero:true});
   legend('cmpLegend',legendItems);
@@ -1974,7 +1978,7 @@ const CHART_DL={
     const base=ccs.reduce((a,b)=>all[a].dates.length>=all[b].dates.length?a:b);const bd=all[base].dates;
     const rows=[['날짜',...ccs.map(cc=>(CMP_META[cc]||{}).name||cc)]];
     for(let t=0;t<bd.length;t++)rows.push([bd[t],...ccs.map(cc=>{const v=alignByDates([bd[t]],all[cc].dates,all[cc][key])[0];return isFinite(v)?v:null;})]);
-    const cols={KRW:'1F3A6E',USD:'7A4F9E',JPY:'A23B3B',EUR:'B07D2B',GBP:'2F6F6B',AUD:'8A5A78',CAD:'6B7488',DATA:'16213A'};
+    const cols={KRW:'1F3A6E',USD:'7A4F9E',JPY:'A23B3B',DATA:'16213A'};
     return {name:'구성요인비교',title:'구성요인비교_'+COMP_LBL[key]+'_'+matLbl(n),rows,
       seriesDefs:ccs.map((cc,i)=>({col:2+i,name:(CMP_META[cc]||{}).name||cc,color:cols[cc]||'444444'}))};},
   taylorCanvas:()=>{if(!S.taylor)return null;const T=S.taylor;
@@ -1995,7 +1999,7 @@ const CHART_DL={
     const maps={};ccs.forEach(c=>{const m2=new Map();cs[c].dates.forEach((d,i)=>m2.set(d,i));maps[c]=m2;});
     const rows=[['날짜',...ccs.map(c=>((CMP_META[c]||{}).name||c)+' 실질(시장)')]];
     for(let t=0;t<bd.length;t++)rows.push([bd[t],...ccs.map(c=>{const i=maps[c].get(bd[t]);return i==null?null:cs[c].mkt55S[i]-piAt(c,i);})]);
-    const cols={KRW:'1F3A6E',USD:'7A4F9E',JPY:'A23B3B',EUR:'B07D2B',GBP:'2F6F6B',AUD:'8A5A78',CAD:'6B7488'};
+    const cols={KRW:'1F3A6E',USD:'7A4F9E',JPY:'A23B3B'};
     return {name:'한미일_실질rstar',title:'한미일_실질중립금리',rows,
       seriesDefs:ccs.map((c,i)=>({col:2+i,name:(CMP_META[c]||{}).name||c,color:cols[c]||'444444'}))};},
   hlwCanvas:()=>{if(!S.hlw)return null;const H=S.hlw,hw=1.645;
@@ -2713,14 +2717,14 @@ function exportXlsx(){
     ['주의','중립금리 추정은 모형·표본에 따라 불확실성이 큼. 한국 BEI는 물가연동국고채 유동성 제약 유의. 연구·교육 목적.']];
   // Sheet: 한미일 비교
   let cmpSheet=null;
-  const cs=S.coEst||{};const haveC=COMP_CURS.filter(c=>cs[c]);
+  const cs=S.coEst||{};const haveC=['KRW','USD','JPY'].filter(c=>cs[c]);
   if(haveC.length>=2){
     const piFix=parseFloat(document.getElementById('piLR').value)||2.0;
     const piAt=(c,i)=>{const b=cs[c].beiS[i];return isFinite(b)?b:piFix;};
     const baseC=haveC.reduce((a,b)=>cs[a].dates.length>=cs[b].dates.length?a:b);
     const dC=cs[baseC].dates;
     const mapsC={};haveC.forEach(c=>{const mm=new Map();cs[c].dates.forEach((d,i)=>mm.set(d,i));mapsC[c]=mm;});
-    const nm={KRW:'한국',USD:'미국',JPY:'일본',EUR:'유로존',GBP:'영국',AUD:'호주',CAD:'캐나다'};
+    const nm={KRW:'한국',USD:'미국',JPY:'일본'};
     const hd=['날짜'];haveC.forEach(c=>hd.push(nm[c]+' 실질(시장)',nm[c]+' 실질(TP조정)'));
     const rowsC=[hd];
     for(let t=0;t<dC.length;t++){
@@ -2729,7 +2733,7 @@ function exportXlsx(){
         row.push(i==null?null:cs[c].mkt55S[i]-piAt(c,i), i==null?null:cs[c].rn55S[i]-piAt(c,i));});
       rowsC.push(row);
     }
-    const colsC={KRW:'1F3A6E',USD:'7A4F9E',JPY:'A23B3B',EUR:'B07D2B',GBP:'2F6F6B',AUD:'8A5A78',CAD:'6B7488'};
+    const colsC={KRW:'1F3A6E',USD:'7A4F9E',JPY:'A23B3B'};
     const serC=[];haveC.forEach((c,k)=>{serC.push({col:2+k*2,name:nm[c]+' 실질(시장)',color:colsC[c]});
       serC.push({col:3+k*2,name:nm[c]+' 실질(TP조정)',color:colsC[c],dash:true});});
     cmpSheet={name:'한미일_비교',rows:rowsC,widths:[11,...Array(haveC.length*2).fill(13)],
@@ -2776,7 +2780,7 @@ function exportXlsx(){
       for(let t=0;t<bd.length;t++){
         rowsCC.push([bd[t],...ccs.map(cc=>{const v=alignByDates([bd[t]],allC[cc].dates,allC[cc][keyC])[0];return isFinite(v)?v:null;})]);
       }
-      const colsC2={KRW:'1F3A6E',USD:'7A4F9E',JPY:'A23B3B',EUR:'B07D2B',GBP:'2F6F6B',AUD:'8A5A78',CAD:'6B7488',DATA:'16213A'};
+      const colsC2={KRW:'1F3A6E',USD:'7A4F9E',JPY:'A23B3B',DATA:'16213A'};
       compCompSheet={name:'구성요인비교_'+matLbl(nC),rows:rowsCC,widths:[11,...Array(ccs.length).fill(12)],
         chart:{title:`${COMP_LBL[keyC]} (${matLbl(nC)}) 국가 비교`,anchor:{c1:ccs.length+2,r1:1,c2:ccs.length+15,r2:24},
           seriesDefs:ccs.map((cc,i)=>({col:2+i,name:nm2(cc),color:colsC2[cc]||'444444'}))}};
@@ -2832,13 +2836,13 @@ function exportXlsx(){
 /* =================== GitHub 저장소 연동 =================== */
 // 토큰은 이 파일에 저장되지 않습니다. 사용자가 세션마다 붙여넣으며, 브라우저 메모리(입력칸)에만 유지되고
 // 새로고침하면 사라집니다. fine-grained PAT(해당 저장소 한정, Contents: Read-only) 사용을 권장합니다.
-const GH_CFG={owner:'jeongmmo',repo:'research-data',path:'data_20260611.xlsx',ref:''};
+const GH_CFG={owner:'jeongmmo',repo:'research-data',path:'data/data_bb.xlsx',ref:''};
 const GH_DATA_EXT=/\.(xlsx|xlsm|csv|tsv|txt)$/i;
 function ghCtx(){ // 현재 입력값 → 접속 정보 (공통)
-  return {o:document.getElementById('ghOwner').value.trim(),
-          r:document.getElementById('ghRepo').value.trim(),
+  return {o:(window.GHCommon?GHCommon.field('ghOwner'):document.getElementById('ghOwner').value).trim(),
+          r:(window.GHCommon?GHCommon.field('ghRepo'):document.getElementById('ghRepo').value).trim(),
           ref:document.getElementById('ghRef').value.trim(),
-          tok:document.getElementById('ghToken').value.trim()};
+          tok:(window.GHCommon?GHCommon.field('ghToken'):document.getElementById('ghToken').value).trim()};
 }
 function ghHeaders(tok){
   const h={'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
@@ -2925,23 +2929,16 @@ document.getElementById('ghLoadBtn').addEventListener('click',()=>{
 
 /* =================== Bloomberg forward-rate xlsx ingestion =================== */
 const BBG_CURVE={'G0025':'USD','G0173':'KRW','G0018':'JPY','G0016':'EUR','G0007':'CAD','G0251':'MXN'};
-const COMP_CURS=['KRW','USD','JPY','EUR','GBP','AUD','CAD'];
 const BBG_SPECIAL={USD:{spot1y:/H15T1Y/i,short3m:/USGG3M INDEX/i,bei10:/USGGBE10/i,policy:/FDTR/i},
                    KRW:{spot1y:/KBPMM1yr/i,short3m:/GVSK3M/i,bei10:/KWGGBE/i,policy:/KORP7D/i},
                    JPY:{short3m:/GTJPY3M/i,bei10:/JYGGBE10/i,policy:/BOJDPBAL/i},
-                   EUR:{short3m:/GTDEM3M/i,policy:/EURR002W/i},
-                   GBP:{short3m:/GUKG3M/i,policy:/UKBRBASE/i},
-                   AUD:{short3m:/GTAUD3M/i,policy:/RBATCTR/i,bei10:/ADGGBE10/i},
-                   CAD:{short3m:/GTCAD3M/i,policy:/CABROVER/i}};
+                   EUR:{short3m:/GTDEM3M/i,policy:/EURR002W/i}};
 // 스팟 국채커브 카탈로그: [만기(개월), 티커 정규식]
 const BBG_SPOT={
   USD:[[3,/USGG3M INDEX/i],[6,/USGG6M/i],[12,/USGG12M/i],[24,/USGG2YR/i],[36,/USGG3YR/i],[60,/USGG5YR/i],[84,/USGG7YR/i],[120,/USGG10YR/i],[240,/USGG20YR/i],[360,/USGG30YR/i]],
   KRW:[[3,/GVSK3M/i],[6,/GVSK6M/i],[9,/KBGBG09M/i],[12,/GVSK1Y/i],[18,/KBGBG18M/i],[24,/GVSK2Y/i],[30,/KBGBG30M/i],[36,/GVSK3Y/i],[48,/KBGBG04Y/i],[60,/GVSK5Y/i],[84,/KBGBG07Y/i],[120,/GVSK10Y/i],[180,/KBGBG15Y/i],[240,/GVSK20Y/i],[360,/GVSK30Y/i]],
   JPY:[[3,/GTJPY3M/i],[6,/GTJPY6M/i],[12,/GTJPY1Y/i],[24,/GTJPY2Y/i],[36,/GTJPY3Y/i],[60,/GTJPY5Y/i],[84,/GTJPY7Y/i],[120,/GTJPY10Y/i],[240,/GTJPY20Y/i],[360,/GTJPY30Y/i]],
-  EUR:[[3,/GTDEM3M/i],[12,/GTDEM1Y/i],[24,/GTDEM2Y/i],[36,/GTDEM3Y/i],[60,/GTDEM5Y/i],[84,/GTDEM7Y/i],[120,/GTDEM10Y/i],[240,/GTDEM20Y/i],[360,/GTDEM30Y/i]],
-  GBP:[[3,/GUKG3M/i],[12,/GUKG1 /i],[24,/GUKG2 /i],[36,/GUKG3 /i],[60,/GUKG5 /i],[84,/GUKG7 /i],[120,/GUKG10 /i],[360,/GUKG30 /i]],
-  AUD:[[3,/GTAUD3M/i],[12,/GTAUD1Y/i],[24,/GTAUD2Y/i],[36,/GTAUD3Y/i],[60,/GTAUD5Y/i],[84,/GTAUD7Y/i],[120,/GTAUD10Y/i],[360,/GTAUD30Y/i]],
-  CAD:[[3,/GTCAD3M/i],[12,/GTCAD1Y/i],[24,/GTCAD2Y/i],[36,/GTCAD3Y/i],[60,/GTCAD5Y/i],[84,/GTCAD7Y/i],[120,/GTCAD10Y/i],[360,/GTCAD30Y/i]]};
+  EUR:[[3,/GTDEM3M/i],[12,/GTDEM1Y/i],[24,/GTDEM2Y/i],[36,/GTDEM3Y/i],[60,/GTDEM5Y/i],[84,/GTDEM7Y/i],[120,/GTDEM10Y/i],[240,/GTDEM20Y/i],[360,/GTDEM30Y/i]]};
 function smpRange(){ // [from,to] as 'YYYY-MM' strings ('' = open)
   const f=(document.getElementById('smpFrom')||{}).value||'';
   const t=(document.getElementById('smpTo')||{}).value||'';
@@ -3018,7 +3015,7 @@ function ingestXlsx(u8){
   document.getElementById('bbgInfo').textContent=
     `시트 '${sn}' · 월별 ${dates.length}개 관측 (${dates[0]} ~ ${dates[dates.length-1]}) · 통화: ${have.join(', ')}`+
     (Object.keys(spot).length?` · 스팟커브: ${Object.keys(spot).map(c=>c+'('+Object.keys(spot[c]).length+'만기)').join(' ')}`:'')+
-    COMP_CURS.filter(c=>special[c]&&special[c].bei10).map(c=>' · '+c+' BEI').join('')+
+    ['KRW','USD','JPY'].filter(c=>special[c]&&special[c].bei10).map(c=>' · '+c+' BEI').join('')+
     (Object.keys(special).filter(c=>special[c].policy).length?' · 정책금리 연결':'');
   document.getElementById('bbgPick').style.display='block';
   document.getElementById('mapWrap').style.display='none';
@@ -3094,7 +3091,7 @@ function bbgBookEntry(cc){ // 곡선 구성 + 표본 클립 → book entry (or n
 function bbgApply(){
   const cur=document.getElementById('bbgCur').value;
   // 모든 가용 통화를 일괄 준비 (선택 통화 + KRW/USD/JPY)
-  const want=[...new Set([cur,...COMP_CURS])].filter(c=>BBG.fwd[c]||(BBG.spot&&BBG.spot[c]));
+  const want=[...new Set([cur,'KRW','USD','JPY','EUR'])].filter(c=>BBG.fwd[c]||(BBG.spot&&BBG.spot[c]));
   S.book={};
   want.forEach(cc=>{try{const e=bbgBookEntry(cc);if(e)S.book[cc]=e;}catch(err){console.warn(cc,err);}});
   if(!S.book[cur]){status('선택한 표본기간의 관측치가 24개 미만입니다. 표본 시작/종료를 조정하세요.','warn');return;}
@@ -3215,7 +3212,7 @@ document.getElementById('exportXlsxBtn5').addEventListener('click',exportXlsx);
 document.getElementById('bootBtn').addEventListener('click',runBoot);
 ['curSel','curSel2','curSel3','curSel4','curSel5'].forEach(id=>document.getElementById(id).addEventListener('change',e=>setActiveCur(e.target.value)));
 document.getElementById('cmpCompSel').addEventListener('change',renderCompComp);
-const IMF_ISO={KRW:'KOR',USD:'USA',JPY:'JPN',GBP:'GBR',AUD:'AUS',CAD:'CAN'};
+const IMF_ISO={KRW:'KOR',USD:'USA',JPY:'JPN'};
 async function fetchIMFGap(){
   const st=document.getElementById('hlwStatus');
   const iso=IMF_ISO[S.activeCur];

@@ -55,6 +55,7 @@
   button.ghost:hover{border-color:var(--accent);color:var(--accent);}
   ol.steps{font-size:.88rem;color:var(--ink2);margin:8px 0 0;padding-left:20px;}
 </style>
+  <script src="./common.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -73,18 +74,17 @@
       <span><label>전망 기준일</label><input type="date" id="fdate"></span>
       <button class="ghost" id="btnFillMean">스프레드를 10년 평균으로 채우기</button>
       <button class="ghost" id="btnFillCur">스프레드를 현재값으로 채우기</button>
-      <button class="primary" id="btnExport">전망 내보내기 — forecasts.xlsx 갱신본 다운로드</button>
+      <button class="primary" id="btnPush">전망 반영 — GitHub에 바로 커밋</button>
+      <button class="ghost" id="btnExport">파일로 받기 (.xlsx)</button>
     </div>
     <ol class="steps">
-      <li>다운로드된 forecasts.xlsx를 <b>research-data 저장소의 data/ 폴더</b>에 덮어쓰기 업로드(Add file → Upload files)</li>
-      <li>커밋되면 Actions가 자동 실행 → 1~2분 뒤 <a href="forecast_tracker.html">전망 적중도 추적</a>에 새 빈티지가 반영됩니다</li>
+      <li>"전망 반영"을 누르면 기존 전망과 병합해 data/forecasts.xlsx로 <b>직접 커밋</b>됩니다 (쓰기 권한 토큰 필요)</li>
+      <li>커밋 즉시 Actions가 자동 실행 → 1~2분 뒤 <a href="forecast_tracker.html">전망 적중도 추적</a>에 새 빈티지 반영 — 아래에서 반영 완료를 자동 확인합니다</li>
     </ol>
     <p class="tnote">기존 전망은 모두 보존되고, 같은 (기준일·변수·타깃) 조합만 새 값으로 교체됩니다.
       입력칸이 노란색이면 과거 10년 평균에서 ±1.5σ를 벗어난 값이라는 표시일 뿐, 입력은 자유입니다.</p>
   </div>
 </div>
-
-<script src="./common.js"></script>
 <script>
 (async function(){
   "use strict";
@@ -211,10 +211,10 @@
     return rows;
   }
 
-  async function exportXlsx(){
+  async function buildMerged(){
     var rows=collectRows();
-    if(!rows)return;
-    if(!rows.length){alert("내보낼 전망값이 없습니다 — 입력을 확인하세요.");return;}
+    if(!rows)return null;
+    if(!rows.length){alert("내보낼 전망값이 없습니다 — 입력을 확인하세요.");return null;}
     status.className="busy"; status.textContent="기존 forecasts.xlsx 불러와 병합 중 …";
     var existing=[];
     try{
@@ -229,7 +229,7 @@
       }).filter(function(r){return r.variable&&r.target&&isFinite(r.value);});
     }catch(e){
       if(!confirm("저장소의 data/forecasts.xlsx를 불러오지 못했습니다("+e.message+").\n기존 전망 없이 새 파일로 만들까요?"))
-        {status.className="err";status.textContent="내보내기 취소됨";return;}
+        {status.className="err";status.textContent="취소됨";return null;}
     }
     var key=function(r){return r.forecast_date+"|"+r.variable+"|"+r.target;};
     var newKeys={}; rows.forEach(function(r){newKeys[key(r)]=1;});
@@ -241,11 +241,57 @@
     var ws=XLSX.utils.json_to_sheet(merged,{header:["forecast_date","variable","target","value"]});
     var out=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(out,ws,"forecasts");
-    XLSX.writeFile(out,"forecasts.xlsx");
+    return {wb:out, merged:merged, existing:existing, rows:rows};
+  }
+
+  async function exportXlsx(){
+    var b=await buildMerged(); if(!b)return;
+    XLSX.writeFile(b.wb,"forecasts.xlsx");
     status.className="ok";
-    status.textContent="완료 — 기존 "+existing.length+"건 유지(중복 "+
-      (existing.length+rows.length-merged.length)+"건 교체) + 신규 포함 총 "+merged.length+
-      "건. 내려받은 forecasts.xlsx를 research-data의 data/에 업로드하세요.";
+    status.textContent="파일 저장 완료 — 총 "+b.merged.length+"건. research-data의 data/에 업로드하면 자동 평가됩니다.";
+  }
+
+  async function pushToGitHub(){
+    var b=await buildMerged(); if(!b)return;
+    var fdate=$("fdate").value;
+    status.className="busy"; status.textContent="GitHub에 커밋 중 …";
+    try{
+      var b64=XLSX.write(b.wb,{type:"base64",bookType:"xlsx"});
+      var cfg=GHCommon.currentConfig();
+      await GHCommon.putFile(cfg,"data/forecasts.xlsx",b64,
+        "forecast: "+fdate+" 전망 입력 ("+b.rows.length+"건, 입력기)");
+      status.className="ok";
+      status.textContent="커밋 완료 — 총 "+b.merged.length+"건(신규·교체 "+b.rows.length+
+        "건). Actions가 자동 실행 중입니다 … 반영 확인 중";
+      pollUntilUpdated();
+    }catch(e){
+      status.className="err";
+      status.innerHTML="자동 반영 실패 — "+e.message+
+        "<br>토큰이 읽기 전용이면: GitHub → Settings → Developer settings → Fine-grained tokens에서 "+
+        "research-data 한정·<b>Contents: Read and write</b> 토큰을 만들어 포털에서 교체 입력하세요. "+
+        "임시로는 옆의 \"파일로 받기\"로 받아 직접 업로드해도 됩니다.";
+    }
+  }
+
+  /* 커밋 후 Actions 완료를 manifest 생성시각으로 확인 (15초 간격, 최대 4분) */
+  async function pollUntilUpdated(){
+    var cfg=GHCommon.currentConfig();
+    var t0=Date.now();
+    var before=null;
+    try{ before=(await GHCommon.loadResults(cfg,"manifest")).generated_utc; }catch(e){}
+    var timer=setInterval(async function(){
+      var elapsed=Math.round((Date.now()-t0)/1000);
+      if(elapsed>240){clearInterval(timer);
+        status.textContent+=" — 4분 내 확인 못함: research-data Actions 탭에서 상태를 확인하세요.";return;}
+      try{
+        var m=await GHCommon.loadResults(cfg,"manifest");
+        if(m.generated_utc!==before){
+          clearInterval(timer);
+          status.className="ok";
+          status.innerHTML="반영 완료 ("+elapsed+"초) — <a href=\"forecast_tracker.html\">전망 적중도 추적</a>에서 새 빈티지를 확인하세요.";
+        } else { status.textContent=status.textContent.replace(/ \(\d+초\)$/,"")+" ("+elapsed+"초)"; }
+      }catch(e){}
+    },15000);
   }
 
   try{
@@ -261,6 +307,7 @@
     $("btnFillMean").addEventListener("click",function(){fillSpreads("mean");});
     $("btnFillCur").addEventListener("click",function(){fillSpreads("current");});
     $("btnExport").addEventListener("click",exportXlsx);
+    $("btnPush").addEventListener("click",pushToGitHub);
     status.textContent="참고 기준일 "+STATS.as_of+" · 통계 윈도우 "+STATS.window[0]+" ~ "+STATS.window[1]+
       " · 전망 대상: 오늘부터 6개 분기 ("+QUARTERS[0]+" ~ "+QUARTERS[QUARTERS.length-1]+")";
     status.className="";
