@@ -133,6 +133,10 @@
 <script src="./common.js"></script>
 </head>
 <body>
+<div style="font-family:'Times New Roman',Times,serif;font-size:.88rem;background:#ffffff;border-bottom:1px solid #d9dde6;padding:7px 28px;">
+  <a href="index.html" style="color:#1f3a6e;text-decoration:none;">&#8592; 포털로 돌아가기</a>
+  <span style="color:#6b7488;font-style:italic;margin-left:14px;">Research Workbench</span>
+</div>
 <div class="wrap">
 
   <header class="mast">
@@ -799,13 +803,16 @@ function buildPreview(){
 function matLbl(m){return m%12===0?(m/12)+'Y':(m+'M');}
 
 /* =================== Charting (canvas, Times New Roman, white bg) =================== */
-function setup(cv){const dpr=window.devicePixelRatio||1;const w=cv.width,hh=cv.height;
+function setup(cv){
+  // 화면 DPR과 무관하게 최소 2.5배 해상도로 렌더(고해상도 디스플레이면 그 배율 사용, 상한 3)
+  const dpr=Math.min(3,Math.max(2.5,window.devicePixelRatio||1));
+  const w=cv._w||cv.width,hh=cv._h||cv.height;
   cv.style.width='100%';const ctx=cv.getContext('2d');
-  // use intrinsic resolution; scale by dpr for crispness
-  if(cv.dataset.dpr!=='1'){cv.width=w*dpr;cv.height=hh*dpr;cv.dataset.dpr='1';cv._w=w;cv._h=hh;ctx.scale(dpr,dpr);}
-  else{ctx.setTransform(dpr,0,0,dpr,0,0);}
+  // 논리 크기(_w,_h)를 기준으로 백킹 스토어를 dpr배 확대 → 선명도 향상
+  if(cv.dataset.dpr!==String(dpr)){cv._w=w;cv._h=hh;cv.width=Math.round(w*dpr);cv.height=Math.round(hh*dpr);cv.dataset.dpr=String(dpr);}
+  ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,w,hh);ctx.fillStyle='#fff';ctx.fillRect(0,0,w,hh);
-  return {ctx,w:cv._w||w,h:cv._h||hh};
+  return {ctx,w:w,h:hh,dpr:dpr};
 }
 function niceTicks(min,max,n){const span=max-min||1;let step=Math.pow(10,Math.floor(Math.log10(span/n)));
   const err=span/n/step;if(err>=7.5)step*=10;else if(err>=3.5)step*=5;else if(err>=1.5)step*=2;
@@ -830,31 +837,40 @@ function xlabels(ctx,A,labels,m,w,h,max){
 }
 
 /* ----- 차트 호버 툴팁 (각 시점 수치 확인) ----- */
-function attachHover(cv,meta){ // meta:{xlab, items(i)=>[{name,val,color}], px:(i)=>x, plotL,plotR, redraw}
+function attachHover(cv,meta){ // meta:{xlab, items(i)=>[{name,val,color}], px:(i)=>x, plotL,plotR,plotT,plotB, redraw, py?:(i,item)=>y}
   cv.__hover=meta;
   if(cv.__hoverBound)return;cv.__hoverBound=true;
   const tip=document.createElement('div');
   tip.style.cssText='position:fixed;display:none;z-index:99;background:rgba(255,255,255,0.97);border:1px solid #c9ceda;'+
-    'box-shadow:0 2px 8px rgba(22,33,58,0.15);padding:7px 11px;font:12px "Times New Roman",serif;color:#16213a;pointer-events:none;line-height:1.5;';
+    'box-shadow:0 2px 8px rgba(22,33,58,0.15);padding:7px 11px;font:12px "Times New Roman",serif;color:#16213a;pointer-events:none;line-height:1.5;white-space:nowrap;';
   document.body.appendChild(tip);
+  cv.style.cursor='crosshair';
   cv.addEventListener('mousemove',e=>{
     const M=cv.__hover;if(!M)return;
     const r=cv.getBoundingClientRect();
-    const x=(e.clientX-r.left)*(cv.width/r.width);
-    if(x<M.plotL||x>M.plotR){tip.style.display='none';M.redraw();return;}
+    // 마우스 X를 '논리 좌표'(_w 기준)로 변환 — 백킹스토어가 dpr배여도 정확
+    const x=(e.clientX-r.left)*((cv._w||cv.width)/r.width);
+    if(x<M.plotL-2||x>M.plotR+2){tip.style.display='none';M.redraw();return;}
     const n=M.xlab.length;
-    const i=Math.max(0,Math.min(n-1,Math.round((x-M.plotL)/(M.plotR-M.plotL)*(n-1))));
+    const i=Math.max(0,Math.min(n-1,Math.round((x-M.plotL)/((M.plotR-M.plotL)||1)*(n-1))));
     M.redraw();
     const ctx=cv.getContext('2d');
     const gx=M.px(i);
     ctx.save();ctx.strokeStyle='#9aa3b5';ctx.setLineDash([4,3]);ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(gx,M.plotT);ctx.lineTo(gx,M.plotB);ctx.stroke();ctx.restore();
+    ctx.beginPath();ctx.moveTo(gx,M.plotT);ctx.lineTo(gx,M.plotB);ctx.stroke();ctx.setLineDash([]);
     const items=M.items(i).filter(it=>isFinite(it.val));
+    // 각 시리즈 값 위치에 점 마커
+    if(M.py){items.forEach(it=>{const y=M.py(i,it);if(isFinite(y)){ctx.fillStyle=it.color;ctx.beginPath();ctx.arc(gx,y,3.2,0,7);ctx.fill();
+      ctx.strokeStyle='#fff';ctx.lineWidth=1.1;ctx.stroke();}});}
+    ctx.restore();
     tip.innerHTML=`<b>${M.xlab[i]}</b><br>`+items.map(it=>
-      `<span style="color:${it.color}">●</span> ${it.name}: <b>${it.val.toFixed(2)}</b>`).join('<br>');
+      `<span style="color:${it.color}">●</span> ${it.name}: <b>${it.val.toFixed(it.dp!=null?it.dp:2)}</b>`).join('<br>');
     tip.style.display='block';
-    tip.style.left=Math.min(window.innerWidth-220,e.clientX+14)+'px';
-    tip.style.top=Math.max(8,e.clientY-10)+'px';
+    // 커서 오른쪽에 두되, 화면 밖으로 나가면 왼쪽으로
+    const tw=tip.offsetWidth||200,th=tip.offsetHeight||40;
+    let lx=e.clientX+14;if(lx+tw>window.innerWidth-6)lx=e.clientX-tw-14;
+    let ly=e.clientY-10;if(ly+th>window.innerHeight-6)ly=window.innerHeight-th-6;if(ly<6)ly=6;
+    tip.style.left=lx+'px';tip.style.top=ly+'px';
   });
   cv.addEventListener('mouseleave',()=>{tip.style.display='none';if(cv.__hover)cv.__hover.redraw();});
 }
@@ -902,8 +918,8 @@ function drawLineChart(cv,series,xlab,opt){ // series:[{name,data:[],color,dash}
   xlabels(ctx,A,xlab,A.m,w,h,opt.xmax||8);
   inLegend(ctx,w,A,[...series.map(s2=>({name:s2.name,color:s2.color,dash:!!s2.dash})),
     ...(opt.band?[{name:opt.band.label||'90% 신뢰대',color:opt.band.color||'rgba(162,59,59,0.35)',fill:true}]:[])].filter(it=>it.name));
-  attachHover(cv,{xlab,px:A.px,plotL:A.m.l,plotR:w-A.m.r,plotT:A.m.t,plotB:h-A.m.b,
-    items:i=>series.map(s2=>({name:s2.name||'',val:s2.data[i],color:s2.color})),
+  attachHover(cv,{xlab,px:A.px,py:(i,it)=>A.py(it._d[i]),plotL:A.m.l,plotR:w-A.m.r,plotT:A.m.t,plotB:h-A.m.b,
+    items:i=>series.map(s2=>({name:s2.name||'',val:s2.data[i],color:s2.color,_d:s2.data})),
     redraw:()=>drawLineChart(cv,series,xlab,opt)});
 }
 function drawGroupedBars(cv,series,xlab,opt){ // grouped signed bars per series
@@ -999,6 +1015,15 @@ function drawStacked(cv,layers,baseline,xlab,opt){ // layers:[{name,data,color}]
   if(opt.total){ctx.strokeStyle='#16213a';ctx.lineWidth=1.6;ctx.beginPath();let st=false;
     opt.total.forEach((v,i)=>{if(!isFinite(v))return;const x=A.px(i),y=A.py(v);st?ctx.lineTo(x,y):(ctx.moveTo(x,y),st=true);});ctx.stroke();}
   xlabels(ctx,A,xlab,A.m,w,h,opt.xmax||8);
+  // 호버: 각 레이어 기여분 + (있으면) 합계
+  attachHover(cv,{
+    xlab:xlab,
+    px:i=>A.px(i),
+    plotL:A.m.l,plotR:w-A.m.r,plotT:A.m.t,plotB:h-A.m.b,
+    items:i=>{const arr=layers.map(L=>({name:L.name,val:L.data[i],color:L.color}));
+      if(opt.total)arr.push({name:opt.totalName||'합계',val:opt.total[i],color:'#16213a'});return arr;},
+    redraw:()=>drawStacked(cv,layers,baseline,xlab,opt)
+  });
 }
 function drawCurveSet(cv,curves,xs,opt){ // curves:[{name,ys,color,dash,dots}] xs=maturities(months)
   opt=opt||{};const {ctx,w,h}=setup(cv);
@@ -1013,6 +1038,15 @@ function drawCurveSet(cv,curves,xs,opt){ // curves:[{name,ys,color,dash,dots}] x
   // x labels in years
   ctx.fillStyle='#6b7488';ctx.font='11.5px "Times New Roman",serif';ctx.textAlign='center';ctx.textBaseline='top';
   niceTicks(0,xmax/12,6).forEach(yr=>{const mo=yr*12;if(mo>xmax+1)return;ctx.fillText(yr+'Y',A.px(mo),h-A.m.b+7);});
+  // 호버: 만기별 각 곡선 값
+  attachHover(cv,{
+    xlab:xs.map(mo=>mo%12===0?(mo/12)+'Y':mo+'M'),
+    px:i=>A.px(xs[i]),
+    py:(i,it)=>A.py(it._ys[i]),
+    plotL:A.m.l,plotR:w-A.m.r,plotT:A.m.t,plotB:h-A.m.b,
+    items:i=>curves.map(c=>({name:c.name,val:c.ys[i],color:c.color,_ys:c.ys})),
+    redraw:()=>drawCurveSet(cv,curves,xs,opt)
+  });
 }
 function legend(elId,items){const el=document.getElementById(elId);if(el)el.innerHTML='';} // 범례는 차트 내부에 직접 표시
 
@@ -1304,6 +1338,14 @@ function drawLineChartMonths(id,months,vals,ylab){
   ctx.strokeStyle=PAL.ntp;ctx.lineWidth=2;ctx.beginPath();months.forEach((mo,i)=>{const x=A.px(mo),y=A.py(vals[i]);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();
   ctx.fillStyle='#6b7488';ctx.font='11.5px "Times New Roman",serif';ctx.textAlign='center';ctx.textBaseline='top';
   niceTicks(0,Math.max(...months)/12,6).forEach(yr=>{const mo=yr*12;if(mo>Math.max(...months)+1)return;ctx.fillText(yr+'Y',A.px(mo),h-A.m.b+7);});
+  attachHover(cv,{
+    xlab:months.map(mo=>mo%12===0?(mo/12)+'Y':mo+'M'),
+    px:i=>A.px(months[i]),
+    py:i=>A.py(vals[i]),
+    plotL:A.m.l,plotR:w-A.m.r,plotT:A.m.t,plotB:h-A.m.b,
+    items:i=>[{name:ylab.replace(/\s*\(.*\)/,''),val:vals[i],color:PAL.ntp}],
+    redraw:()=>drawLineChartMonths(id,months,vals,ylab)
+  });
 }
 function card(lab,val,pct,hint,lead){return `<div class="card${lead?' lead':''}"><p class="lab">${lab}</p>
   <div class="val">${val}<span class="pct">${pct||''}</span></div>${hint?`<p class="hint">${hint}</p>`:''}</div>`;}
@@ -1737,6 +1779,16 @@ function drawPath(cv,nomPath,realPath,rstar){
     ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();p.forEach((v,i)=>{const x=A.px(i),y=A.py(v);i?ctx.lineTo(x,y):ctx.moveTo(x,y);});ctx.stroke();});
   ctx.fillStyle='#6b7488';ctx.font='11.5px "Times New Roman",serif';ctx.textAlign='center';ctx.textBaseline='top';
   niceTicks(0,H/12,6).forEach(y=>{const mo=y*12;if(mo>H+1)return;ctx.fillText(y+'Y',A.px(mo),h-A.m.b+7);});
+  attachHover(cv,{
+    xlab:nomPath.map((_,i)=>i%12===0?(i/12)+'Y':i+'M'),
+    px:i=>A.px(i),
+    py:(i,it)=>A.py(it._p[i]),
+    plotL:A.m.l,plotR:w-A.m.r,plotT:A.m.t,plotB:h-A.m.b,
+    items:i=>[{name:'명목',val:nomPath[i],color:PAL.exp,_p:nomPath},
+              {name:'실질',val:realPath[i],color:PAL.real2,_p:realPath},
+              {name:'r*',val:rstar,color:PAL.rstar,_p:nomPath.map(()=>rstar)}],
+    redraw:()=>drawPath(cv,nomPath,realPath,rstar)
+  });
 }
 function tableIdxs(n,k){const out=[];const step=Math.max(1,Math.floor(n/k));for(let i=0;i<n;i+=step)out.push(i);if(out[out.length-1]!==n-1)out.push(n-1);return out;}
 
@@ -2594,6 +2646,14 @@ function drawTaylorBars(cv,comps){
     // x label
     ctx.fillStyle='#6b7488';ctx.font='12px "Times New Roman",serif';ctx.textBaseline='top';
     ctx.fillText(c.t,x,h-m.b+8);});
+  attachHover(cv,{
+    xlab:comps.map(c=>c.t),
+    px:i=>px(i),
+    py:i=>py(comps[i].v),
+    plotL:m.l,plotR:w-m.r,plotT:m.t,plotB:h-m.b,
+    items:i=>[{name:comps[i].t,val:comps[i].v,color:comps[i].c}],
+    redraw:()=>drawTaylorBars(cv,comps)
+  });
 }
 
 function exportXlsx(){
