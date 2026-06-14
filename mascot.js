@@ -12,7 +12,7 @@
 
   function computeXP(data) {
     var recs = (data && data.records) || [];
-    var xp = 0, hits = 0, evaluated = 0, precise = 0, misses = 0, relieved = 0;
+    var xp = 0, hits = 0, evaluated = 0, precise = 0, misses = 0, relieved = 0, beatRW = 0;
     recs.forEach(function (r) {
       if (r.error === null || r.error === undefined) return;
       evaluated++;
@@ -30,6 +30,11 @@
       else if (ae <= 1.00) { xp -= 1 * relief; }
       else if (ae <= 2.00) { xp -= 2 * relief; }
       else { xp -= 3 * relief; }
+      // 랜덤워크 격파 보너스: 무변화 가정보다 정확하면 +6 (진짜 실력의 신호)
+      if (r.anchor !== null && r.anchor !== undefined && r.realized !== null && r.realized !== undefined) {
+        var rwErr = Math.abs(r.realized - r.anchor);
+        if (ae < rwErr - 1e-9) { xp += 6; beatRW++; }
+      }
     });
     var FREE_REVISIONS = 5;
     var groups = {};
@@ -57,7 +62,7 @@
     if (xp < 0) xp = 0;
     return {
       xp: xp, evaluated: evaluated, hits: hits, precise: precise, misses: misses,
-      hitRate: evaluated ? hits / evaluated : 0, volRelieved: relieved,
+      hitRate: evaluated ? hits / evaluated : 0, volRelieved: relieved, beatRW: beatRW,
       revisions: revisions, rapidRevisions: rapidRevisions, revPenalty: revPenalty
     };
   }
@@ -153,8 +158,68 @@
     };
   }
 
+  /* ---------- 회귀 벤치마크 (구조 모델) ----------
+     툴킷의 회귀(예: 미국_10y = f(미국_3m, BEI))가 함의하는 값 vs 내 전망 vs 실현.
+     회귀 예측은 평가 시점의 '실현된 설명변수'로 계산 → 구조적 관계가 유지됐는지 측정.
+     tsData = us_term_structure.json (회귀 계수 + 월별 series 포함).
+     현재 미국_10y만 산출 가능(설명변수가 series에 모두 존재). */
+  function regBenchmark(data, tsData) {
+    var out = { available: false, variable: "미국_10y", rows: [], note: "" };
+    if (!tsData || !tsData.regressions || !tsData.series) { out.note = "회귀 결과 없음"; return out; }
+    var reg = null;
+    tsData.regressions.forEach(function (r) { if (r.y === "미국_10y") reg = r; });
+    if (!reg || !reg.coef) { out.note = "미국_10y 회귀 없음"; return out; }
+    var s = tsData.series, dates = s.dates, vals = s.values;
+    // 설명변수가 series에 모두 있는지
+    var Xs = reg.X.filter(function (x) { return x !== "const"; });
+    var ok = Xs.every(function (x) { return vals[x]; });
+    if (!ok) { out.note = "설명변수 series 부족"; return out; }
+    function at(v, d) { var i = dates.indexOf(d); return i >= 0 ? vals[v][i] : null; }
+    function predict(d) {
+      var p = reg.coef.const || 0, miss = false;
+      Xs.forEach(function (x) {
+        var xv = at(x, d);
+        if (xv === null || xv === undefined) miss = true;
+        else p += (reg.coef[x] || 0) * xv;
+      });
+      return miss ? null : p;
+    }
+    var recs = (data && data.records) || [];
+    var ev = recs.filter(function (r) {
+      return r.variable === "미국_10y" && r.realized !== null && r.realized !== undefined
+        && r.forecast !== null && r.forecast !== undefined;
+    });
+    var sumMy = 0, sumReg = 0, beatReg = 0, n = 0;
+    ev.forEach(function (r) {
+      var rp = predict(r.target_end);
+      if (rp === null) return;
+      var myErr = Math.abs(r.realized - r.forecast);
+      var regErr = Math.abs(r.realized - rp);
+      sumMy += myErr; sumReg += regErr; n++;
+      if (myErr < regErr - 1e-9) beatReg++;
+      out.rows.push({
+        target: r.target, date: r.forecast_date,
+        myForecast: r.forecast, regForecast: rp, realized: r.realized,
+        myErr: myErr, regErr: regErr
+      });
+    });
+    if (n > 0) {
+      out.available = true;
+      out.evaluated = n;
+      out.myMAE = sumMy / n;
+      out.regMAE = sumReg / n;
+      out.skillVsReg = sumReg > 0 ? 1 - (sumMy / sumReg) : 0;
+      out.beat = beatReg;
+      out.regName = reg.name;
+      out.r2 = reg.r2;
+    } else {
+      out.note = "평가 가능한 시점 없음";
+    }
+    return out;
+  }
+
   root.Mascot = {
     STAGES: STAGES, computeXP: computeXP, stageFor: stageFor,
-    progress: progress, xpTrend: xpTrend, rwBenchmark: rwBenchmark
+    progress: progress, xpTrend: xpTrend, rwBenchmark: rwBenchmark, regBenchmark: regBenchmark
   };
 })(window);

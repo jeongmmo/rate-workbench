@@ -161,6 +161,7 @@
         <div><div id="scMiss" style="font-size:1.3rem;font-weight:700;color:var(--bad);">—</div><div style="font-size:.7rem;color:var(--muted);">방향 오답</div></div>
         <div><div id="scRev" style="font-size:1.3rem;font-weight:700;color:var(--bad);">—</div><div style="font-size:.7rem;color:var(--muted);">번복 패널티</div></div>
         <div><div id="scVol" style="font-size:1.3rem;font-weight:700;color:var(--accent);">—</div><div style="font-size:.7rem;color:var(--muted);">변동성 경감</div></div>
+        <div><div id="scBeatRW" style="font-size:1.3rem;font-weight:700;color:#3c8a4a;">—</div><div style="font-size:.7rem;color:var(--muted);">랜덤워크 격파</div></div>
       </div>
       <!-- 등급 표 -->
       <div style="margin-top:16px;border-top:1px solid var(--line2);padding-top:12px;">
@@ -178,7 +179,7 @@
     <p style="font-size:.78rem;color:var(--muted);font-style:italic;margin:0 0 6px;">
       적중 +10 XP · 정밀(≤0.10%p) +8 — 빗나가면 차감(방향 −3, 큰 오차 −3)되어 등급이 <b>하락</b>합니다.
       단, 그 시기 금리 변동폭이 0.20%p 이상이면(<b>고변동 구간</b>) 오답 패널티를 절반만 부과합니다 — 요동친 장에서의 실패는 덜 가혹하게.
-      같은 전망을 6회 넘게 바꾸면 번복 패널티도 붙습니다. 등급은 7단계입니다.</p>
+      같은 전망을 6회 넘게 바꾸면 번복 패널티도 붙습니다. <b>랜덤워크(무변화 가정)보다 정확하면 +6 보너스</b> — 단순 정확도가 아니라 "벤치마크를 이겼는가"를 보상합니다. 등급은 7단계입니다.</p>
 
     <div id="rwPanel" style="border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(60,50,30,0.05);padding:20px 24px;margin:18px 0 8px;border-radius:2px;display:none;">
       <div style="font-variant:small-caps;letter-spacing:.08em;font-size:.74rem;color:var(--muted);margin-bottom:4px;">랜덤워크 대비 실력 (벤치마크)</div>
@@ -209,6 +210,29 @@
         <div style="font-variant:small-caps;letter-spacing:.08em;font-size:.72rem;color:var(--muted);margin-bottom:6px;">변수별 분해</div>
         <table class="grid" id="rwTable" style="font-size:.84rem;">
           <thead><tr><th class="lab">변수</th><th>건수</th><th>내 MAE</th><th>RW MAE</th><th>스킬</th><th>승률</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <!-- 회귀 벤치마크 (구조 모델) -->
+      <div id="regSection" style="margin-top:18px;border-top:1px solid var(--line2);padding-top:12px;display:none;">
+        <div style="font-variant:small-caps;letter-spacing:.08em;font-size:.72rem;color:var(--muted);margin-bottom:4px;">회귀 벤치마크 (구조 모델)</div>
+        <p style="font-size:.82rem;color:var(--ink2);margin:0 0 10px;" id="regDesc"></p>
+        <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px;">
+          <div>
+            <div style="font-variant:small-caps;font-size:.7rem;color:var(--muted);">스킬 vs 회귀</div>
+            <div id="regSkill" style="font-size:1.8rem;font-weight:700;line-height:1;">—</div>
+          </div>
+          <div>
+            <div style="font-variant:small-caps;font-size:.7rem;color:var(--muted);">회귀보다 정확</div>
+            <div style="font-size:.95rem;margin-top:4px;"><span id="regBeat" style="font-weight:700;color:#3c8a4a;">—</span> / <span id="regN">—</span>건</div>
+          </div>
+          <div>
+            <div style="font-variant:small-caps;font-size:.7rem;color:var(--muted);">MAE</div>
+            <div style="font-size:.95rem;margin-top:4px;">내 <b id="regMyMAE">—</b> · 회귀 <b id="regRegMAE">—</b></div>
+          </div>
+        </div>
+        <table class="grid" id="regTable" style="font-size:.84rem;">
+          <thead><tr><th class="lab">타깃</th><th>전망일</th><th>내 전망</th><th>회귀 전망</th><th>실현</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -558,6 +582,10 @@
   try{
     var cfg=GHCommon.currentConfig();
     var data=await GHCommon.loadResults(cfg,"forecast_eval");
+    // 회귀 벤치마크용 (없어도 무방)
+    var tsData=null;
+    try{ tsData=await GHCommon.loadResults(cfg,"us_term_structure"); }catch(e){ tsData=null; }
+    window.__tsData=tsData;
     status.textContent="생성 시각(UTC): "+data.generated_utc+" · 기준: "+data.convention+
       " · 시장데이터 최종일 "+data.market_last_obs+" · 전망 "+data.n_total+"건 중 평가 "+data.n_evaluated+"건";
     status.className="";
@@ -593,6 +621,7 @@
       $("scMiss").textContent=x.misses;
       $("scRev").textContent=x.revPenalty>0?("−"+x.revPenalty):"0";
       $("scVol").textContent=x.volRelieved+"건";
+      $("scBeatRW").textContent=(x.beatRW||0)+"건";
       // 등급 표
       var tiers=Mascot.STAGES.map(function(st){
         var cur=st.id===pr.stage.id;
@@ -655,6 +684,31 @@
           '<td>'+(p.winRate*100).toFixed(0)+'%</td></tr>';
       }).join("");
       $("rwPanel").style.display="";
+
+      // 회귀 벤치마크 (us_term_structure 있으면)
+      if(Mascot.regBenchmark && window.__tsData){
+        var rb=Mascot.regBenchmark(data, window.__tsData);
+        if(rb.available){
+          $("regDesc").textContent=rb.regName+" (R²="+rb.r2.toFixed(2)+") — "+rb.variable+"만 산출 가능. 회귀 예측은 평가 시점의 실현된 설명변수로 계산.";
+          $("regSkill").textContent=(rb.skillVsReg>=0?"+":"")+rb.skillVsReg.toFixed(2);
+          $("regSkill").style.color=rb.skillVsReg>0?"#3c8a4a":(rb.skillVsReg<0?"#a23b3b":"#6b7488");
+          $("regBeat").textContent=rb.beat;
+          $("regN").textContent=rb.evaluated;
+          $("regMyMAE").textContent=rb.myMAE.toFixed(3);
+          $("regRegMAE").textContent=rb.regMAE.toFixed(3);
+          var rtb=$("regTable").querySelector("tbody");
+          // 중복 타깃 제거(같은 타깃 여러 전망일 → 최신만)
+          var seen={};
+          rtb.innerHTML=rb.rows.filter(function(r){var k=r.target;if(seen[k])return false;seen[k]=1;return true;}).map(function(r){
+            return '<tr><td class="lab">'+r.target+'</td>'+
+              '<td>'+r.date.slice(2)+'</td>'+
+              '<td>'+r.myForecast.toFixed(2)+'</td>'+
+              '<td>'+r.regForecast.toFixed(2)+'</td>'+
+              '<td>'+r.realized.toFixed(2)+'</td></tr>';
+          }).join("");
+          $("regSection").style.display="";
+        }
+      }
     })();
     var allVars=[];data.records.forEach(function(r){if(allVars.indexOf(r.variable)<0)allVars.push(r.variable);});
     allVars.sort();
