@@ -98,11 +98,18 @@
         <div style="font-variant:small-caps;letter-spacing:.08em;font-size:.74rem;color:var(--muted);margin-bottom:8px;">등급 기준</div>
         <div id="scoreTiers" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
       </div>
+      <!-- 점수 추이 차트 -->
+      <div style="margin-top:16px;border-top:1px solid var(--line2);padding-top:12px;">
+        <div style="font-variant:small-caps;letter-spacing:.08em;font-size:.74rem;color:var(--muted);margin-bottom:8px;">점수 추이 (전망 제출 라운드별 누적 XP)</div>
+        <div style="background:#fff;border:1px solid var(--line2);border-radius:4px;padding:10px;">
+          <canvas id="scoreTrend" height="120"></canvas>
+        </div>
+      </div>
     </div>
     <p style="font-size:.78rem;color:var(--muted);font-style:italic;margin:0 0 6px;">
       적중 +10 XP · 정밀(≤0.10%p) +8 — 빗나가면 차감(방향 −3, 큰 오차 −3)되어 등급이 <b>하락</b>합니다.
       단, 그 시기 금리 변동폭이 0.20%p 이상이면(<b>고변동 구간</b>) 오답 패널티를 절반만 부과합니다 — 요동친 장에서의 실패는 덜 가혹하게.
-      같은 전망을 6회 넘게 바꾸면 번복 패널티도 붙습니다. 등급은 5단계입니다.</p>
+      같은 전망을 6회 넘게 바꾸면 번복 패널티도 붙습니다. 등급은 7단계입니다.</p>
 
     <h2 class="sec"><span class="num">§ 1</span>빈티지 차트</h2>
     <p class="secdesc">굵은 선=실현치, 가는 선=각 시점 전망 경로.</p>
@@ -209,7 +216,7 @@
       var x=Mascot.computeXP(data);
       var pr=Mascot.progress(x.xp);
       var nTiers=Mascot.STAGES.length;
-      var TIER=["브론즈","실버","골드","플래티넘","다이아"];
+      var TIER=["브론즈","실버","골드","플래티넘","다이아","마스터","그랜드마스터"];
       function tierName(id){ return TIER[id]||("Lv."+(id+1)); }
       // 메인 숫자
       $("scoreXP").textContent=x.xp;
@@ -245,6 +252,26 @@
           '</div>';
       }).join("");
       $("scoreTiers").innerHTML=tiers;
+
+      // 점수 추이 차트
+      var trend=Mascot.xpTrend(data);
+      if(trend.length>1){
+        var tierColors=["#a9783c","#9aa0a6","#d4a017","#6aa8e0","#7a5cd0","#c0392b","#16a085"];
+        // 등급 경계선(주석)
+        var maxStage=Mascot.STAGES.length;
+        var trendChart=new Chart($("scoreTrend"),{type:"line",
+          data:{labels:trend.map(function(p){return p.date.slice(2);}),
+            datasets:[{label:"누적 XP",data:trend.map(function(p){return p.xp;}),
+              borderColor:"#5aa9d6",backgroundColor:"rgba(90,169,214,0.12)",
+              borderWidth:2.4,pointRadius:3,pointBackgroundColor:trend.map(function(p){return tierColors[p.stage]||"#5aa9d6";}),
+              fill:true,tension:0.2}]},
+          options:{responsive:true,
+            plugins:{legend:{display:false},
+              tooltip:{callbacks:{afterLabel:function(ctx){return "등급 Lv."+(trend[ctx.dataIndex].stage+1)+" · 평가 "+trend[ctx.dataIndex].evaluated+"건";}}}},
+            scales:{x:{grid:{color:"#eceef3"},ticks:{font:{size:10}}},
+                    y:{grid:{color:"#eceef3"},title:{display:true,text:"누적 XP"},beginAtZero:true}},
+            backgroundColor:"#ffffff"}});
+      }
     })();
 
     var vars=Object.keys(data.summary_by_variable).sort();

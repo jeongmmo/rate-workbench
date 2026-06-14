@@ -1,7 +1,7 @@
 /* =====================================================================
    mascot.js — 전망 적중 점수 엔진 (숫자 표시용)
    적중하면 XP 상승(등급 상승), 빗나가면 차감(등급 하락).
-   5등급. computeXP/progress/STAGES 제공.
+   7등급. computeXP/progress/STAGES 제공.
    금리 변동성 큰 시기의 오답은 패널티 경감. window.Mascot 노출.
    ===================================================================== */
 (function (root) {
@@ -64,11 +64,13 @@
 
   /* 샴고양이 얼굴 5단계. glow=눈빛(파란 눈) */
   var STAGES = [
-    { id: 0, name: "잠꾸러기 샴", min: 0,    glow: "#60a0da" },
-    { id: 1, name: "뚠뚠 샴",     min: 200,  glow: "#60a0da" },
-    { id: 2, name: "방긋 샴",     min: 600,  glow: "#5a9ad6" },
-    { id: 3, name: "행복 샴",     min: 1300, glow: "#6aa8e0" },
-    { id: 4, name: "여왕 샴",     min: 2400, glow: "#7ab8ee" }
+    { id: 0, name: "Lv.1", min: 0,    glow: "#60a0da" },
+    { id: 1, name: "Lv.2", min: 150,  glow: "#60a0da" },
+    { id: 2, name: "Lv.3", min: 400,  glow: "#5a9ad6" },
+    { id: 3, name: "Lv.4", min: 800,  glow: "#6aa8e0" },
+    { id: 4, name: "Lv.5", min: 1400, glow: "#7ab8ee" },
+    { id: 5, name: "Lv.6", min: 2200, glow: "#7ab8ee" },
+    { id: 6, name: "Lv.7", min: 3400, glow: "#7ab8ee" }
   ];
 
   function stageFor(xp) {
@@ -92,8 +94,23 @@
     return out;
   }
 
+  /* ---------- 점수 추이: 전망 제출일(forecast_date) 누적 XP ----------
+     각 제출 라운드까지 누적된 데이터로 XP를 재계산 → 시간에 따른 점수 변화. */
+  function xpTrend(data) {
+    var recs = (data && data.records) || [];
+    var dates = {};
+    recs.forEach(function (r) { if (r.forecast_date) dates[r.forecast_date] = 1; });
+    var keys = Object.keys(dates).sort();
+    return keys.map(function (d) {
+      var sub = { records: recs.filter(function (r) { return r.forecast_date <= d; }) };
+      var x = computeXP(sub);
+      var pr = progress(x.xp);
+      return { date: d, xp: x.xp, stage: pr.stage.id, evaluated: x.evaluated };
+    });
+  }
+
   root.Mascot = {
     STAGES: STAGES, computeXP: computeXP, stageFor: stageFor,
-    progress: progress
+    progress: progress, xpTrend: xpTrend
   };
 })(window);
