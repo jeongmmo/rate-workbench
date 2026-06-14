@@ -95,7 +95,8 @@
     </div>
     <p style="font-size:.78rem;color:var(--muted);font-style:italic;margin:0 0 6px;">
       적중 +10 XP · 정밀(≤0.10%p) +8 — 빗나가면 차감(방향 −3, 큰 오차 −3)되어 전 단계로 <b>퇴화</b>합니다.
-      같은 전망을 6회 넘게 바꾸면 번복 패널티(−1~2)가 붙습니다.</p>
+      단, 그 시기 금리 변동폭이 0.20%p 이상이면(<b>고변동 구간</b>) 오답 패널티를 절반만 부과합니다 — 요동친 장에서의 실패는 덜 가혹하게.
+      같은 전망을 6회 넘게 바꾸면 번복 패널티도 붙습니다. 임수룡은 5단계로 진화합니다.</p>
 
     <h2 class="sec"><span class="num">§ 1</span>빈티지 차트</h2>
     <p class="secdesc">굵은 선=실현치, 가는 선=각 시점 전망 경로.</p>
@@ -203,25 +204,26 @@
       var pr=Mascot.progress(x.xp);
       var nStages=Mascot.STAGES.length;
       // 현재
-      $("mascotArt").innerHTML=Mascot.svg(pr.stage.id,3.4);
+      $("mascotArt").innerHTML=Mascot.svg(pr.stage.id,1.93);
       $("mascotName").textContent=pr.stage.name;
       $("mascotStage").textContent="Lv."+(pr.stage.id+1)+" / "+nStages;
       var xpline=x.xp+" XP · 방향 적중 "+x.hits+"/"+x.evaluated+
         " ("+(x.hitRate*100).toFixed(0)+"%) · 정밀 "+x.precise+"건 · 오답 "+x.misses+"건";
       if(x.revPenalty>0)xpline+=" · 번복 −"+x.revPenalty+"("+x.revisions+"회 수정)";
+      if(x.volRelieved>0)xpline+=" · 변동성 경감 "+x.volRelieved+"건";
       $("mascotXP").textContent=xpline;
       $("mascotBar").style.width=pr.pct+"%";
       if(pr.next)$("mascotNext").textContent="다음 진화 '"+pr.next.name+"'까지 "+pr.toNext+" XP";
       else $("mascotNext").textContent="★ 최종 진화 — 금리몬 킹 등극!";
       // 이전 단계
       if(pr.prev){
-        $("mascotPrevArt").innerHTML=Mascot.svg(pr.prev.id,1.5);
+        $("mascotPrevArt").innerHTML=Mascot.svg(pr.prev.id,0.86);
         $("mascotPrevName").textContent=pr.prev.name;
         $("mascotPrevWrap").style.display="";
       }
       // 다음 단계
       if(pr.next){
-        $("mascotNextArt").innerHTML=Mascot.svg(pr.next.id,1.5);
+        $("mascotNextArt").innerHTML=Mascot.svg(pr.next.id,0.86);
         $("mascotNextName").textContent=pr.next.name;
         $("mascotNextWrap").style.display="";
       }
@@ -236,7 +238,7 @@
         var reached=x.xp>=st.min;
         return '<div style="flex:1;min-width:70px;text-align:center;padding:8px 4px;border-radius:3px;'+
           (cur?'background:#f0ebdd;border:1px solid #ddd5c4;':'border:1px solid transparent;opacity:'+(reached?'0.85':'0.4')+';')+'">'+
-          '<div style="width:36px;height:36px;margin:0 auto;display:flex;align-items:center;justify-content:center;">'+Mascot.svg(st.id,1.1)+'</div>'+
+          '<div style="width:36px;height:36px;margin:0 auto;display:flex;align-items:center;justify-content:center;">'+Mascot.svg(st.id,0.64)+'</div>'+
           '<div style="font-size:.66rem;font-weight:'+(cur?'700':'400')+';color:'+(cur?'var(--ink)':'var(--muted)')+';margin-top:3px;">'+st.name+'</div>'+
           '<div style="font-size:.6rem;color:var(--muted);">Lv.'+(st.id+1)+' · '+st.min+'</div>'+
           '</div>';

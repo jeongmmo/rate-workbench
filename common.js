@@ -145,7 +145,12 @@
       encodeURIComponent(cfg.owner) + "/" + encodeURIComponent(cfg.repo) +
       "/contents/" + path.split("/").map(encodeURIComponent).join("/") +
       (cfg.ref ? "?ref=" + encodeURIComponent(cfg.ref) : "");
-    var res = await fetch(url, { headers: headers(cfg.token, "application/vnd.github.raw+json") });
+    // 캐시버스팅: GitHub CDN이 푸시 후 오래된 results를 주는 것을 방지
+    url += (url.indexOf("?") >= 0 ? "&" : "?") + "_=" + Date.now();
+    var res = await fetch(url, {
+      headers: headers(cfg.token, "application/vnd.github.raw+json"),
+      cache: "no-store"
+    });
     if (!res.ok) throw new Error(explain(res.status));
     var buf = await res.arrayBuffer();
     return new Uint8Array(buf);
@@ -178,7 +183,7 @@
       ① 같은 출처(GitHub Pages) 상대경로 시도 → ② GitHub API 폴백(비공개 저장소) */
   async function loadResults(cfg, name) {
     try {
-      var r = await fetch("./results/" + name + ".json", { cache: "no-store" });
+      var r = await fetch("./results/" + name + ".json?_=" + Date.now(), { cache: "no-store" });
       if (r.ok) return await r.json();
     } catch (e) { /* file:// 또는 Pages 미사용 → API로 */ }
     var bytes = await fetchFile(cfg, "results/" + name + ".json");

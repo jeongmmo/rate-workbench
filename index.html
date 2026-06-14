@@ -110,7 +110,7 @@
           </div>
         </div>
         <div style="background:#ece6d8;border-radius:5px;height:7px;overflow:hidden;border:1px solid #ddd5c4;margin-top:8px;">
-          <div id="pmBar" style="height:100%;width:0%;background:linear-gradient(90deg,#4f9a82,#60b896);transition:width .9s ease;"></div>
+          <div id="pmBar" style="height:100%;width:0%;background:linear-gradient(90deg,#2c687c,#4a96a8);transition:width .9s ease;"></div>
         </div>
         <div id="pmDrop" style="font-size:.66rem;color:var(--bad);margin-top:4px;text-align:center;display:none;"></div>
       </div>
@@ -148,7 +148,7 @@
         <li><a class="mod" href="korea_neutral_rate.html"><span class="modnum"></span><span class="modname">한국 중립금리 추정기</span></a><p class="moddesc">기간구조 분해 · 기간프리미엄</p></li>
         <li><a class="mod" href="bond_etf_portfolio_analyzer.html"><span class="modnum"></span><span class="modname">채권 ETF 포트폴리오 분석기</span></a><p class="moddesc">성과 귀속 · 드로다운 · 비중 관리</p></li>
         <li><a class="mod" href="forecast_input.html"><span class="modnum"></span><span class="modname">전망 입력기</span></a><p class="moddesc">기준금리 + 스프레드 입력</p></li>
-        <li><a class="mod" href="forecast_tracker.html"><span class="modnum"></span><span class="modname">전망 적중도 추적</span></a><p class="moddesc">전망 vs 실현 · 금리몬 진화</p></li>
+        <li><a class="mod" href="forecast_tracker.html"><span class="modnum"></span><span class="modname">전망 적중도 추적</span></a><p class="moddesc">전망 vs 실현 · 임수룡 진화</p></li>
       </ol>
       <p style="margin-top:18px;font-size:.92rem">
         <a href="results_viewer.html" style="color:var(--accent)">→ 사전계산 결과 열람 (GitHub Actions · statsmodels)</a>
@@ -259,19 +259,19 @@
     }
   });
 
-  /* 포털 마스코트: forecast_eval 결과로 금리몬 진화(이전/현재/다음) 표시 */
+  /* 포털 마스코트: forecast_eval 결과로 임수룡 진화(이전/현재/다음) 표시 */
   async function loadPortalMascot(repoCfg){
     if(!window.Mascot)return;
     try{
       var data=await GHCommon.loadResults(GHCommon.currentConfig(),"forecast_eval");
       var x=Mascot.computeXP(data), pr=Mascot.progress(x.xp), n=Mascot.STAGES.length;
-      document.getElementById("pmArt").innerHTML=Mascot.svg(pr.stage.id,2.25);
+      document.getElementById("pmArt").innerHTML=Mascot.svg(pr.stage.id,1.29);
       document.getElementById("pmName").textContent=pr.stage.name;
       document.getElementById("pmLv").textContent="Lv."+(pr.stage.id+1)+" / "+n+" · "+x.xp+" XP";
       document.getElementById("pmBar").style.width=pr.pct+"%";
-      if(pr.prev){document.getElementById("pmPrevArt").innerHTML=Mascot.svg(pr.prev.id,1.06);document.getElementById("pmPrev").style.display="";}
-      if(pr.next){document.getElementById("pmNextArt").innerHTML=Mascot.svg(pr.next.id,1.06);document.getElementById("pmNext").style.display="";}
-      if(pr.prev && pr.marginToDrop<=30){document.getElementById("pmDrop").textContent="⚠ −"+pr.marginToDrop+" XP면 퇴화";document.getElementById("pmDrop").style.display="";}
+      if(pr.prev){document.getElementById("pmPrevArt").innerHTML=Mascot.svg(pr.prev.id,0.61);document.getElementById("pmPrev").style.display="";}
+      if(pr.next){document.getElementById("pmNextArt").innerHTML=Mascot.svg(pr.next.id,0.61);document.getElementById("pmNext").style.display="";}
+      if(pr.prev && pr.marginToDrop<=40){document.getElementById("pmDrop").textContent="⚠ −"+pr.marginToDrop+" XP면 퇴화";document.getElementById("pmDrop").style.display="";}
       document.getElementById("portalMascot").style.display="";
     }catch(e){ }
   }
