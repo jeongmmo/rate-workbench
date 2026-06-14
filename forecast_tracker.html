@@ -58,45 +58,51 @@
   <div id="status" class="busy">결과 불러오는 중 …</div>
   <div id="content" style="display:none">
 
-    <div id="mascotPanel" style="border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(60,50,30,0.05);padding:18px 22px;margin-bottom:8px;border-radius:2px;">
-      <div style="display:flex;gap:18px;align-items:center;">
-        <!-- 이전 단계(작게, 흐리게) -->
-        <div id="mascotPrevWrap" style="flex:none;text-align:center;opacity:.5;display:none;">
-          <div id="mascotPrevArt" style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;"></div>
-          <div id="mascotPrevName" style="font-size:.68rem;color:var(--muted);margin-top:2px;"></div>
-          <div style="font-size:.62rem;color:var(--muted);">◀ 이전</div>
-        </div>
-        <!-- 현재 단계(크게) -->
-        <div id="mascotArt" style="flex:none;width:108px;height:108px;display:flex;align-items:center;justify-content:center;"></div>
-        <div style="flex:1;min-width:0;">
-          <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
-            <span id="mascotName" style="font-size:1.18rem;font-weight:700;color:var(--ink);"></span>
-            <span id="mascotStage" style="font-variant:small-caps;letter-spacing:.08em;font-size:.82rem;color:var(--accent);"></span>
+    <div id="scorePanel" style="border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(60,50,30,0.05);padding:20px 24px;margin-bottom:8px;border-radius:2px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;">
+        <div>
+          <div style="font-variant:small-caps;letter-spacing:.08em;font-size:.74rem;color:var(--muted);">전망 적중 점수</div>
+          <div style="display:flex;align-items:baseline;gap:6px;margin-top:2px;">
+            <span id="scoreXP" style="font-size:2.4rem;font-weight:700;color:var(--ink);line-height:1;">—</span>
+            <span style="font-size:1rem;color:var(--muted);">XP</span>
           </div>
-          <div id="mascotXP" style="font-size:.86rem;color:var(--muted);font-style:italic;margin:3px 0 8px;"></div>
-          <div style="background:#ece6d8;border-radius:6px;height:11px;overflow:hidden;border:1px solid #ddd5c4;">
-            <div id="mascotBar" style="height:100%;width:0%;background:linear-gradient(90deg,#5a5470,#8a6bd0);transition:width .9s ease;"></div>
-          </div>
-          <div id="mascotNext" style="font-size:.8rem;color:var(--muted);margin-top:5px;"></div>
-          <div id="mascotDrop" style="font-size:.78rem;color:var(--bad);margin-top:3px;display:none;"></div>
         </div>
-        <!-- 다음 단계(작게, 흐리게) -->
-        <div id="mascotNextWrap" style="flex:none;text-align:center;opacity:.5;display:none;">
-          <div id="mascotNextArt" style="width:48px;height:48px;display:flex;align-items:center;justify-content:center;"></div>
-          <div id="mascotNextName" style="font-size:.68rem;color:var(--muted);margin-top:2px;"></div>
-          <div style="font-size:.62rem;color:var(--muted);">다음 ▶</div>
+        <div style="text-align:right;">
+          <div style="font-variant:small-caps;letter-spacing:.08em;font-size:.74rem;color:var(--muted);">등급</div>
+          <div id="scoreLevel" style="font-size:1.3rem;font-weight:700;color:var(--accent);margin-top:2px;">—</div>
+          <div id="scoreNext" style="font-size:.78rem;color:var(--muted);margin-top:2px;"></div>
         </div>
       </div>
-      <!-- 전체 진화 목록 -->
-      <div style="margin-top:14px;border-top:1px solid var(--line2);padding-top:12px;">
-        <div style="font-variant:small-caps;letter-spacing:.08em;font-size:.74rem;color:var(--muted);margin-bottom:8px;">전체 진화 단계</div>
-        <div id="mascotRoster" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:space-between;"></div>
+      <!-- 진행 바 -->
+      <div style="margin-top:14px;">
+        <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-bottom:4px;">
+          <span id="scoreLevelLo">—</span><span id="scoreLevelHi">—</span>
+        </div>
+        <div style="background:#ece6d8;border-radius:6px;height:10px;overflow:hidden;border:1px solid #ddd5c4;">
+          <div id="scoreBar" style="height:100%;width:0%;background:linear-gradient(90deg,#9ec99b,#5aa9d6);transition:width .9s ease;"></div>
+        </div>
+        <div id="scoreDrop" style="font-size:.76rem;color:var(--bad);margin-top:4px;display:none;"></div>
+      </div>
+      <!-- 점수 내역 (숫자 카드) -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:10px;margin-top:16px;border-top:1px solid var(--line2);padding-top:14px;">
+        <div><div id="scEval" style="font-size:1.3rem;font-weight:700;color:var(--ink);">—</div><div style="font-size:.7rem;color:var(--muted);">평가 전망</div></div>
+        <div><div id="scHit" style="font-size:1.3rem;font-weight:700;color:#3c8a4a;">—</div><div style="font-size:.7rem;color:var(--muted);">방향 적중</div></div>
+        <div><div id="scRate" style="font-size:1.3rem;font-weight:700;color:var(--ink);">—</div><div style="font-size:.7rem;color:var(--muted);">적중률</div></div>
+        <div><div id="scPrecise" style="font-size:1.3rem;font-weight:700;color:#3c8a4a;">—</div><div style="font-size:.7rem;color:var(--muted);">정밀 예측</div></div>
+        <div><div id="scMiss" style="font-size:1.3rem;font-weight:700;color:var(--bad);">—</div><div style="font-size:.7rem;color:var(--muted);">방향 오답</div></div>
+        <div><div id="scRev" style="font-size:1.3rem;font-weight:700;color:var(--bad);">—</div><div style="font-size:.7rem;color:var(--muted);">번복 패널티</div></div>
+        <div><div id="scVol" style="font-size:1.3rem;font-weight:700;color:var(--accent);">—</div><div style="font-size:.7rem;color:var(--muted);">변동성 경감</div></div>
+      </div>
+      <!-- 등급 표 -->
+      <div style="margin-top:16px;border-top:1px solid var(--line2);padding-top:12px;">
+        <div style="font-variant:small-caps;letter-spacing:.08em;font-size:.74rem;color:var(--muted);margin-bottom:8px;">등급 기준</div>
+        <div id="scoreTiers" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
       </div>
     </div>
     <p style="font-size:.78rem;color:var(--muted);font-style:italic;margin:0 0 6px;">
-      적중 +10 XP · 정밀(≤0.10%p) +8 — 빗나가면 차감(방향 −3, 큰 오차 −3)되어 전 단계로 <b>퇴화</b>합니다.
+      적중 +10 XP · 정밀(≤0.10%p) +8 — 빗나가면 차감(방향 −3, 큰 오차 −3)되어 등급이 <b>하락</b>합니다.
       단, 그 시기 금리 변동폭이 0.20%p 이상이면(<b>고변동 구간</b>) 오답 패널티를 절반만 부과합니다 — 요동친 장에서의 실패는 덜 가혹하게.
-      같은 전망을 6회 넘게 바꾸면 번복 패널티도 붙습니다. 임수룡은 5단계로 진화합니다.</p>
+      같은 전망을 6회 넘게 바꾸면 번복 패널티도 붙습니다. 등급은 5단계입니다.</p>
 
     <h2 class="sec"><span class="num">§ 1</span>빈티지 차트</h2>
     <p class="secdesc">굵은 선=실현치, 가는 선=각 시점 전망 경로.</p>
@@ -197,53 +203,48 @@
     status.className="";
     $("content").style.display="";
 
-    // ── 픽셀 마스코트: 적중도 XP → 진화 단계 (보상+패널티) ──
+    // ── 숫자 스코어보드: 적중도 XP → 등급 ──
     (function(){
       if(!window.Mascot)return;
       var x=Mascot.computeXP(data);
       var pr=Mascot.progress(x.xp);
-      var nStages=Mascot.STAGES.length;
-      // 현재
-      $("mascotArt").innerHTML=Mascot.svg(pr.stage.id,1.93);
-      $("mascotName").textContent=pr.stage.name;
-      $("mascotStage").textContent="Lv."+(pr.stage.id+1)+" / "+nStages;
-      var xpline=x.xp+" XP · 방향 적중 "+x.hits+"/"+x.evaluated+
-        " ("+(x.hitRate*100).toFixed(0)+"%) · 정밀 "+x.precise+"건 · 오답 "+x.misses+"건";
-      if(x.revPenalty>0)xpline+=" · 번복 −"+x.revPenalty+"("+x.revisions+"회 수정)";
-      if(x.volRelieved>0)xpline+=" · 변동성 경감 "+x.volRelieved+"건";
-      $("mascotXP").textContent=xpline;
-      $("mascotBar").style.width=pr.pct+"%";
-      if(pr.next)$("mascotNext").textContent="다음 진화 '"+pr.next.name+"'까지 "+pr.toNext+" XP";
-      else $("mascotNext").textContent="★ 최종 진화 — 금리몬 킹 등극!";
-      // 이전 단계
-      if(pr.prev){
-        $("mascotPrevArt").innerHTML=Mascot.svg(pr.prev.id,0.86);
-        $("mascotPrevName").textContent=pr.prev.name;
-        $("mascotPrevWrap").style.display="";
-      }
-      // 다음 단계
-      if(pr.next){
-        $("mascotNextArt").innerHTML=Mascot.svg(pr.next.id,0.86);
-        $("mascotNextName").textContent=pr.next.name;
-        $("mascotNextWrap").style.display="";
-      }
-      // 퇴화 경고: 현 단계 안 여유가 적으면
+      var nTiers=Mascot.STAGES.length;
+      var TIER=["브론즈","실버","골드","플래티넘","다이아"];
+      function tierName(id){ return TIER[id]||("Lv."+(id+1)); }
+      // 메인 숫자
+      $("scoreXP").textContent=x.xp;
+      $("scoreLevel").textContent=tierName(pr.stage.id)+" (Lv."+(pr.stage.id+1)+"/"+nTiers+")";
+      if(pr.next) $("scoreNext").textContent="다음 등급까지 "+pr.toNext+" XP";
+      else $("scoreNext").textContent="★ 최고 등급 달성";
+      // 진행 바: 현재 등급 구간 내 위치
+      $("scoreBar").style.width=pr.pct+"%";
+      $("scoreLevelLo").textContent=tierName(pr.stage.id)+" · "+pr.stage.min+" XP";
+      $("scoreLevelHi").textContent=pr.next?(tierName(pr.next.id)+" · "+pr.next.min+" XP"):"MAX";
+      // 하락 경고
       if(pr.prev && pr.marginToDrop<=30){
-        $("mascotDrop").textContent="⚠ XP "+pr.marginToDrop+"만 더 깎이면 '"+pr.prev.name+"'(으)로 퇴화합니다";
-        $("mascotDrop").style.display="";
+        $("scoreDrop").textContent="⚠ "+pr.marginToDrop+" XP만 더 깎이면 "+tierName(pr.prev.id)+"(으)로 하락합니다";
+        $("scoreDrop").style.display="";
       }
-      // 전체 진화 목록
-      var roster=Mascot.STAGES.map(function(st){
+      // 내역 카드
+      $("scEval").textContent=x.evaluated;
+      $("scHit").textContent=x.hits;
+      $("scRate").textContent=(x.hitRate*100).toFixed(0)+"%";
+      $("scPrecise").textContent=x.precise;
+      $("scMiss").textContent=x.misses;
+      $("scRev").textContent=x.revPenalty>0?("−"+x.revPenalty):"0";
+      $("scVol").textContent=x.volRelieved+"건";
+      // 등급 표
+      var tiers=Mascot.STAGES.map(function(st){
         var cur=st.id===pr.stage.id;
         var reached=x.xp>=st.min;
-        return '<div style="flex:1;min-width:70px;text-align:center;padding:8px 4px;border-radius:3px;'+
-          (cur?'background:#f0ebdd;border:1px solid #ddd5c4;':'border:1px solid transparent;opacity:'+(reached?'0.85':'0.4')+';')+'">'+
-          '<div style="width:36px;height:36px;margin:0 auto;display:flex;align-items:center;justify-content:center;">'+Mascot.svg(st.id,0.64)+'</div>'+
-          '<div style="font-size:.66rem;font-weight:'+(cur?'700':'400')+';color:'+(cur?'var(--ink)':'var(--muted)')+';margin-top:3px;">'+st.name+'</div>'+
-          '<div style="font-size:.6rem;color:var(--muted);">Lv.'+(st.id+1)+' · '+st.min+'</div>'+
+        return '<div style="flex:1;min-width:78px;text-align:center;padding:8px 4px;border-radius:3px;'+
+          (cur?'background:#eef3ee;border:1px solid #cfe0cf;':'border:1px solid var(--line2);opacity:'+(reached?'1':'0.45')+';')+'">'+
+          '<div style="font-size:.9rem;font-weight:'+(cur?'700':'600')+';color:'+(cur?'var(--accent)':'var(--ink)')+';">'+tierName(st.id)+'</div>'+
+          '<div style="font-size:.66rem;color:var(--muted);margin-top:2px;">Lv.'+(st.id+1)+' · '+st.min+'+ XP</div>'+
+          (cur?'<div style="font-size:.62rem;color:var(--accent);margin-top:2px;">● 현재</div>':'')+
           '</div>';
       }).join("");
-      $("mascotRoster").innerHTML=roster;
+      $("scoreTiers").innerHTML=tiers;
     })();
 
     var vars=Object.keys(data.summary_by_variable).sort();

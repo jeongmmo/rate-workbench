@@ -93,26 +93,18 @@
           <span>데이터 파일 <b id="metaFiles">—</b></span>
         </div>
       </div>
-      <div id="portalMascot" style="display:none;flex:none;border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(60,50,30,0.05);padding:12px 16px 10px;border-radius:2px;">
-        <div style="display:flex;gap:10px;align-items:center;">
-          <div id="pmPrev" style="flex:none;text-align:center;opacity:.45;display:none;">
-            <div id="pmPrevArt" style="width:34px;height:34px;"></div>
-            <div style="font-size:.58rem;color:var(--muted);">◀</div>
-          </div>
-          <div style="text-align:center;">
-            <div id="pmArt" style="width:72px;height:72px;margin:0 auto;display:flex;align-items:center;justify-content:center;"></div>
-            <div id="pmName" style="font-size:.9rem;font-weight:700;color:var(--ink);margin-top:3px;"></div>
-            <div id="pmLv" style="font-variant:small-caps;letter-spacing:.06em;font-size:.72rem;color:var(--accent);"></div>
-          </div>
-          <div id="pmNext" style="flex:none;text-align:center;opacity:.45;display:none;">
-            <div id="pmNextArt" style="width:34px;height:34px;"></div>
-            <div style="font-size:.58rem;color:var(--muted);">▶</div>
-          </div>
+      <div id="scoreBadge" style="display:none;flex:none;text-align:center;border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(60,50,30,0.05);padding:14px 22px;border-radius:2px;min-width:140px;">
+        <div style="font-variant:small-caps;letter-spacing:.07em;font-size:.7rem;color:var(--muted);">전망 적중 점수</div>
+        <div style="display:flex;align-items:baseline;justify-content:center;gap:4px;margin-top:2px;">
+          <span id="sbXP" style="font-size:1.9rem;font-weight:700;color:var(--ink);line-height:1;">—</span>
+          <span style="font-size:.82rem;color:var(--muted);">XP</span>
         </div>
-        <div style="background:#ece6d8;border-radius:5px;height:7px;overflow:hidden;border:1px solid #ddd5c4;margin-top:8px;">
-          <div id="pmBar" style="height:100%;width:0%;background:linear-gradient(90deg,#2c687c,#4a96a8);transition:width .9s ease;"></div>
+        <div id="sbLevel" style="font-size:.92rem;font-weight:700;color:var(--accent);margin-top:3px;">—</div>
+        <div style="background:#ece6d8;border-radius:5px;height:7px;overflow:hidden;border:1px solid #ddd5c4;margin-top:7px;">
+          <div id="sbBar" style="height:100%;width:0%;background:linear-gradient(90deg,#9ec99b,#5aa9d6);transition:width .9s ease;"></div>
         </div>
-        <div id="pmDrop" style="font-size:.66rem;color:var(--bad);margin-top:4px;text-align:center;display:none;"></div>
+        <div id="sbNext" style="font-size:.68rem;color:var(--muted);margin-top:4px;"></div>
+        <div id="sbDrop" style="font-size:.66rem;color:var(--bad);margin-top:2px;display:none;"></div>
       </div>
     </div>
   </header>
@@ -148,7 +140,7 @@
         <li><a class="mod" href="korea_neutral_rate.html"><span class="modnum"></span><span class="modname">한국 중립금리 추정기</span></a><p class="moddesc">기간구조 분해 · 기간프리미엄</p></li>
         <li><a class="mod" href="bond_etf_portfolio_analyzer.html"><span class="modnum"></span><span class="modname">채권 ETF 포트폴리오 분석기</span></a><p class="moddesc">성과 귀속 · 드로다운 · 비중 관리</p></li>
         <li><a class="mod" href="forecast_input.html"><span class="modnum"></span><span class="modname">전망 입력기</span></a><p class="moddesc">기준금리 + 스프레드 입력</p></li>
-        <li><a class="mod" href="forecast_tracker.html"><span class="modnum"></span><span class="modname">전망 적중도 추적</span></a><p class="moddesc">전망 vs 실현 · 임수룡 진화</p></li>
+        <li><a class="mod" href="forecast_tracker.html"><span class="modnum"></span><span class="modname">전망 적중도 추적</span></a><p class="moddesc">전망 vs 실현 · 적중 점수</p></li>
       </ol>
       <p style="margin-top:18px;font-size:.92rem">
         <a href="results_viewer.html" style="color:var(--accent)">→ 사전계산 결과 열람 (GitHub Actions · statsmodels)</a>
@@ -252,27 +244,27 @@
                 ", 데이터 파일 " + files.length + "개", "ok");
       $("metaConn").textContent = "연결됨";
       renderLedger(files, repoCfg);
-      loadPortalMascot(repoCfg);
+      loadPortalScore(repoCfg);
     } catch (e) {
       setStatus(e.message, "err");
       $("metaConn").textContent = "실패";
     }
   });
 
-  /* 포털 마스코트: forecast_eval 결과로 임수룡 진화(이전/현재/다음) 표시 */
-  async function loadPortalMascot(repoCfg){
+  /* 포털 점수 배지: forecast_eval 결과로 적중 점수·등급 표시 */
+  var TIER_NAMES=["브론즈","실버","골드","플래티넘","다이아"];
+  async function loadPortalScore(repoCfg){
     if(!window.Mascot)return;
     try{
       var data=await GHCommon.loadResults(GHCommon.currentConfig(),"forecast_eval");
       var x=Mascot.computeXP(data), pr=Mascot.progress(x.xp), n=Mascot.STAGES.length;
-      document.getElementById("pmArt").innerHTML=Mascot.svg(pr.stage.id,1.29);
-      document.getElementById("pmName").textContent=pr.stage.name;
-      document.getElementById("pmLv").textContent="Lv."+(pr.stage.id+1)+" / "+n+" · "+x.xp+" XP";
-      document.getElementById("pmBar").style.width=pr.pct+"%";
-      if(pr.prev){document.getElementById("pmPrevArt").innerHTML=Mascot.svg(pr.prev.id,0.61);document.getElementById("pmPrev").style.display="";}
-      if(pr.next){document.getElementById("pmNextArt").innerHTML=Mascot.svg(pr.next.id,0.61);document.getElementById("pmNext").style.display="";}
-      if(pr.prev && pr.marginToDrop<=40){document.getElementById("pmDrop").textContent="⚠ −"+pr.marginToDrop+" XP면 퇴화";document.getElementById("pmDrop").style.display="";}
-      document.getElementById("portalMascot").style.display="";
+      function tn(id){return TIER_NAMES[id]||("Lv."+(id+1));}
+      document.getElementById("sbXP").textContent=x.xp;
+      document.getElementById("sbLevel").textContent=tn(pr.stage.id)+" (Lv."+(pr.stage.id+1)+"/"+n+")";
+      document.getElementById("sbBar").style.width=pr.pct+"%";
+      document.getElementById("sbNext").textContent=pr.next?("다음 등급까지 "+pr.toNext+" XP"):"최고 등급";
+      if(pr.prev && pr.marginToDrop<=30){document.getElementById("sbDrop").textContent="⚠ −"+pr.marginToDrop+" XP면 하락";document.getElementById("sbDrop").style.display="";}
+      document.getElementById("scoreBadge").style.display="";
     }catch(e){ }
   }
 
