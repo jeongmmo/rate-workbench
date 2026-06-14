@@ -71,6 +71,11 @@
   button.ghost{font-family:inherit;font-size:.88rem;padding:6px 14px;cursor:pointer;background:none;border:1px solid var(--line);color:var(--ink2);}
   button.ghost:hover{border-color:var(--accent);color:var(--accent);}
   ol.steps{font-size:.88rem;color:var(--ink2);margin:8px 0 0;padding-left:20px;}
+  /* 대상 분기 컨트롤바 */
+  .qbar{display:flex;gap:18px;align-items:center;flex-wrap:wrap;border:1px solid var(--line);
+    background:var(--card);padding:12px 18px;margin:18px 0 6px;box-shadow:0 1px 3px rgba(60,50,30,0.05);}
+  .qbar label{font-variant:small-caps;font-size:.8rem;color:var(--muted);letter-spacing:.06em;margin-right:8px;}
+  .qbar .qrange{font-size:.82rem;color:var(--ink2);font-style:italic;margin-left:auto;}
   /* ── 탭 UI ── */
   .tabbar{display:flex;gap:0;margin:22px 0 0;border-bottom:2px solid var(--ink);}
   .tabbtn{font-family:inherit;font-size:1rem;font-weight:700;padding:10px 24px;cursor:pointer;
@@ -102,6 +107,11 @@
   <div class="tabpane active" id="paneInput">
     <div id="inpStatus" class="busy">참고 통계(results/spread_stats.json) 불러오는 중 …</div>
     <div id="inpContent" style="display:none">
+    <div class="qbar">
+      <span><label>대상 분기 시작</label><select id="qStart"></select></span>
+      <span><label>분기 수</label><select id="qCount"></select></span>
+      <span class="qrange" id="qRange"></span>
+    </div>
     <div id="chains"></div>
 
     <div class="exportbar">
@@ -481,22 +491,74 @@
     },15000);
   }
 
-  try{
-    STATS=await GHCommon.loadResults(GHCommon.currentConfig(),"spread_stats");
-    QUARTERS=buildQuarters(6);
-    $("fdate").value=new Date().toISOString().slice(0,10);
-    var box=$("chains");
+  /* ── 대상 분기 컨트롤: 시작 분기 + 분기 수를 사용자가 지정 ── */
+  function curYQ(){var d=new Date();return {y:d.getFullYear(),q:Math.floor(d.getMonth()/3)+1};}
+  function qLabel(y,q){return y+"Q"+q;}
+  function quartersFrom(startLabel,n){
+    var y=+startLabel.slice(0,4),q=+startLabel.slice(5),out=[];
+    for(var i=0;i<n;i++){out.push(qLabel(y,q));q++;if(q>4){q=1;y++;}}
+    return out;
+  }
+  function startRange(back,fwd){
+    var c=curYQ(),y=c.y,q=c.q,i;
+    for(i=0;i<back;i++){q--;if(q<1){q=4;y--;}}
+    var out=[];for(i=0;i<back+1+fwd;i++){out.push(qLabel(y,q));q++;if(q>4){q=1;y++;}}
+    return out;
+  }
+  function snapKey(chain,kind,link,label){return chain+"|"+kind+"|"+(link==null?"":link)+"|"+label;}
+  function snapshotValues(){
+    var s={};
+    if(!QUARTERS||!QUARTERS.length)return s;
+    document.querySelectorAll('#chains input.cell').forEach(function(inp){
+      var label=QUARTERS[+inp.dataset.q];if(label===undefined)return;
+      s[snapKey(inp.dataset.chain,inp.dataset.kind,inp.dataset.link,label)]=inp.value;
+    });
+    return s;
+  }
+  function updateRangeText(){
+    var el=$("qRange");if(!el)return;
+    var txt="대상 "+QUARTERS[0]+" ~ "+QUARTERS[QUARTERS.length-1]+" · "+QUARTERS.length+"개 분기";
+    var fd=$("fdate").value?new Date($("fdate").value):new Date();
+    var past=QUARTERS.filter(function(q){return qEndDate(q)<fd;}).length;
+    if(past>0)txt+=" · 지난 "+past+"개 분기는 커밋 시 자동 제외";
+    el.textContent=txt;
+  }
+  /* 컨트롤 값으로 분기 헤더 재생성 — 이미 입력한 값은 분기 라벨 기준으로 보존 */
+  function renderChains(){
+    var snap=snapshotValues();
+    QUARTERS=quartersFrom($("qStart").value,parseInt($("qCount").value,10)||6);
+    var box=$("chains");box.innerHTML="";
     Object.keys(STATS.chains).forEach(function(cn){box.appendChild(buildChainTable(cn,STATS.chains[cn]));});
-    document.querySelectorAll("input.cell").forEach(function(inp){
+    document.querySelectorAll('#chains input.cell').forEach(function(inp){
+      var label=QUARTERS[+inp.dataset.q];
+      var k=snapKey(inp.dataset.chain,inp.dataset.kind,inp.dataset.link,label);
+      if(snap[k]!==undefined&&snap[k]!=="")inp.value=snap[k];
       inp.addEventListener("input",function(){recompute(inp.dataset.chain);});
     });
     Object.keys(STATS.chains).forEach(recompute);
+    updateRangeText();
+  }
+
+  try{
+    STATS=await GHCommon.loadResults(GHCommon.currentConfig(),"spread_stats");
+    $("fdate").value=new Date().toISOString().slice(0,10);
+    /* 대상 분기 컨트롤 채우기 (시작: 8분기 전 ~ 20분기 후, 기본=현재 분기 / 개수 기본=6) */
+    startRange(8,20).forEach(function(s){
+      $("qStart").appendChild(new Option(s.slice(0,4)+" Q"+s.slice(5),s));
+    });
+    $("qStart").value=qLabel(curYQ().y,curYQ().q);
+    for(var ci=1;ci<=12;ci++)$("qCount").appendChild(new Option(ci+"개 분기",ci));
+    $("qCount").value="6";
+    renderChains();
+    $("qStart").addEventListener("change",renderChains);
+    $("qCount").addEventListener("change",renderChains);
+    $("fdate").addEventListener("change",updateRangeText);
     $("btnFillMean").addEventListener("click",function(){fillSpreads("mean");});
     $("btnFillCur").addEventListener("click",function(){fillSpreads("current");});
     $("btnExport").addEventListener("click",exportXlsx);
     $("btnPush").addEventListener("click",pushToGitHub);
     status.textContent="참고 기준일 "+STATS.as_of+" · 통계 윈도우 "+STATS.window[0]+" ~ "+STATS.window[1]+
-      " · 전망 대상: 오늘부터 6개 분기 ("+QUARTERS[0]+" ~ "+QUARTERS[QUARTERS.length-1]+")";
+      " · 대상 분기는 위에서 직접 설정";
     status.className="";
     $("inpContent").style.display="";
   }catch(e){
