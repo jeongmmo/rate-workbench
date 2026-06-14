@@ -140,6 +140,16 @@
 </nav>
 
 <header>
+  <style>
+    a.portal-back{display:inline-flex;align-items:center;gap:7px;text-decoration:none;font-size:13px;font-weight:600;
+      color:var(--ink,#1a1a1a);background:#fff;border:1px solid #cfc7b4;padding:7px 13px;border-radius:3px;
+      box-shadow:0 1px 2px rgba(60,50,30,0.06);transition:background .15s,box-shadow .15s,transform .05s;}
+    a.portal-back:hover{background:#faf7f0;box-shadow:0 2px 5px rgba(60,50,30,0.10);}
+    a.portal-back:active{transform:translateY(1px);}
+  </style>
+  <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+    <a href="./index.html" class="portal-back" title="토큰을 한 번만 입력하는 포털로 이동">← 포털로 돌아가기</a>
+  </div>
   <h1>채권형 ETF 포트폴리오 분석 모듈</h1>
   <div class="subtitle">채권 ETF 포트폴리오 구성·백테스트</div>
 </header>
@@ -828,9 +838,8 @@ async function loadGhPath(path){
   msg.className="msg"; msg.textContent = "GitHub에서 「"+path+"」 불러오는 중…";
   try{
     const bytes = await fetchGithubFile(ctx.owner, ctx.repo, path, ctx.ref, token);
-    token = null; $("ghToken").value = "";   // wipe token from input & memory after use
     parseWorkbookBytes(bytes, path.split("/").pop());
-    msg.className="msg ok"; msg.textContent = "✔ "+ctx.owner+"/"+ctx.repo+" · "+path+(ctx.ref?(" @"+ctx.ref):"")+" 불러오기 완료. 토큰은 입력란에서 지워졌습니다.";
+    msg.className="msg ok"; msg.textContent = "✔ "+ctx.owner+"/"+ctx.repo+" · "+path+(ctx.ref?(" @"+ctx.ref):"")+" 불러오기 완료.";
   }catch(err){
     token = null;
     msg.className="msg err"; msg.textContent = "불러오기 실패: " + err.message;
@@ -3811,6 +3820,47 @@ $("btnDlCharts").addEventListener("click", async ()=>{
   a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href), 5000);
 });
+</script>
+<!-- ===== 포털 세션 브리지 =====
+     포털(index.html)에서 한 번 입력한 토큰·저장소 설정을 이어받아 입력칸을 자동으로 채웁니다.
+     같은 세션 동안 데이터 토큰을 다시 입력할 필요가 없습니다.
+     (file:// 로 직접 열면 페이지 간 공유가 되지 않으므로 GitHub Pages 또는 로컬 서버 권장) -->
+<script>
+(function(){
+  if (window.__portalBridge) return;            // 중복 설치 방지
+  window.__portalBridge = true;
+  var FIELD_KEYS = { ghOwner:"gh_owner", ghRepo:"gh_repo", ghRef:"gh_ref", ghToken:"gh_token", ghPath:"gh_path" };
+  function storeGet(key){                        // 읽기: localStorage(기억모드) → sessionStorage
+    try { var v = localStorage.getItem(key); if (v !== null) return v; } catch(e){}
+    try { return sessionStorage.getItem(key); } catch(e){}
+    return null;
+  }
+  function storeSet(key, val){                   // 쓰기: 포털 common.js와 동일 규약(gh_remember)
+    var remember = false;
+    try { remember = localStorage.getItem("gh_remember") === "1"; } catch(e){}
+    try {
+      if (remember){ localStorage.setItem(key, val); sessionStorage.removeItem(key); }
+      else { sessionStorage.setItem(key, val); localStorage.removeItem(key); }
+    } catch(e){}
+  }
+  function storeRemove(key){ try{localStorage.removeItem(key);}catch(e){} try{sessionStorage.removeItem(key);}catch(e){} }
+  function init(){
+    Object.keys(FIELD_KEYS).forEach(function(id){
+      var el = document.getElementById(id);
+      if (!el) return;
+      var stored = storeGet(FIELD_KEYS[id]);
+      if (stored !== null && stored !== "") el.value = stored;   // 포털 값이 있으면 채움(없으면 기존 기본값 유지)
+      if (!el.__portalBound){                                    // 사용자가 고치면 세션에 다시 공유
+        el.__portalBound = true;
+        el.addEventListener("change", function(){ storeSet(FIELD_KEYS[id], el.value); });
+      }
+    });
+    var clr = document.getElementById("btnGhClear");            // '토큰 지우기'는 세션 메모리에서도 제거
+    if (clr && !clr.__portalBoundClr){ clr.__portalBoundClr = true; clr.addEventListener("click", function(){ storeRemove("gh_token"); }); }
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function(){ setTimeout(init, 0); });
+  else setTimeout(init, 0);                                     // 모듈 자체 초기화 뒤에 실행되도록 보장
+})();
 </script>
 </body>
 </html>
