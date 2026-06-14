@@ -1,35 +1,70 @@
 /* =====================================================================
-   mascot.js — 전망 적중도 픽셀 마스코트 (오리지널 캐릭터)
-   "녹스(Nox)" — 금리를 예언하는 흑룡. 적중할수록 7단계로 진화한다.
-   추적 페이지와 포털이 공유. window.Mascot 노출.
+   mascot.js — 전망 적중도 픽셀 마스코트 "금리몬"
+   알 → 슬라임 → 날개 달린 슬라임 드래곤. 적중하면 진화, 빗나가면 퇴화.
+   32x32 픽셀. 추적 페이지와 포털이 공유. window.Mascot 노출.
    ===================================================================== */
 (function (root) {
   "use strict";
 
+  /* ---------- XP 계산: 보상 + 패널티 ----------
+     [적중] 방향 +10 · 오차 ≤0.10%p +8 / ≤0.25 +4 / ≤0.50 +1
+     [오답] 방향 틀림 −3 · 오차 >1.00%p −3 / >0.50 −2 / >0.25 −1
+     [번복] 같은 (변수,타깃) 갱신 5회 무료, 6회차부터 −1(30일내 −2)
+why: 적중엔 보상, 오답·과잉수정엔 패널티 → XP 하락 시 전 단계 퇴화 가능. */
   function computeXP(data) {
-    var xp = 0, hits = 0, evaluated = 0, precise = 0;
     var recs = (data && data.records) || [];
+    var xp = 0, hits = 0, evaluated = 0, precise = 0, misses = 0;
     recs.forEach(function (r) {
       if (r.error === null || r.error === undefined) return;
       evaluated++;
       var ae = Math.abs(r.error);
       if (r.direction_hit === true) { xp += 10; hits++; }
+      else if (r.direction_hit === false) { xp -= 3; misses++; }
       if (ae <= 0.10) { xp += 8; precise++; }
       else if (ae <= 0.25) { xp += 4; }
       else if (ae <= 0.50) { xp += 1; }
+      else if (ae <= 1.00) { xp -= 1; }
+      else if (ae <= 2.00) { xp -= 2; }
+      else { xp -= 3; }
     });
-    return { xp: xp, evaluated: evaluated, hits: hits, precise: precise,
-             hitRate: evaluated ? hits / evaluated : 0 };
+    var FREE_REVISIONS = 5;
+    var groups = {};
+    recs.forEach(function (r) {
+      var k = r.variable + "|" + r.target;
+      (groups[k] = groups[k] || []).push(r);
+    });
+    var revisions = 0, rapidRevisions = 0, revPenalty = 0;
+    Object.keys(groups).forEach(function (k) {
+      var arr = groups[k].slice().sort(function (a, b) {
+        return (a.forecast_date < b.forecast_date) ? -1 : 1;
+      });
+      for (var i = 1; i < arr.length; i++) {
+        revisions++;
+        if (i <= FREE_REVISIONS) continue;
+        var prev = Date.parse(arr[i - 1].forecast_date);
+        var cur = Date.parse(arr[i].forecast_date);
+        var days = (isFinite(prev) && isFinite(cur)) ? (cur - prev) / 86400000 : 999;
+        if (days <= 30) { revPenalty += 2; rapidRevisions++; }
+        else { revPenalty += 1; }
+      }
+    });
+    xp -= revPenalty;
+    if (xp < 0) xp = 0;
+    return {
+      xp: xp, evaluated: evaluated, hits: hits, precise: precise, misses: misses,
+      hitRate: evaluated ? hits / evaluated : 0,
+      revisions: revisions, rapidRevisions: rapidRevisions, revPenalty: revPenalty
+    };
   }
 
   var STAGES = [
-    { id: 0, name: "흑룡의 알",    min: 0,    body: "#3a3a42", dark: "#22222a", glow: "#8a6bd0" },
-    { id: 1, name: "해츨링",       min: 150,  body: "#36363f", dark: "#202028", glow: "#7d5fd0" },
-    { id: 2, name: "윙드 드레이크", min: 400,  body: "#323240", dark: "#1c1c26", glow: "#6f8fe0" },
-    { id: 3, name: "영 드래곤",     min: 800,  body: "#2e2e3c", dark: "#191922", glow: "#5fc0e0" },
-    { id: 4, name: "스톰 와이번",   min: 1400, body: "#2b2b3a", dark: "#161620", glow: "#58d0c0" },
-    { id: 5, name: "엘더 드래곤",   min: 2200, body: "#28283a", dark: "#131320", glow: "#d6a84a" },
-    { id: 6, name: "녹스, 종말룡",  min: 3400, body: "#242438", dark: "#10101e", glow: "#e0483a" }
+    { id: 0, name: "금리몬의 알",   min: 0,    glow: "#9a7bd8" },
+    { id: 1, name: "슬라임 금리몬", min: 150,  glow: "#5fc0a0" },
+    { id: 2, name: "새싹날개 금리몬", min: 400, glow: "#5fb0d0" },
+    { id: 3, name: "날개 금리몬",   min: 800,  glow: "#5f90e0" },
+    { id: 4, name: "비룡 금리몬",   min: 1400, glow: "#7f7be0" },
+    { id: 5, name: "성룡 금리몬",   min: 2200, glow: "#e0b850" },
+    { id: 6, name: "금리몬 킹",     min: 3400, glow: "#ff5a4a" }
   ];
 
   function stageFor(xp) {
@@ -38,159 +73,266 @@
     return s;
   }
   function nextStage(stage) { return STAGES[Math.min(STAGES.length - 1, stage.id + 1)]; }
+  function prevStage(stage) { return STAGES[Math.max(0, stage.id - 1)]; }
 
   var GRIDS = {
     0: [
-      "......HH........",
-      ".....DDDD.......",
-      "....DBBBBD......",
-      "...DBBBBBBD.....",
-      "...DBBBBBBD.....",
-      "..DBBBFBBBBD....",
-      "..DBBFBBBBBD....",
-      "..DBBBBFBBBD....",
-      "..DBBBBBFBBD....",
-      "..DBBBFBBBBD....",
-      "...DBBBBBBD.....",
-      "...DBBBBBBD.....",
-      "....DBBBBD......",
-      ".....DDDD.......",
-      "................",
-      "................"
+      "................................",
+      "................................",
+      "................................",
+      "............H......H............",
+      "............H......H............",
+      "............H......H............",
+      "................................",
+      "............DDDDDDDD............",
+      "...........DDDBBBBDDD...........",
+      "..........DDBBBBBBBBDD..........",
+      ".........DDBBBBBBBBBBDD.........",
+      ".........DBLLBBCCBBLLBD.........",
+      "........DDBLBBCBBCBBLBDD........",
+      "........DBBBBBBCCBBBBBBD........",
+      "........DBBBBBCBBCBBBBBD........",
+      "........DBBBBBBCCBBBBBBD........",
+      "........DBBBBBCBBCBBBBBD........",
+      ".......DDBBBBBBCCBBBBBBDD.......",
+      "........DBBBBBBBBBBBBBBD........",
+      "........DBBBBBBBBBBBBBBD........",
+      "........DBBBBBBBBBBBBBBD........",
+      "........DBBBBBBBBBBBBBBD........",
+      "........DDBBBBBBBBBBBBDD........",
+      ".........DBBBBBBBBBBBBD.........",
+      ".........DDBBBBBBBBBBDD.........",
+      "..........DDBBBBBBBBDD..........",
+      "...........DDDBBBBDDD...........",
+      "............DDDDDDDD............",
+      "................................",
+      "................................",
+      "................................",
+      "................................"
     ],
     1: [
-      "...H........H...",
-      "...HD......DH...",
-      "....DBBBBBBD....",
-      "...DBBBBBBBBD...",
-      "..DBEEBBBBEEBD..",
-      "..DBEEBBBBEEBD..",
-      "..DBBBBBBBBBBD..",
-      "..DBBBFFFFBBBD..",
-      "...DBBBBBBBBD...",
-      "..WDBBBBBBBBDW..",
-      ".W..DBBBBBBD..W.",
-      ".....DBBBBD.....",
-      "......DBBD....DD",
-      ".......DD...DDB.",
-      "................",
-      "................"
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      ".............BBBBBB.............",
+      "............BBLLLLBB............",
+      "..........DBBBBLLBBBBD..........",
+      "..........BBBBBBBBBBBB..........",
+      ".........DBBBBBBBBBBBBD.........",
+      "........DDSWBBBBBBBBWSDD........",
+      "........DBWEBBBBBBBBEWBD........",
+      "........DBBEBBBBBBBBEBBD........",
+      ".......DDPBBBBBBBBBBBBPDD.......",
+      ".......DBBBBBBMMMMBBBBBBD.......",
+      ".......DBBBBBBBBBBBBBBBBD.......",
+      ".......DBBBBBBBBBBBBBBBBD.......",
+      "......DDBBBBBBBBBBBBBBBBDD......",
+      "......DBBBBBLLLLLLLLBBBBBD......",
+      "......DBBBBLLLLLLLLLLBBBBD......",
+      "......DBBBBBLLLLLLLLBBBBBD......",
+      ".....DDBBBBBBLLLLLLBBBBBBDD.....",
+      ".....DDBBBBBBBBBBBBBBBBBBDD.....",
+      ".....DBBBBBBBBBBBBBBBBBBBBD.....",
+      "................................",
+      "................................",
+      "................................"
     ],
     2: [
-      "..WW......WW....",
-      ".WBBW....WBBW...",
-      "WWBBWW..WWBBWW..",
-      "WBBBBW..WBBBBW..",
-      ".WBBW.HBBH.WBBW.",
-      "..WW.DBEEBD.WW..",
-      ".....DBBBBD.....",
-      ".....DBFFBD.....",
-      ".....DBBBBD.....",
-      "......DBBD......",
-      "......DBBD......",
-      ".....DBBBD......",
-      "....DBBD........",
-      "...DBBD.....HH..",
-      "..DDD.....HH....",
-      "................"
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      ".............BBBBBB.............",
+      "............BBBBBBBB............",
+      ".......K...DBBBBBBBBD...K.......",
+      ".......GK.DBBBBBBBBBBD.KG.......",
+      ".......GGKKSWBBBBBBWSKKGG.......",
+      "........GGGKEBBBBBBEKGGG........",
+      "........GKGBEBBBBBBEBGKG........",
+      "........GGPBBBBBBBBBBPGG........",
+      "........GDBBBBBMMBBBBBDG........",
+      "........DDBBBBBBBBBBBBDD........",
+      "........DDBBBBBBBBBBBBDD........",
+      "........DBBBBBBBBBBBBBBD........",
+      "........DBBBLLLLLLLLBBBD........",
+      "........DBBBBLLLLLLBBBBD........",
+      ".......DDBBBBBLLLLBBBBBDD.......",
+      ".......DDBBBBBBBBBBBBBBDD.......",
+      ".......DBBBBBBBBBBBBBBBBD.......",
+      "................................",
+      "................................",
+      "................................"
     ],
     3: [
-      ".WW..HH..HH..WW.",
-      "WBBW.HH..HH.WBBW",
-      "WBBBW......WBBBW",
-      "WBBBBW HH WBBBBW",
-      ".WBBBWBEEBWBBBW.",
-      "..WWBDBBBBDBWW..",
-      "....DBBBBBBD....",
-      "FFF.DBBFFBBD....",
-      "....DBBBBBBD....",
-      "....DBBBBBBD....",
-      ".....DBBBBD.....",
-      ".....DBBBD......",
-      "....DBBD........",
-      "...DBBD.....HH..",
-      "..DDD.....HHH...",
-      "................"
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "....K......................K....",
+      "....GKK..................KKG....",
+      "....GGGK.....BBBBBB.....KGGG....",
+      ".....GGKK...DBBBBBBD...KKGG.....",
+      ".....GGGGKKDBBBBBBBBDKKGGGG.....",
+      ".....GGKGGGKBBBBBBBBKGGGKGG.....",
+      ".....GGGGGGDSWBBBBWSDGGGGGG.....",
+      ".....GGKGGDBWEBBBBEWBDGGKGG.....",
+      "......GGG.DBBBBBBBBBBD.GGG......",
+      "......GK..DPBBBBBBBBPD..KG......",
+      "......G..DDBBBBMMBBBBDD..G......",
+      ".........DDBBLLLLLLBBDD.........",
+      ".........DBBBBLLLLBBBBD.........",
+      ".........DBBBBLLLLBBBBD.........",
+      ".........DBBBBBBBBBBBBD.........",
+      "........DDBBBBBBBBBBBBDD........",
+      "................................",
+      "................................",
+      "................................"
     ],
     4: [
-      "WW..HH....HH..WW",
-      "WBBW.HH..HH.WBBW",
-      "WBBBW.HH.H.WBBBW",
-      "WBBBBW....WBBBBW",
-      "WBBBBWHBBHWBBBBW",
-      ".WBBBDBEEBDBBBW.",
-      "..WWDBBBBBBDWW..",
-      "FFF.DBBFFBBD....",
-      "....DBBBBBBD....",
-      "....DBBBBBBD....",
-      ".....DBBBBD..H..",
-      ".....DBBBD..HH..",
-      "....DBBD...HH...",
-      "...DBBD..HH.....",
-      "..DDD..HH.......",
-      "................"
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "..K..........................K..",
+      "..GK........................KG..",
+      "..GGKK....................KKGG..",
+      "...GGGK..................KGGG...",
+      "...GGGKK................KKGGG...",
+      "...GGGGGKK...BBBBBB...KKGGGGG...",
+      "...GGGKGGGK.DBBBBBBD.KGGGKGGG...",
+      "....GGGGGGGKBBBBBBBBKGGGGGGG....",
+      "....GGKGGGGDBBBBBBBBDGGGGKGG....",
+      "....GGGGGG.DSWBBBBWSD.GGGGGG....",
+      "....GGKGG.DDWEBBBBEWDD.GGKGG....",
+      ".....GGG..DBBBBBBBBBBD..GGG.....",
+      ".....GK...DPBBBBBBBBPD...KG.....",
+      ".....G....DBBBLMMLBBBD....G.....",
+      "..........DBBBLLLLBBBD..........",
+      ".........DDBBBBLLBBBBDD.........",
+      ".........DDBBBBBBBBBBDD.........",
+      ".........DBBBBBBBBBBBBD.........",
+      "................................",
+      "................................"
     ],
     5: [
-      "HWWWWW..WWWWWH..",
-      "HHWWWWWWWWWWWHH.",
-      "WWWBBBWWBBBWWWW.",
-      "WBBBBBBWWBBBBBW.",
-      "WBBBBBBWWBBBBBW.",
-      "HWWBBBDBBDBBBWW.",
-      "HH.WDBEBBEBDW...",
-      "FFFFDBBBBBBBD...",
-      ".FF.DBBHHBBBD...",
-      "....DBBBBBBBD...",
-      "....DBBBBBBD.H..",
-      "...DBBBBBBD.HH..",
-      "..DBBBBBD.HH....",
-      "..DBBBD.HH......",
-      ".DDD..HH........",
-      "......H........."
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "K..............................K",
+      "GKK..........................KKG",
+      "GGGK.........H....H.........KGGG",
+      ".GGGK........H....H........KGGG.",
+      ".GGGGKK..................KKGGGG.",
+      ".GGGGGGK................KGGGGGG.",
+      ".GGGGKGGK..............KGGKGGGG.",
+      ".GGGGGGGGKK..BBBBBB..KKGGGGGGGG.",
+      "..GGGKGGGGGKDBBBBBBDKGGGGGKGGG..",
+      "..GGGGGGGGGDBBBBBBBBDGGGGGGGGG..",
+      "..GGGKGGGG.DBBBBBBBBD.GGGGKGGG..",
+      "..GGGGGGG..DSWBBBBWSD..GGGGGGG..",
+      "..GGGKGG..DDWEBBBBEWDD..GGKGGG..",
+      "...GGG....DBBBBBBBBBBD....GGG...",
+      "...GG.....DPBBBBBBBBPD.....GG...",
+      "...G......DBBBLMMLBBBD......G...",
+      "..........DBBBLLLLBBBD..........",
+      ".........DDBBBBLLBBBBDD.........",
+      ".........DDBBBBBBBBBBDD.........",
+      ".........DBBBBBBBBBBBBD.........",
+      "................................",
+      "................................"
     ],
     6: [
-      "HWWWWWWWWWWWWWH.",
-      "HHWWWWWWWWWWWHH.",
-      "WWWBBBBWWBBBBWW.",
-      "WBBBBBBWWBBBBBW.",
-      "WBBBBBBWWBBBBBW.",
-      "HWWBBBBDBBBBBWW.",
-      "HHWWBEEBBEEBWWH.",
-      "FFFFFBBBBBBBBDH.",
-      "FFF.DBBHHHBBBD..",
-      ".F..DBBBBBBBBD..",
-      "....DBBBBBBBD.H.",
-      "...DBBBBBBBD.HH.",
-      "..DBBBBBBD.HH...",
-      "..DBBBBD.HH.....",
-      ".DDDD..HHH......",
-      "H....HH........."
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "................................",
+      "K..............................K",
+      "GKK..........................KKG",
+      "GGGK.........H....H.........KGGG",
+      "GGGGKK......H..HH..H......KKGGGG",
+      "GGGGGGK.....H..HH..H.....KGGGGGG",
+      "GGGGGKGK................KGKGGGGG",
+      ".GGGGGGGK..............KGGGGGGG.",
+      ".GGGGKGGGKK..........KKGGGKGGGG.",
+      ".GGGGGGGGGGK.BBBBBB.KGGGGGGGGGG.",
+      ".GGGGKGGGGG.BBBBBBBB.GGGGGKGGGG.",
+      "..GGGGGGGG.DBBBBBBBBD.GGGGGGGG..",
+      "..GGGKGGG.DDBBBBBBBBDD.GGGKGGG..",
+      "..GGGGGG..DBSEBBBBESBD..GGGGGG..",
+      "..GGGKG...DBEEBBBBEEBD...GKGGG..",
+      "...GGG....DBBBBBBBBBBD....GGG...",
+      "...GG....DDPBBBBBBBBPDD....GG...",
+      "...G.....DDBBBLMMLBBBDD.....G...",
+      ".........DBBBBLLLLBBBBD.........",
+      ".........DBBBBBLLBBBBBD.........",
+      ".........DBBBBBBBBBBBBD.........",
+      "........DDBBBBBBBBBBBBDD........",
+      "................................",
+      "................................"
     ]
   };
-
-  function mix(a, b, t) {
-    function p(h, i) { return parseInt(h.replace("#", "").substr(i, 2), 16); }
-    var r = Math.round(p(a, 0) * (1 - t) + p(b, 0) * t);
-    var g = Math.round(p(a, 2) * (1 - t) + p(b, 2) * t);
-    var bl = Math.round(p(a, 4) * (1 - t) + p(b, 4) * t);
-    return "#" + [r, g, bl].map(function (v) { return ("0" + v.toString(16)).slice(-2); }).join("");
-  }
+  /* 슬라임 팔레트(청록 본체). glow만 단계별. */
+  var PAL = {
+    B: "#60b896", D: "#3a8068", L: "#96dec0", H: "#e2d8ba",
+    W: "#ffffff", S: "#ffffff", M: "#a84e67", P: "#f496a2",
+    C: "#78c8aa", G: "#50a28a", K: "#367662"
+  };
 
   function svgFor(stageId, px) {
-    px = px || 9;
+    px = px || 4;
     var grid = GRIDS[stageId] || GRIDS[0];
     var st = STAGES[stageId] || STAGES[0];
-    var palette = {
-      B: st.body, D: st.dark, H: "#c8c8d2",
-      E: st.glow, F: st.glow, W: mix(st.body, st.dark, 0.5)
-    };
-    var n = 16, dim = n * px, rects = "";
+    var n = 32, dim = n * px, rects = "";
     for (var y = 0; y < n; y++) {
       var row = grid[y] || "";
       for (var x = 0; x < n; x++) {
         var c = row.charAt(x);
         if (!c || c === "." || c === " ") continue;
-        var col = palette[c];
+        var col = (c === "E" || c === "F") ? st.glow : PAL[c];
         if (!col) continue;
         rects += '<rect x="' + (x * px) + '" y="' + (y * px) + '" width="' + px + '" height="' + px + '" fill="' + col + '"/>';
       }
@@ -201,17 +343,18 @@
   }
 
   function progress(xp) {
-    var st = stageFor(xp), nx = nextStage(st);
-    if (nx.id === st.id) return { stage: st, next: null, pct: 100, toNext: 0 };
-    var span = nx.min - st.min, into = xp - st.min;
-    return { stage: st, next: nx, pct: Math.round(into / span * 100), toNext: nx.min - xp };
+    var st = stageFor(xp), nx = nextStage(st), pv = prevStage(st);
+    var out = { stage: st, next: null, prev: (pv.id !== st.id ? pv : null), pct: 100, toNext: 0 };
+    if (nx.id !== st.id) {
+      var span = nx.min - st.min, into = xp - st.min;
+      out.next = nx; out.pct = Math.round(into / span * 100); out.toNext = nx.min - xp;
+    }
+    out.marginToDrop = xp - st.min;
+    return out;
   }
 
   root.Mascot = {
-    STAGES: STAGES,
-    computeXP: computeXP,
-    stageFor: stageFor,
-    progress: progress,
-    svg: svgFor
+    STAGES: STAGES, computeXP: computeXP, stageFor: stageFor,
+    progress: progress, svg: svgFor
   };
 })(window);
