@@ -115,7 +115,8 @@
       <li>"전망 반영"을 누르면 기존 전망과 병합해 data/forecasts.xlsx로 <b>직접 커밋</b>됩니다 (쓰기 권한 토큰 필요)</li>
       <li>커밋 즉시 Actions가 자동 실행 → 1~2분 뒤 <a href="#" onclick="showTab('track');return false;">적중도 추적 탭</a>에 새 빈티지 반영 — 아래에서 반영 완료를 자동 확인합니다</li>
     </ol>
-    <p class="tnote">기존 전망은 보존되고 같은 (기준일·변수·타깃)만 교체됩니다. 노란 칸은 10년 평균에서 ±1.5σ 밖.</p>
+    <p class="tnote">기존 전망은 보존되고 같은 (기준일·변수·타깃)만 교체됩니다. 노란 칸은 10년 평균에서 ±1.5σ 밖.
+      각 칸의 <b>"현재" 값이 랜덤워크 벤치마크</b>입니다 — 여기서 의미 있게 벗어난 전망만이 무변화 가정을 이길 기회를 가집니다. 적중도 추적 탭에서 실제로 이겼는지 확인할 수 있습니다.</p>
   </div>
 </div>
   </div>
@@ -178,6 +179,40 @@
       적중 +10 XP · 정밀(≤0.10%p) +8 — 빗나가면 차감(방향 −3, 큰 오차 −3)되어 등급이 <b>하락</b>합니다.
       단, 그 시기 금리 변동폭이 0.20%p 이상이면(<b>고변동 구간</b>) 오답 패널티를 절반만 부과합니다 — 요동친 장에서의 실패는 덜 가혹하게.
       같은 전망을 6회 넘게 바꾸면 번복 패널티도 붙습니다. 등급은 7단계입니다.</p>
+
+    <div id="rwPanel" style="border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(60,50,30,0.05);padding:20px 24px;margin:18px 0 8px;border-radius:2px;display:none;">
+      <div style="font-variant:small-caps;letter-spacing:.08em;font-size:.74rem;color:var(--muted);margin-bottom:4px;">랜덤워크 대비 실력 (벤치마크)</div>
+      <p style="font-size:.82rem;color:var(--ink2);margin:0 0 14px;">
+        랜덤워크 = "전망 시점 시장값이 그대로 유지된다"는 무변화 가정. 내 전망이 이보다 정확해야 의미가 있습니다.
+        <b>스킬 스코어 = 1 − (내 평균오차 ÷ 랜덤워크 평균오차)</b> — 양수면 무변화 가정을 이긴 것.</p>
+      <div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-end;">
+        <div>
+          <div style="font-variant:small-caps;font-size:.7rem;color:var(--muted);">스킬 스코어</div>
+          <div id="rwSkill" style="font-size:2.2rem;font-weight:700;line-height:1;">—</div>
+          <div id="rwVerdict" style="font-size:.8rem;margin-top:2px;"></div>
+        </div>
+        <div>
+          <div style="font-variant:small-caps;font-size:.7rem;color:var(--muted);">랜덤워크보다</div>
+          <div style="font-size:.95rem;margin-top:4px;line-height:1.5;">
+            <span id="rwBeat" style="font-weight:700;color:#3c8a4a;">—</span> 이김 ·
+            <span id="rwLose" style="font-weight:700;color:var(--bad);">—</span> 짐 ·
+            <span id="rwTie" style="font-weight:700;color:var(--muted);">—</span> 동률</div>
+        </div>
+        <div>
+          <div style="font-variant:small-caps;font-size:.7rem;color:var(--muted);">평균 절대오차 (MAE)</div>
+          <div style="font-size:.95rem;margin-top:4px;line-height:1.5;">
+            내 전망 <b id="rwMyMAE">—</b>%p · 랜덤워크 <b id="rwRwMAE">—</b>%p</div>
+        </div>
+      </div>
+      <!-- 변수별 분해 -->
+      <div style="margin-top:16px;border-top:1px solid var(--line2);padding-top:12px;">
+        <div style="font-variant:small-caps;letter-spacing:.08em;font-size:.72rem;color:var(--muted);margin-bottom:6px;">변수별 분해</div>
+        <table class="grid" id="rwTable" style="font-size:.84rem;">
+          <thead><tr><th class="lab">변수</th><th>건수</th><th>내 MAE</th><th>RW MAE</th><th>스킬</th><th>승률</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
 
     <h2 class="sec"><span class="num">§ 1</span>빈티지 차트</h2>
     <p class="secdesc">굵은 선=실현치, 가는 선=각 시점 전망 경로.</p>
@@ -592,7 +627,35 @@
       }
     })();
 
-    var vars=Object.keys(data.summary_by_variable).sort();
+    // ── 랜덤워크 벤치마크 패널 ──
+    (function(){
+      if(!window.Mascot || !Mascot.rwBenchmark) return;
+      var b=Mascot.rwBenchmark(data);
+      if(b.evaluated<1) return;
+      function fmt(v){return (v>=0?"+":"")+v.toFixed(2);}
+      $("rwSkill").textContent=fmt(b.skill);
+      $("rwSkill").style.color = b.skill>0 ? "#3c8a4a" : (b.skill<0 ? "#a23b3b" : "#6b7488");
+      $("rwVerdict").textContent = b.skill>0 ? "랜덤워크보다 우수" : (b.skill<0 ? "랜덤워크보다 열위" : "랜덤워크와 동급");
+      $("rwVerdict").style.color = b.skill>0 ? "#3c8a4a" : (b.skill<0 ? "#a23b3b" : "#6b7488");
+      $("rwBeat").textContent=b.beat;
+      $("rwLose").textContent=b.lose;
+      $("rwTie").textContent=b.tie;
+      $("rwMyMAE").textContent=b.myMAE.toFixed(3);
+      $("rwRwMAE").textContent=b.rwMAE.toFixed(3);
+      // 변수별 표
+      var tb=$("rwTable").querySelector("tbody");
+      tb.innerHTML=b.perVariable.map(function(p){
+        var sk=(p.skill>=0?"+":"")+p.skill.toFixed(2);
+        var skColor=p.skill>0?"#3c8a4a":(p.skill<0?"#a23b3b":"#6b7488");
+        return '<tr><td class="lab">'+p.variable+'</td>'+
+          '<td>'+p.n+'</td>'+
+          '<td>'+p.myMAE.toFixed(3)+'</td>'+
+          '<td>'+p.rwMAE.toFixed(3)+'</td>'+
+          '<td style="color:'+skColor+';font-weight:700;">'+sk+'</td>'+
+          '<td>'+(p.winRate*100).toFixed(0)+'%</td></tr>';
+      }).join("");
+      $("rwPanel").style.display="";
+    })();
     var allVars=[];data.records.forEach(function(r){if(allVars.indexOf(r.variable)<0)allVars.push(r.variable);});
     allVars.sort();
     vars.concat(allVars.filter(function(v){return vars.indexOf(v)<0;}));

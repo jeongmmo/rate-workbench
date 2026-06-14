@@ -109,8 +109,52 @@
     });
   }
 
+  /* ---------- 랜덤워크 벤치마크 ----------
+     랜덤워크 예측 = 전망 시점 시장값(anchor)을 무변화로 가정.
+     "내 전망이 단순 무변화보다 나았는가"가 전망의 진짜 가치.
+     스킬 스코어 = 1 − (내 MAE / 랜덤워크 MAE). 양수면 랜덤워크 이김. */
+  function rwBenchmark(data) {
+    var recs = (data && data.records) || [];
+    var ev = recs.filter(function (r) {
+      return r.realized !== null && r.realized !== undefined
+        && r.anchor !== null && r.anchor !== undefined
+        && r.forecast !== null && r.forecast !== undefined;
+    });
+    var sumMy = 0, sumRw = 0, beat = 0, lose = 0, tie = 0;
+    var byVar = {};
+    ev.forEach(function (r) {
+      var myErr = Math.abs(r.realized - r.forecast);
+      var rwErr = Math.abs(r.realized - r.anchor);
+      sumMy += myErr; sumRw += rwErr;
+      if (myErr < rwErr - 1e-9) beat++;
+      else if (myErr > rwErr + 1e-9) lose++;
+      else tie++;
+      var v = r.variable;
+      if (!byVar[v]) byVar[v] = { my: 0, rw: 0, beat: 0, n: 0 };
+      byVar[v].my += myErr; byVar[v].rw += rwErr; byVar[v].n++;
+      if (myErr < rwErr - 1e-9) byVar[v].beat++;
+    });
+    var perVar = Object.keys(byVar).sort().map(function (v) {
+      var d = byVar[v];
+      return {
+        variable: v, n: d.n,
+        myMAE: d.my / d.n, rwMAE: d.rw / d.n,
+        skill: d.rw > 0 ? 1 - (d.my / d.rw) : 0,
+        winRate: d.beat / d.n
+      };
+    });
+    return {
+      evaluated: ev.length, beat: beat, lose: lose, tie: tie,
+      myMAE: ev.length ? sumMy / ev.length : 0,
+      rwMAE: ev.length ? sumRw / ev.length : 0,
+      skill: sumRw > 0 ? 1 - (sumMy / sumRw) : 0,
+      winRate: ev.length ? beat / ev.length : 0,
+      perVariable: perVar
+    };
+  }
+
   root.Mascot = {
     STAGES: STAGES, computeXP: computeXP, stageFor: stageFor,
-    progress: progress, xpTrend: xpTrend
+    progress: progress, xpTrend: xpTrend, rwBenchmark: rwBenchmark
   };
 })(window);
