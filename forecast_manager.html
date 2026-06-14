@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>전망치 관리 · Forecast Manager</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --ink:#16213a; --ink2:#3a4a6b; --muted:#6b7488;
+    --line:#d9dde6; --line2:#eceef3;
+    --accent:#1f3a6e; --accent-soft:#eaf0f9;
+    --paper:#f4efe4; --card:#ffffff; --good:#2f6f6b; --bad:#a23b3b; --warn:#b07d2b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);
+    font-family:'Times New Roman',Times,Georgia,serif;font-size:16px;line-height:1.5;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 28px 90px;}
+  header.mast{border-bottom:2px solid var(--ink);padding:34px 0 18px;}
+  .eyebrow{font-variant:small-caps;letter-spacing:.14em;font-size:.82rem;color:var(--accent);margin:0 0 6px;}
+  h1.title{font-size:2rem;font-weight:700;margin:0 0 6px;}
+  .subtitle{font-size:1rem;color:var(--ink2);font-style:italic;margin:0;}
+  a.back{font-size:.86rem;color:var(--accent);}
+  #status{margin:18px 0;font-size:.92rem;}
+  #status.err{color:var(--bad)} #status.busy{color:var(--warn);font-style:italic}
+
+  h2.sec{font-size:1.16rem;margin:36px 0 4px;font-weight:700;}
+  h2.sec .num{font-variant:small-caps;font-size:.78rem;color:var(--accent);margin-right:9px;letter-spacing:.1em;}
+  p.secdesc{margin:0 0 14px;color:var(--ink2);font-size:.92rem;}
+
+  table.reg{border-collapse:collapse;font-size:.92rem;margin:6px 0 4px;width:100%;}
+  table.reg th{font-variant:small-caps;font-size:.78rem;letter-spacing:.06em;color:var(--muted);
+    border-top:1.5px solid var(--ink);border-bottom:1px solid var(--line);padding:7px 12px 7px 0;text-align:right;font-weight:700;}
+  table.reg th:first-child{text-align:left;}
+  table.reg td{border-bottom:1px solid var(--line2);padding:6px 12px 6px 0;text-align:right;font-variant-numeric:tabular-nums;}
+  table.reg td:first-child{text-align:left;}
+  table.reg tr:last-child td{border-bottom:1.5px solid var(--ink);}
+  .tnote{font-size:.82rem;color:var(--muted);font-style:italic;margin:2px 0 0;}
+  .pos{color:var(--bad)} .neg{color:var(--good)}
+
+  .ctrl{display:flex;gap:10px;align-items:center;margin:0 0 12px;flex-wrap:wrap;}
+  .ctrl label{font-variant:small-caps;font-size:.8rem;color:var(--muted);letter-spacing:.06em;}
+  select{font-family:inherit;font-size:.95rem;padding:5px 8px;border:1px solid var(--line);background:#fff;color:var(--ink);}
+  .chartbox{border:1px solid var(--line);padding:14px;background:var(--card,#fff);box-shadow:0 1px 3px rgba(60,50,30,0.05);}
+  canvas{max-height:420px;}
+
+  /* ── 전망 입력 탭 전용 ── */
+  h2.sec{font-size:1.16rem;margin:34px 0 4px;font-weight:700;}
+  h2.sec .num{font-variant:small-caps;font-size:.78rem;color:var(--accent);margin-right:9px;letter-spacing:.1em;}
+  table.grid{border-collapse:collapse;font-size:.9rem;width:100%;margin:4px 0 6px;background:var(--card);}
+  table.grid th{font-variant:small-caps;font-size:.76rem;letter-spacing:.05em;color:var(--muted);
+    border-top:1.5px solid var(--ink);border-bottom:1px solid var(--line);padding:7px 8px;text-align:center;font-weight:700;}
+  table.grid th.lab{text-align:left;}
+  table.grid td{border-bottom:1px solid var(--line2);padding:4px 8px;text-align:center;font-variant-numeric:tabular-nums;}
+  table.grid td.lab{text-align:left;white-space:nowrap;}
+  table.grid td.ref{font-size:.8rem;color:var(--muted);white-space:nowrap;text-align:left;font-style:italic;}
+  tr.level td{font-weight:700;background:var(--accent-soft);}
+  tr.level td.lab{font-weight:700;}
+  tr.spread td.lab{color:var(--ink2);padding-left:22px;}
+  input.cell{width:64px;font-family:inherit;font-size:.9rem;text-align:right;padding:3px 5px;
+    border:1px solid var(--line);background:#fff;color:var(--ink);}
+  input.cell:focus{outline:2px solid var(--accent-soft);border-color:var(--accent);}
+  input.cell.unusual{background:#fdf6ec;border-color:var(--warn);}
+  .tnote{font-size:.82rem;color:var(--muted);font-style:italic;margin:2px 0 14px;}
+  .exportbar{border:1px solid var(--line);background:var(--card);padding:16px 20px;margin-top:30px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;box-shadow:0 1px 3px rgba(60,50,30,0.05);}
+  .exportbar label{font-variant:small-caps;font-size:.8rem;color:var(--muted);letter-spacing:.06em;margin-right:6px;}
+  input#fdate{font-family:inherit;font-size:.95rem;padding:5px 8px;border:1px solid var(--line);}
+  button.primary{font-family:inherit;font-size:.95rem;padding:9px 22px;cursor:pointer;background:var(--accent);color:#fff;border:1px solid var(--accent);}
+  button.primary:hover{background:#16305c;}
+  button.ghost{font-family:inherit;font-size:.88rem;padding:6px 14px;cursor:pointer;background:none;border:1px solid var(--line);color:var(--ink2);}
+  button.ghost:hover{border-color:var(--accent);color:var(--accent);}
+  ol.steps{font-size:.88rem;color:var(--ink2);margin:8px 0 0;padding-left:20px;}
+  /* ── 탭 UI ── */
+  .tabbar{display:flex;gap:0;margin:22px 0 0;border-bottom:2px solid var(--ink);}
+  .tabbtn{font-family:inherit;font-size:1rem;font-weight:700;padding:10px 24px;cursor:pointer;
+    background:none;border:none;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px;}
+  .tabbtn.active{color:var(--accent);border-bottom-color:var(--accent);}
+  .tabbtn:hover{color:var(--ink);}
+  .tabpane{display:none;}
+  .tabpane.active{display:block;}
+
+</style>
+  <script src="./common.js"></script>
+  <script src="./mascot.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="mast">
+    <p class="eyebrow">Forecast Manager · 입력 + 적중도</p>
+    <h1 class="title">전망치 관리</h1>
+    <p class="subtitle">전망을 입력하고, 적중도와 점수 추이를 한 곳에서 관리합니다.</p>
+    <p style="margin:10px 0 0"><a class="back" href="index.html">&#8592; 포털로 돌아가기</a></p>
+  </header>
+
+  <div class="tabbar">
+    <button class="tabbtn active" id="tabBtnInput" onclick="showTab('input')">전망 입력</button>
+    <button class="tabbtn" id="tabBtnTrack" onclick="showTab('track')">적중도 추적</button>
+  </div>
+
+  <!-- 탭 1: 전망 입력 -->
+  <div class="tabpane active" id="paneInput">
+    <div id="inpStatus" class="busy">참고 통계(results/spread_stats.json) 불러오는 중 …</div>
+    <div id="inpContent" style="display:none">
+    <div id="chains"></div>
+
+    <div class="exportbar">
+      <span><label>전망 기준일</label><input type="date" id="fdate"></span>
+      <button class="ghost" id="btnFillMean">스프레드를 10년 평균으로 채우기</button>
+      <button class="ghost" id="btnFillCur">스프레드를 현재값으로 채우기</button>
+      <button class="primary" id="btnPush">전망 반영 — GitHub에 바로 커밋</button>
+      <button class="ghost" id="btnExport">파일로 받기 (.xlsx)</button>
+    </div>
+    <ol class="steps">
+      <li>"전망 반영"을 누르면 기존 전망과 병합해 data/forecasts.xlsx로 <b>직접 커밋</b>됩니다 (쓰기 권한 토큰 필요)</li>
+      <li>커밋 즉시 Actions가 자동 실행 → 1~2분 뒤 <a href="#" onclick="showTab('track');return false;">적중도 추적 탭</a>에 새 빈티지 반영 — 아래에서 반영 완료를 자동 확인합니다</li>
+    </ol>
+    <p class="tnote">기존 전망은 보존되고 같은 (기준일·변수·타깃)만 교체됩니다. 노란 칸은 10년 평균에서 ±1.5σ 밖.</p>
+  </div>
+</div>
+  </div>
+
+  <!-- 탭 2: 적중도 추적 -->
+  <div class="tabpane" id="paneTrack">
+    
+  <div id="trkStatus" class="busy">결과 불러오는 중 …</div>
+  <div id="content" style="display:none">
+
+    <div id="scorePanel" style="border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(60,50,30,0.05);padding:20px 24px;margin-bottom:8px;border-radius:2px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap;">
+        <div>
+          <div style="font-variant:small-caps;letter-spacing:.08em;font-size:.74rem;color:var(--muted);">전망 적중 점수</div>
+          <div style="display:flex;align-items:baseline;gap:6px;margin-top:2px;">
+            <span id="scoreXP" style="font-size:2.4rem;font-weight:700;color:var(--ink);line-height:1;">—</span>
+            <span style="font-size:1rem;color:var(--muted);">XP</span>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-variant:small-caps;letter-spacing:.08em;font-size:.74rem;color:var(--muted);">등급</div>
+          <div id="scoreLevel" style="font-size:1.3rem;font-weight:700;color:var(--accent);margin-top:2px;">—</div>
+          <div id="scoreNext" style="font-size:.78rem;color:var(--muted);margin-top:2px;"></div>
+        </div>
+      </div>
+      <!-- 진행 바 -->
+      <div style="margin-top:14px;">
+        <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-bottom:4px;">
+          <span id="scoreLevelLo">—</span><span id="scoreLevelHi">—</span>
+        </div>
+        <div style="background:#ece6d8;border-radius:6px;height:10px;overflow:hidden;border:1px solid #ddd5c4;">
+          <div id="scoreBar" style="height:100%;width:0%;background:linear-gradient(90deg,#9ec99b,#5aa9d6);transition:width .9s ease;"></div>
+        </div>
+        <div id="scoreDrop" style="font-size:.76rem;color:var(--bad);margin-top:4px;display:none;"></div>
+      </div>
+      <!-- 점수 내역 (숫자 카드) -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:10px;margin-top:16px;border-top:1px solid var(--line2);padding-top:14px;">
+        <div><div id="scEval" style="font-size:1.3rem;font-weight:700;color:var(--ink);">—</div><div style="font-size:.7rem;color:var(--muted);">평가 전망</div></div>
+        <div><div id="scHit" style="font-size:1.3rem;font-weight:700;color:#3c8a4a;">—</div><div style="font-size:.7rem;color:var(--muted);">방향 적중</div></div>
+        <div><div id="scRate" style="font-size:1.3rem;font-weight:700;color:var(--ink);">—</div><div style="font-size:.7rem;color:var(--muted);">적중률</div></div>
+        <div><div id="scPrecise" style="font-size:1.3rem;font-weight:700;color:#3c8a4a;">—</div><div style="font-size:.7rem;color:var(--muted);">정밀 예측</div></div>
+        <div><div id="scMiss" style="font-size:1.3rem;font-weight:700;color:var(--bad);">—</div><div style="font-size:.7rem;color:var(--muted);">방향 오답</div></div>
+        <div><div id="scRev" style="font-size:1.3rem;font-weight:700;color:var(--bad);">—</div><div style="font-size:.7rem;color:var(--muted);">번복 패널티</div></div>
+        <div><div id="scVol" style="font-size:1.3rem;font-weight:700;color:var(--accent);">—</div><div style="font-size:.7rem;color:var(--muted);">변동성 경감</div></div>
+      </div>
+      <!-- 등급 표 -->
+      <div style="margin-top:16px;border-top:1px solid var(--line2);padding-top:12px;">
+        <div style="font-variant:small-caps;letter-spacing:.08em;font-size:.74rem;color:var(--muted);margin-bottom:8px;">등급 기준</div>
+        <div id="scoreTiers" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+      </div>
+      <!-- 점수 추이 차트 -->
+      <div style="margin-top:16px;border-top:1px solid var(--line2);padding-top:12px;">
+        <div style="font-variant:small-caps;letter-spacing:.08em;font-size:.74rem;color:var(--muted);margin-bottom:8px;">점수 추이 (전망 제출 라운드별 누적 XP)</div>
+        <div style="background:#fff;border:1px solid var(--line2);border-radius:4px;padding:10px;">
+          <canvas id="scoreTrend" height="120"></canvas>
+        </div>
+      </div>
+    </div>
+    <p style="font-size:.78rem;color:var(--muted);font-style:italic;margin:0 0 6px;">
+      적중 +10 XP · 정밀(≤0.10%p) +8 — 빗나가면 차감(방향 −3, 큰 오차 −3)되어 등급이 <b>하락</b>합니다.
+      단, 그 시기 금리 변동폭이 0.20%p 이상이면(<b>고변동 구간</b>) 오답 패널티를 절반만 부과합니다 — 요동친 장에서의 실패는 덜 가혹하게.
+      같은 전망을 6회 넘게 바꾸면 번복 패널티도 붙습니다. 등급은 7단계입니다.</p>
+
+    <h2 class="sec"><span class="num">§ 1</span>빈티지 차트</h2>
+    <p class="secdesc">굵은 선=실현치, 가는 선=각 시점 전망 경로.</p>
+    <div class="ctrl"><label>변수</label><select id="varSel"></select></div>
+    <div class="chartbox"><canvas id="hedgehog"></canvas></div>
+
+    <h2 class="sec"><span class="num">§ 2</span>변수별 적중도</h2>
+    <p class="secdesc">오차 = 전망 − 실현. ME 음수 = 과소전망. 방향적중률은 상승/하락 방향을 맞힌 비율.</p>
+    <div id="byVar"></div>
+
+    <h2 class="sec"><span class="num">§ 3</span>호라이즌별 적중도</h2>
+    <p class="secdesc">전망 시점~목표 분기말 거리별 성적.</p>
+    <div id="byHz"></div>
+
+    <h2 class="sec"><span class="num">§ 4</span>개별 기록</h2>
+    <div class="ctrl"><label>변수</label><select id="recSel"></select>
+      <label><input type="checkbox" id="onlyDone" checked> 평가완료만</label></div>
+    <div id="records"></div>
+  </div>
+</div>
+  </div>
+</div>
+
+<script>
+  // 탭 전환
+  function showTab(which){
+    var isInput = which==='input';
+    document.getElementById('paneInput').classList.toggle('active', isInput);
+    document.getElementById('paneTrack').classList.toggle('active', !isInput);
+    document.getElementById('tabBtnInput').classList.toggle('active', isInput);
+    document.getElementById('tabBtnTrack').classList.toggle('active', !isInput);
+  }
+</script>
+
+<script>
+/* ===== 전망 입력 로직 ===== */
+(async function(){
+  "use strict";
+  var $=function(id){return document.getElementById(id);};
+  var status=$("inpStatus");
+  var STATS=null, QUARTERS=[];
+
+  /* 오늘이 속한 분기부터 6개 분기 라벨 생성 → "2026Q3" */
+  function buildQuarters(n){
+    var d=new Date(), y=d.getFullYear(), q=Math.floor(d.getMonth()/3)+1, out=[];
+    for(var i=0;i<n;i++){ out.push(y+"Q"+q); q++; if(q>4){q=1;y++;} }
+    return out;
+  }
+  function qEndDate(tq){  // "2026Q3" → 그 분기의 말일
+    var y=+tq.slice(0,4), q=+tq.slice(5);
+    return new Date(y, q*3, 0);
+  }
+  function fmt(v,d){return v===null||v===undefined?"—":Number(v).toFixed(d===undefined?2:d);}
+
+  function buildChainTable(cname, chain){
+    var sec=document.createElement("section");
+    sec.innerHTML='<h2 class="sec"><span class="num">'+cname+'</span>'+cname+' 금리 전망</h2>'+
+      '<p class="secdesc">레벨 = 윗 행 + 스프레드.</p>';
+    var t=document.createElement("table"); t.className="grid";
+    var head='<tr><th class="lab">항목</th><th style="text-align:left">참고치 ('+STATS.window_years+'년)</th>';
+    QUARTERS.forEach(function(q){head+='<th>'+q.slice(2)+'</th>';});
+    t.innerHTML='<thead>'+head+'</tr></thead>';
+    var tb=document.createElement("tbody");
+
+    // 1행: 기준금리 — 레벨 직접 입력
+    var base=chain.nodes[0];
+    var tr=document.createElement("tr"); tr.className="level";
+    var refBase='현재 '+fmt(base.current);
+    tr.innerHTML='<td class="lab">'+base.var+'</td><td class="ref">'+refBase+'</td>';
+    QUARTERS.forEach(function(q,qi){
+      var td=document.createElement("td");
+      var inp=document.createElement("input");
+      inp.className="cell"; inp.type="number"; inp.step="0.05";
+      inp.dataset.chain=cname; inp.dataset.kind="base"; inp.dataset.q=qi;
+      inp.value=base.current!==null?Number(base.current).toFixed(2):"";
+      td.appendChild(inp); tr.appendChild(td);
+    });
+    tb.appendChild(tr);
+
+    // 링크별: 스프레드 입력 행 + 레벨 산출 행
+    chain.links.forEach(function(l,li){
+      var trS=document.createElement("tr"); trS.className="spread";
+      var ref='현재 '+fmt(l.current)+' · 평균 '+fmt(l.mean)+' ± '+fmt(l.sd);
+      trS.innerHTML='<td class="lab">+ 스프레드 ('+l.to.replace(cname+"_","")+'−'+l.from.replace(cname+"_","")+')</td>'+
+                    '<td class="ref">'+ref+'</td>';
+      QUARTERS.forEach(function(q,qi){
+        var td=document.createElement("td");
+        var inp=document.createElement("input");
+        inp.className="cell"; inp.type="number"; inp.step="0.01";
+        inp.dataset.chain=cname; inp.dataset.kind="spread"; inp.dataset.link=li; inp.dataset.q=qi;
+        inp.dataset.mean=l.mean; inp.dataset.sd=l.sd;
+        inp.value=l.current!==null?Number(l.current).toFixed(2):"";
+        td.appendChild(inp); trS.appendChild(td);
+      });
+      tb.appendChild(trS);
+
+      var trL=document.createElement("tr"); trL.className="level";
+      trL.innerHTML='<td class="lab">'+l.to+'</td><td class="ref">현재 '+
+        fmt((chain.nodes[li+1]||{}).current)+'</td>';
+      QUARTERS.forEach(function(q,qi){
+        var td=document.createElement("td");
+        td.dataset.chain=cname; td.dataset.kind="lvl"; td.dataset.node=li+1; td.dataset.q=qi;
+        td.textContent="—"; trL.appendChild(td);
+      });
+      tb.appendChild(trL);
+    });
+    t.appendChild(tb); sec.appendChild(t);
+    return sec;
+  }
+
+  function recompute(cname){
+    var chain=STATS.chains[cname];
+    QUARTERS.forEach(function(q,qi){
+      var baseInp=document.querySelector('input[data-chain="'+cname+'"][data-kind="base"][data-q="'+qi+'"]');
+      var lvl=parseFloat(baseInp.value);
+      chain.links.forEach(function(l,li){
+        var sInp=document.querySelector('input[data-chain="'+cname+'"][data-kind="spread"][data-link="'+li+'"][data-q="'+qi+'"]');
+        var sp=parseFloat(sInp.value);
+        // 비정상 표시: |z| > 1.5
+        var m=parseFloat(sInp.dataset.mean), sd=parseFloat(sInp.dataset.sd);
+        sInp.classList.toggle("unusual", isFinite(sp)&&isFinite(m)&&isFinite(sd)&&sd>0&&Math.abs((sp-m)/sd)>1.5);
+        var cell=document.querySelector('td[data-chain="'+cname+'"][data-kind="lvl"][data-node="'+(li+1)+'"][data-q="'+qi+'"]');
+        if(isFinite(lvl)&&isFinite(sp)){ lvl=lvl+sp; cell.textContent=lvl.toFixed(2); }
+        else { lvl=NaN; cell.textContent="—"; }
+      });
+    });
+  }
+
+  function fillSpreads(field){
+    document.querySelectorAll('input[data-kind="spread"]').forEach(function(inp){
+      var cname=inp.dataset.chain, li=+inp.dataset.link;
+      var v=STATS.chains[cname].links[li][field];
+      if(v!==null&&v!==undefined)inp.value=Number(v).toFixed(2);
+    });
+    Object.keys(STATS.chains).forEach(recompute);
+  }
+
+  /* 전망값 수집: 레벨만(기준금리 + 산출 만기) long 포맷으로 */
+  function collectRows(){
+    var fdate=$("fdate").value;
+    if(!fdate){alert("전망 기준일을 선택하세요.");return null;}
+    var rows=[];
+    Object.keys(STATS.chains).forEach(function(cname){
+      var chain=STATS.chains[cname];
+      QUARTERS.forEach(function(q,qi){
+        if(qEndDate(q) < new Date(fdate)) return;   // 이미 지난 분기는 제외
+        var baseInp=document.querySelector('input[data-chain="'+cname+'"][data-kind="base"][data-q="'+qi+'"]');
+        var lvl=parseFloat(baseInp.value);
+        if(isFinite(lvl)) rows.push({forecast_date:fdate,variable:chain.nodes[0].var,target:q,value:+lvl.toFixed(2)});
+        chain.links.forEach(function(l,li){
+          var sInp=document.querySelector('input[data-chain="'+cname+'"][data-kind="spread"][data-link="'+li+'"][data-q="'+qi+'"]');
+          var sp=parseFloat(sInp.value);
+          if(isFinite(lvl)&&isFinite(sp)){ lvl=+(lvl+sp).toFixed(4);
+            rows.push({forecast_date:fdate,variable:l.to,target:q,value:+lvl.toFixed(2)});
+          } else lvl=NaN;
+        });
+      });
+    });
+    return rows;
+  }
+
+  async function buildMerged(){
+    var rows=collectRows();
+    if(!rows)return null;
+    if(!rows.length){alert("내보낼 전망값이 없습니다 — 입력을 확인하세요.");return null;}
+    status.className="busy"; status.textContent="기존 forecasts.xlsx 불러와 병합 중 …";
+    var existing=[];
+    try{
+      var bytes=await GHCommon.fetchFile(GHCommon.currentConfig(),"data/forecasts.xlsx");
+      var wb=XLSX.read(bytes,{type:"array",cellDates:true});
+      existing=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:null});
+      existing=existing.map(function(r){
+        var d=r.forecast_date;
+        if(d instanceof Date)d=d.toISOString().slice(0,10);
+        return {forecast_date:String(d).slice(0,10),variable:String(r.variable),
+                target:String(r.target),value:Number(r.value)};
+      }).filter(function(r){return r.variable&&r.target&&isFinite(r.value);});
+    }catch(e){
+      if(!confirm("저장소의 data/forecasts.xlsx를 불러오지 못했습니다("+e.message+").\n기존 전망 없이 새 파일로 만들까요?"))
+        {status.className="err";status.textContent="취소됨";return null;}
+    }
+    var key=function(r){return r.forecast_date+"|"+r.variable+"|"+r.target;};
+    var newKeys={}; rows.forEach(function(r){newKeys[key(r)]=1;});
+    var merged=existing.filter(function(r){return !newKeys[key(r)];}).concat(rows);
+    merged.sort(function(a,b){
+      return a.variable<b.variable?-1:a.variable>b.variable?1:
+             a.forecast_date<b.forecast_date?-1:a.forecast_date>b.forecast_date?1:
+             a.target<b.target?-1:1;});
+    var ws=XLSX.utils.json_to_sheet(merged,{header:["forecast_date","variable","target","value"]});
+    var out=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(out,ws,"forecasts");
+    return {wb:out, merged:merged, existing:existing, rows:rows};
+  }
+
+  async function exportXlsx(){
+    var b=await buildMerged(); if(!b)return;
+    XLSX.writeFile(b.wb,"forecasts.xlsx");
+    status.className="ok";
+    status.textContent="파일 저장 완료 — 총 "+b.merged.length+"건. research-data의 data/에 업로드하면 자동 평가됩니다.";
+  }
+
+  async function pushToGitHub(){
+    var b=await buildMerged(); if(!b)return;
+    var fdate=$("fdate").value;
+    status.className="busy"; status.textContent="GitHub에 커밋 중 …";
+    try{
+      var b64=XLSX.write(b.wb,{type:"base64",bookType:"xlsx"});
+      var cfg=GHCommon.currentConfig();
+      await GHCommon.putFile(cfg,"data/forecasts.xlsx",b64,
+        "forecast: "+fdate+" 전망 입력 ("+b.rows.length+"건, 입력기)");
+      status.className="ok";
+      status.textContent="커밋 완료 — 총 "+b.merged.length+"건(신규·교체 "+b.rows.length+
+        "건). Actions가 자동 실행 중입니다 … 반영 확인 중";
+      pollUntilUpdated();
+    }catch(e){
+      status.className="err";
+      status.innerHTML="자동 반영 실패 — "+e.message+
+        "<br>토큰이 읽기 전용이면: GitHub → Settings → Developer settings → Fine-grained tokens에서 "+
+        "research-data 한정·<b>Contents: Read and write</b> 토큰을 만들어 포털에서 교체 입력하세요. "+
+        "임시로는 옆의 \"파일로 받기\"로 받아 직접 업로드해도 됩니다.";
+    }
+  }
+
+  /* 커밋 후 Actions 완료를 manifest 생성시각으로 확인 (15초 간격, 최대 4분) */
+  async function pollUntilUpdated(){
+    var cfg=GHCommon.currentConfig();
+    var t0=Date.now();
+    var before=null;
+    try{ before=(await GHCommon.loadResults(cfg,"manifest")).generated_utc; }catch(e){}
+    var timer=setInterval(async function(){
+      var elapsed=Math.round((Date.now()-t0)/1000);
+      if(elapsed>240){clearInterval(timer);
+        status.textContent+=" — 4분 내 확인 못함: research-data Actions 탭에서 상태를 확인하세요.";return;}
+      try{
+        var m=await GHCommon.loadResults(cfg,"manifest");
+        if(m.generated_utc!==before){
+          clearInterval(timer);
+          status.className="ok";
+          status.innerHTML="반영 완료 ("+elapsed+"초) — <a href=\"#\" onclick=\"showTab('track');return false;\">적중도 추적 탭</a>에서 새 빈티지를 확인하세요.";
+        } else { status.textContent=status.textContent.replace(/ \(\d+초\)$/,"")+" ("+elapsed+"초)"; }
+      }catch(e){}
+    },15000);
+  }
+
+  try{
+    STATS=await GHCommon.loadResults(GHCommon.currentConfig(),"spread_stats");
+    QUARTERS=buildQuarters(6);
+    $("fdate").value=new Date().toISOString().slice(0,10);
+    var box=$("chains");
+    Object.keys(STATS.chains).forEach(function(cn){box.appendChild(buildChainTable(cn,STATS.chains[cn]));});
+    document.querySelectorAll("input.cell").forEach(function(inp){
+      inp.addEventListener("input",function(){recompute(inp.dataset.chain);});
+    });
+    Object.keys(STATS.chains).forEach(recompute);
+    $("btnFillMean").addEventListener("click",function(){fillSpreads("mean");});
+    $("btnFillCur").addEventListener("click",function(){fillSpreads("current");});
+    $("btnExport").addEventListener("click",exportXlsx);
+    $("btnPush").addEventListener("click",pushToGitHub);
+    status.textContent="참고 기준일 "+STATS.as_of+" · 통계 윈도우 "+STATS.window[0]+" ~ "+STATS.window[1]+
+      " · 전망 대상: 오늘부터 6개 분기 ("+QUARTERS[0]+" ~ "+QUARTERS[QUARTERS.length-1]+")";
+    status.className="";
+    $("inpContent").style.display="";
+  }catch(e){
+    status.className="err";
+    status.innerHTML="참고 통계를 불러오지 못했습니다 — "+e.message+
+      "<br>① research-data에 최신 analysis(specs·러너)가 푸시되어 Actions가 spread_stats를 만들었는지, ② <a href='index.html'>포털</a>에서 토큰 연결을 했는지 확인하세요.";
+  }
+})();
+</script>
+<script>
+/* ===== 적중도 추적 로직 ===== */
+(async function(){
+  "use strict";
+  var $=function(id){return document.getElementById(id);};
+  var status=$("trkStatus");
+  Chart.defaults.font.family="'Times New Roman',Times,serif";
+  Chart.defaults.color="#16213a";
+
+  function el(t,c,h){var e=document.createElement(t);if(c)e.className=c;if(h!==undefined)e.innerHTML=h;return e;}
+  function fmt(v,d){return v===null||v===undefined?"—":Number(v).toFixed(d===undefined?3:d);}
+  function signed(v){if(v===null||v===undefined)return "—";
+    var s=Number(v);return "<span class='"+(s>0?"pos":"neg")+"'>"+(s>0?"+":"")+s.toFixed(3)+"</span>";}
+
+  function summaryTable(obj,keyLabel){
+    var t=el("table","reg");
+    t.appendChild(el("thead","","<tr><th>"+keyLabel+"</th><th>N</th><th>ME</th><th>MAE</th><th>RMSE</th><th>방향적중률</th></tr>"));
+    var tb=el("tbody");
+    Object.keys(obj).sort().forEach(function(k){
+      var v=obj[k];
+      tb.appendChild(el("tr","","<td>"+k+"</td><td>"+v.n+"</td><td>"+signed(v.me)+"</td><td>"+fmt(v.mae)+
+        "</td><td>"+fmt(v.rmse)+"</td><td>"+(v.hit_rate===null?"—":(v.hit_rate*100).toFixed(0)+"%")+"</td>"));
+    });
+    t.appendChild(tb);return t;
+  }
+
+  function recordsTable(recs){
+    var t=el("table","reg");
+    t.appendChild(el("thead","","<tr><th>전망일</th><th>타깃</th><th>호라이즌</th><th>전망</th><th>실현</th><th>오차</th><th>방향</th></tr>"));
+    var tb=el("tbody");
+    recs.forEach(function(r){
+      tb.appendChild(el("tr","","<td>"+r.forecast_date+"</td><td>"+r.target+"</td><td>"+r.horizon_days+"일</td>"+
+        "<td>"+fmt(r.forecast,2)+"</td><td>"+(r.realized===null?"미도래":fmt(r.realized,2))+"</td>"+
+        "<td>"+(r.error===null?"—":signed(r.error))+"</td>"+
+        "<td>"+(r.direction_hit===null?"—":r.direction_hit?"○":"×")+"</td>"));
+    });
+    t.appendChild(tb);return t;
+  }
+
+  var chart=null;
+  function drawHedgehog(data,variable){
+    var rq=data.realized_series;
+    var realized=rq.dates.map(function(d,i){return {x:d,y:rq.values[variable]?rq.values[variable][i]:null};})
+                  .filter(function(p){return p.y!==null;});
+    // 빈티지별 전망 경로: 앵커(전망일, 시장수준) → 타깃 분기말 전망값들
+    var groups={};
+    data.records.filter(function(r){return r.variable===variable;}).forEach(function(r){
+      (groups[r.forecast_date]=groups[r.forecast_date]||[]).push(r);
+    });
+    var paths=Object.keys(groups).sort().map(function(fd,gi){
+      var rs=groups[fd].sort(function(a,b){return a.target_end<b.target_end?-1:1;});
+      var pts=[];
+      if(rs[0].anchor!==null)pts.push({x:fd,y:rs[0].anchor});
+      rs.forEach(function(r){pts.push({x:r.target_end,y:r.forecast});});
+      return {label:fd+" 전망",data:pts,borderColor:"rgba(63,90,138,"+(0.25+0.6*gi/Math.max(1,Object.keys(groups).length-1))+")",
+        borderWidth:1.2,pointRadius:2,fill:false,tension:0};
+    });
+    var ds=[{label:"실현치(분기말)",data:realized,borderColor:"#16213a",borderWidth:2.6,pointRadius:3,fill:false,tension:0}].concat(paths);
+    if(chart)chart.destroy();
+    chart=new Chart($("hedgehog"),{type:"line",
+      data:{datasets:ds},
+      options:{responsive:true,parsing:{xAxisKey:"x",yAxisKey:"y"},
+        plugins:{legend:{display:false},title:{display:true,text:variable+" — 전망 빈티지 vs 실현치",font:{size:15}}},
+        scales:{x:{type:"category",labels:buildAxis(realized,paths),grid:{color:"#eceef3"}},
+                y:{grid:{color:"#eceef3"},title:{display:true,text:"연 %"}}},
+        backgroundColor:"#ffffff"}});
+  }
+  function buildAxis(realized,paths){
+    var set={};realized.forEach(function(p){set[p.x]=1;});
+    paths.forEach(function(p){p.data.forEach(function(q){set[q.x]=1;});});
+    return Object.keys(set).sort();
+  }
+
+  try{
+    var cfg=GHCommon.currentConfig();
+    var data=await GHCommon.loadResults(cfg,"forecast_eval");
+    status.textContent="생성 시각(UTC): "+data.generated_utc+" · 기준: "+data.convention+
+      " · 시장데이터 최종일 "+data.market_last_obs+" · 전망 "+data.n_total+"건 중 평가 "+data.n_evaluated+"건";
+    status.className="";
+    $("content").style.display="";
+
+    // ── 숫자 스코어보드: 적중도 XP → 등급 ──
+    (function(){
+      if(!window.Mascot)return;
+      var x=Mascot.computeXP(data);
+      var pr=Mascot.progress(x.xp);
+      var nTiers=Mascot.STAGES.length;
+      var TIER=["브론즈","실버","골드","플래티넘","다이아","마스터","그랜드마스터"];
+      function tierName(id){ return TIER[id]||("Lv."+(id+1)); }
+      // 메인 숫자
+      $("scoreXP").textContent=x.xp;
+      $("scoreLevel").textContent=tierName(pr.stage.id)+" (Lv."+(pr.stage.id+1)+"/"+nTiers+")";
+      if(pr.next) $("scoreNext").textContent="다음 등급까지 "+pr.toNext+" XP";
+      else $("scoreNext").textContent="★ 최고 등급 달성";
+      // 진행 바: 현재 등급 구간 내 위치
+      $("scoreBar").style.width=pr.pct+"%";
+      $("scoreLevelLo").textContent=tierName(pr.stage.id)+" · "+pr.stage.min+" XP";
+      $("scoreLevelHi").textContent=pr.next?(tierName(pr.next.id)+" · "+pr.next.min+" XP"):"MAX";
+      // 하락 경고
+      if(pr.prev && pr.marginToDrop<=30){
+        $("scoreDrop").textContent="⚠ "+pr.marginToDrop+" XP만 더 깎이면 "+tierName(pr.prev.id)+"(으)로 하락합니다";
+        $("scoreDrop").style.display="";
+      }
+      // 내역 카드
+      $("scEval").textContent=x.evaluated;
+      $("scHit").textContent=x.hits;
+      $("scRate").textContent=(x.hitRate*100).toFixed(0)+"%";
+      $("scPrecise").textContent=x.precise;
+      $("scMiss").textContent=x.misses;
+      $("scRev").textContent=x.revPenalty>0?("−"+x.revPenalty):"0";
+      $("scVol").textContent=x.volRelieved+"건";
+      // 등급 표
+      var tiers=Mascot.STAGES.map(function(st){
+        var cur=st.id===pr.stage.id;
+        var reached=x.xp>=st.min;
+        return '<div style="flex:1;min-width:78px;text-align:center;padding:8px 4px;border-radius:3px;'+
+          (cur?'background:#eef3ee;border:1px solid #cfe0cf;':'border:1px solid var(--line2);opacity:'+(reached?'1':'0.45')+';')+'">'+
+          '<div style="font-size:.9rem;font-weight:'+(cur?'700':'600')+';color:'+(cur?'var(--accent)':'var(--ink)')+';">'+tierName(st.id)+'</div>'+
+          '<div style="font-size:.66rem;color:var(--muted);margin-top:2px;">Lv.'+(st.id+1)+' · '+st.min+'+ XP</div>'+
+          (cur?'<div style="font-size:.62rem;color:var(--accent);margin-top:2px;">● 현재</div>':'')+
+          '</div>';
+      }).join("");
+      $("scoreTiers").innerHTML=tiers;
+
+      // 점수 추이 차트
+      var trend=Mascot.xpTrend(data);
+      if(trend.length>1){
+        var tierColors=["#a9783c","#9aa0a6","#d4a017","#6aa8e0","#7a5cd0","#c0392b","#16a085"];
+        // 등급 경계선(주석)
+        var maxStage=Mascot.STAGES.length;
+        var trendChart=new Chart($("scoreTrend"),{type:"line",
+          data:{labels:trend.map(function(p){return p.date.slice(2);}),
+            datasets:[{label:"누적 XP",data:trend.map(function(p){return p.xp;}),
+              borderColor:"#5aa9d6",backgroundColor:"rgba(90,169,214,0.12)",
+              borderWidth:2.4,pointRadius:3,pointBackgroundColor:trend.map(function(p){return tierColors[p.stage]||"#5aa9d6";}),
+              fill:true,tension:0.2}]},
+          options:{responsive:true,
+            plugins:{legend:{display:false},
+              tooltip:{callbacks:{afterLabel:function(ctx){return "등급 Lv."+(trend[ctx.dataIndex].stage+1)+" · 평가 "+trend[ctx.dataIndex].evaluated+"건";}}}},
+            scales:{x:{grid:{color:"#eceef3"},ticks:{font:{size:10}}},
+                    y:{grid:{color:"#eceef3"},title:{display:true,text:"누적 XP"},beginAtZero:true}},
+            backgroundColor:"#ffffff"}});
+      }
+    })();
+
+    var vars=Object.keys(data.summary_by_variable).sort();
+    var allVars=[];data.records.forEach(function(r){if(allVars.indexOf(r.variable)<0)allVars.push(r.variable);});
+    allVars.sort();
+    vars.concat(allVars.filter(function(v){return vars.indexOf(v)<0;}));
+    allVars.forEach(function(v){
+      $("varSel").appendChild(new Option(v,v));
+      $("recSel").appendChild(new Option(v,v));
+    });
+    $("byVar").appendChild(summaryTable(data.summary_by_variable,"변수"));
+    $("byVar").appendChild(el("p","tnote","오차 단위: %p · ME 양(+)=과대전망(빨강 계열) · 음(−)=과소전망"));
+    $("byHz").appendChild(summaryTable(data.summary_by_horizon,"호라이즌"));
+
+    function refreshRecords(){
+      var v=$("recSel").value,only=$("onlyDone").checked;
+      var recs=data.records.filter(function(r){return r.variable===v&&(!only||r.error!==null);});
+      $("records").innerHTML="";$("records").appendChild(recordsTable(recs));
+    }
+    $("varSel").addEventListener("change",function(){drawHedgehog(data,this.value);});
+    $("recSel").addEventListener("change",refreshRecords);
+    $("onlyDone").addEventListener("change",refreshRecords);
+    drawHedgehog(data,allVars[0]);refreshRecords();
+    if(data.missing_variables.length)
+      status.innerHTML+=" · <span style='color:var(--warn)'>매핑 안 된 변수: "+data.missing_variables.join(", ")+"</span>";
+  }catch(e){
+    status.className="err";
+    status.innerHTML="결과를 불러오지 못했습니다 — "+e.message+
+      "<br>① research-data에 data/forecasts.xlsx가 푸시되어 Actions가 한 번 돌았는지, ② <a href='index.html'>포털</a>에서 토큰 연결을 했는지 확인하세요.";
+  }
+})();
+</script>
+</body>
+</html>
